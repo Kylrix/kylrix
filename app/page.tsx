@@ -11,13 +11,10 @@ import {
   ChevronRight,
   Copy,
   Database,
-  Github,
   KeyRound,
   Lock,
-  Menu,
   ShieldCheck,
   Terminal,
-  X,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ThreadNoteClaimer } from '@/components/landing/ThreadNoteClaimer';
@@ -57,7 +54,7 @@ function Command({ children, onCopy, copied }: { children: string; onCopy: () =>
   return (
     <button
       onClick={onCopy}
-      className="group flex w-full items-center justify-between gap-4 border border-white/20 bg-black px-4 py-3 text-left font-mono text-xs text-white transition-colors hover:border-indigo-400 sm:text-sm"
+      className="group flex w-full items-center justify-between gap-4 rounded-xl border border-white/20 bg-black px-4 py-3 text-left font-mono text-xs text-white transition-colors hover:border-[#818CF8] sm:text-sm"
       aria-label={`Copy ${children}`}
     >
       <span className="truncate">
@@ -74,7 +71,6 @@ export default function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const [copiedCli, setCopiedCli] = useState(false);
   const [copiedDocker, setCopiedDocker] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
@@ -113,32 +109,6 @@ export default function LandingPage() {
       </div>
 
       <section className="relative z-10 mx-auto max-w-7xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20 lg:px-12 lg:pb-32">
-        <div className="mb-16 flex items-center justify-between border-b border-white/15 pb-5">
-          <a href="/" className="flex items-center gap-3" aria-label="Kylrix home">
-            <span className="grid h-9 w-9 place-items-center bg-indigo-500 font-clash text-lg font-bold text-white">K</span>
-            <span className="font-clash text-xl font-bold tracking-tight">KYLRIX</span>
-          </a>
-          <nav className="hidden items-center gap-7 text-sm font-bold sm:flex">
-            <a href="#why" className="text-white transition-colors hover:text-indigo-300">Why Kylrix</a>
-            <a href="#connect" className="text-white transition-colors hover:text-indigo-300">Connect</a>
-            <a href="https://github.com/Kylrix/kylrix" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-white transition-colors hover:text-indigo-300">
-              <Github size={16} /> GitHub
-            </a>
-            <Link href="/login" className="border border-white/25 px-4 py-2 transition-colors hover:border-white hover:bg-white hover:text-black">Sign in</Link>
-          </nav>
-          <button onClick={() => setMobileMenuOpen((open) => !open)} className="border border-white/20 p-2 sm:hidden" aria-label="Toggle navigation">
-            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-        </div>
-
-        {mobileMenuOpen && (
-          <nav className="mb-10 grid gap-3 border border-white/20 bg-[#161412] p-4 text-sm font-bold sm:hidden">
-            <a href="#why" onClick={() => setMobileMenuOpen(false)}>Why Kylrix</a>
-            <a href="#connect" onClick={() => setMobileMenuOpen(false)}>Connect</a>
-            <Link href="/login">Sign in</Link>
-          </nav>
-        )}
-
         <div className="grid items-end gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
           <div>
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.22em] text-emerald-400">
@@ -154,10 +124,10 @@ export default function LandingPage() {
               Kylrix is the private workspace for humans and AI tools: encrypted credentials, persistent context, and local-first control in one place.
             </motion.p>
             <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Link href="/app" className="inline-flex items-center justify-center gap-2 bg-indigo-500 px-6 py-4 text-sm font-bold text-white transition-colors hover:bg-indigo-400">
+              <Link href="/app" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#6366F1] px-6 py-4 text-sm font-bold text-white transition-colors hover:bg-[#818CF8]">
                 Open your workspace <ArrowRight size={17} />
               </Link>
-              <a href="#connect" className="inline-flex items-center justify-center gap-2 border border-white/25 px-6 py-4 text-sm font-bold transition-colors hover:border-white hover:bg-white hover:text-black">
+              <a href="#connect" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 px-6 py-4 text-sm font-bold transition-colors hover:border-white hover:bg-white hover:text-black">
                 Connect an agent <ChevronRight size={17} />
               </a>
             </motion.div>
@@ -168,7 +138,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="border border-white/20 bg-[#161412] p-4 sm:p-5">
+          <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="rounded-3xl border border-white/20 bg-[#161412] p-4 shadow-[0_30px_100px_rgba(99,102,241,0.18)] sm:p-5">
             <div className="mb-4 flex items-center justify-between border-b border-white/15 pb-4 font-mono text-[11px] uppercase tracking-widest text-white">
               <span>kylrix / local bridge</span>
               <span className="flex items-center gap-2 text-emerald-400"><span className="h-2 w-2 bg-emerald-400" /> ready</span>
@@ -183,6 +153,52 @@ export default function LandingPage() {
               </div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      <section className="relative z-10 -mt-8 px-4 pb-24 sm:px-8 lg:-mt-12 lg:px-12">
+        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/20 bg-[#161412] p-2 shadow-[0_35px_120px_rgba(0,0,0,0.8)] sm:p-3">
+          <div className="pointer-events-none absolute -inset-1/2 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.22),transparent_45%)]" />
+          <div className="relative overflow-hidden rounded-[1.5rem] border border-white/15 bg-black">
+            <div className="flex h-12 items-center justify-between border-b border-white/15 bg-[#161412] px-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#6366F1] font-clash text-xs font-bold">K</span>
+                <span className="hidden font-clash text-sm font-bold sm:inline">Kylrix workspace</span>
+              </div>
+              <div className="h-7 w-32 rounded-full border border-white/15 bg-black sm:w-56" />
+              <div className="h-7 w-7 rounded-full bg-white/10" />
+            </div>
+            <div className="grid min-h-[270px] grid-cols-[150px_1fr] sm:grid-cols-[210px_1fr]">
+              <aside className="border-r border-white/15 bg-[#161412] p-4">
+                <div className="mb-6 h-2 w-20 rounded-full bg-white/20" />
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-[#6366F1]/20 px-3 py-2 text-xs font-bold text-white">Ideas</div>
+                  <div className="px-3 py-2 text-xs font-bold text-white">Goals</div>
+                  <div className="px-3 py-2 text-xs font-bold text-white">Vault</div>
+                  <div className="px-3 py-2 text-xs font-bold text-white">Agents</div>
+                </div>
+              </aside>
+              <div className="p-5 sm:p-8">
+                <div className="mb-7 flex items-end justify-between">
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#818CF8]">Personal workspace</p><h3 className="mt-2 font-clash text-2xl font-bold sm:text-3xl">Good morning.</h3></div>
+                  <span className="hidden rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold text-emerald-300 sm:inline">Synced locally</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {['Agent memory', 'Secure vault', 'Active goals'].map((label, index) => (
+                    <div key={label} className="rounded-2xl border border-white/15 bg-[#161412] p-4">
+                      <div className={`mb-7 h-2 w-8 rounded-full ${index === 0 ? 'bg-[#A855F7]' : index === 1 ? 'bg-[#10B981]' : 'bg-[#F59E0B]'}`} />
+                      <p className="text-xs font-bold text-white">{label}</p>
+                      <p className="mt-2 text-[10px] font-medium text-white">{index === 0 ? '12 linked notes' : index === 1 ? 'Protected' : '3 in progress'}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 rounded-2xl border border-white/15 bg-[#161412] p-4">
+                  <div className="flex items-center justify-between"><span className="text-xs font-bold">Recent ideas</span><span className="text-[10px] text-[#818CF8]">View all</span></div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-3"><span className="rounded-lg bg-black px-3 py-2 text-[10px] text-white">Sovereign stack</span><span className="rounded-lg bg-black px-3 py-2 text-[10px] text-white">Agent handoff</span><span className="rounded-lg bg-black px-3 py-2 text-[10px] text-white">Launch plan</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -238,13 +254,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="relative z-10 border-t border-white/15 bg-indigo-500 px-5 py-20 text-black sm:px-8 lg:px-12 lg:py-24">
+      <section className="relative z-10 border-t border-white/15 bg-[#6366F1] px-5 py-20 text-black sm:px-8 lg:px-12 lg:py-24">
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 md:flex-row md:items-end">
           <div>
             <p className="mb-4 text-xs font-bold uppercase tracking-[0.22em]">The next session starts here</p>
             <h2 className="max-w-3xl font-clash text-4xl font-bold leading-tight sm:text-6xl">Your work deserves a home that lasts.</h2>
           </div>
-          <Link href="/app" className="inline-flex shrink-0 items-center gap-2 border border-black px-6 py-4 text-sm font-bold transition-colors hover:bg-black hover:text-white">Get started free <ArrowRight size={17} /></Link>
+          <Link href="/app" className="inline-flex shrink-0 items-center gap-2 rounded-full border border-black px-6 py-4 text-sm font-bold transition-colors hover:bg-black hover:text-white">Get started free <ArrowRight size={17} /></Link>
         </div>
       </section>
 
