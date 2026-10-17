@@ -21,6 +21,7 @@ import { useTypeIntelligence, useTypeIntelEnabled } from '@/hooks/useTypeIntelli
 import { TypeIntelToggle, TypeIntelGhostLayer } from '@/components/agentic/TypeIntelBar';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { ulid } from '@/lib/utils/ulid';
 
 const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low'];
 
@@ -212,7 +213,7 @@ export function CreateGoalComposer({
   const ensureId = useCallback(() => {
     const existing = initialContent?.id || resolvedId || liveIdRef.current;
     if (existing) return existing;
-    const id = crypto.randomUUID();
+    const id = ulid();
     liveIdRef.current = id;
     setResolvedId(id);
     return id;

@@ -23,7 +23,6 @@ import {
 import { isFlowPath } from '@/lib/routing/app-paths';
 import { searchLocalEngine, type GlobalResult } from '@/lib/search/globalLocalSearch';
 import {
-  Bot,
   Terminal,
   Wallet,
   Copy as CopyIcon,
@@ -59,7 +58,6 @@ import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
-import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useWebMcpContext } from '@/context/WebMcpContext';
 import { useNativeSidebarApiOptional } from '@/context/RightRailContext';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
@@ -101,7 +99,6 @@ export default function ConnectTopbar({
   className}: ConnectTopbarProps) {
   const { user, logout, isAuthenticating, updatePreferences } = useAuth();
   const { openWallet } = useWalletOverlay();
-  const { openAgenticDrawer, closeAgenticDrawer } = useAgenticDrawer();
   const { toggleInspector: toggleWebMcp, isInspectorOpen: isWebMcpOpen } = useWebMcpContext();
   const { open: openUnified } = useUnifiedDrawer();
   const nativeSidebar = useNativeSidebarApiOptional();
@@ -414,11 +411,10 @@ export default function ConnectTopbar({
     setNotificationsOpen(false);
     setNotifHint(null);
     setPassiveNotification(null);
-    closeAgenticDrawer();
     if (secondarySidebar.type === 'notification' || secondarySidebar.type === 'notifications') {
       closeSecondarySidebar();
     }
-  }, [closeAgenticDrawer, secondarySidebar, closeSecondarySidebar]);
+  }, [secondarySidebar, closeSecondarySidebar]);
 
   const handleNotificationClick = useCallback((notif: KylrixNotification) => {
     // Record dismissed ID before clearing, so the suggestions effect
@@ -461,20 +457,6 @@ export default function ConnectTopbar({
     handleCloseAll,
     setDismissedHintId,
   ]);
-
-  const openAgenticFromTopbar = useCallback(() => {
-    if (activeWorkspace?.privacyMode) {
-      toast.error('AI is disabled in this workspace (Privacy Mode active)');
-      return;
-    }
-    setProfileMenuAnchorEl(null);
-    setAppMenuAnchorEl(null);
-    setSearchOpen(false);
-    setSearchShortcutsView(false);
-    setNotificationsOpen(false);
-    setNotifHint(null);
-    openAgenticDrawer();
-  }, [openAgenticDrawer, activeWorkspace?.privacyMode]);
 
   const openSearchShortcuts = useCallback(() => {
     setProfileMenuAnchorEl(null);
@@ -802,9 +784,6 @@ export default function ConnectTopbar({
         case 'profile':
           setProfileMenuAnchorEl(document.body);
           break;
-        case 'agent':
-          openAgenticFromTopbar();
-          break;
         case 'hangouts':
           openUnified('hangouts');
           break;
@@ -816,7 +795,7 @@ export default function ConnectTopbar({
 
     window.addEventListener('keydown', handleGlobalShortcuts, true);
     return () => window.removeEventListener('keydown', handleGlobalShortcuts, true);
-  }, [handleCloseAll, openSearch, openAgenticFromTopbar, router]);
+  }, [handleCloseAll, openSearch, router]);
 
   const renderNotificationDrawer = () => {
     if (isDesktop) return null;
@@ -2608,12 +2587,6 @@ export default function ConnectTopbar({
                       </Tooltip>
                     )}
 
-                    {!isWorkspacePrivacyMode && (
-                      <IconButton onClick={openAgenticFromTopbar} sx={{ color: appAccent, bgcolor: '#161412', border: '1px solid', borderColor: alpha(appAccent, 0.35), borderRadius: '14px', width: 44, height: 44, boxShadow: `0 8px 24px ${alpha(appAccent, 0.25)}`, '&:hover': { bgcolor: '#201D1A', transform: 'scale(1.05)' }, transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                        <Bot size={20} strokeWidth={2.2} />
-                      </IconButton>
-                    )}
-
 
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
                       <IdentityAvatar 
@@ -2793,4 +2766,3 @@ export default function ConnectTopbar({
     </>
   );
 }
-

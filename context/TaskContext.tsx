@@ -1143,6 +1143,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     const hydrateInstant = async () => {
       const userId =
+        (authUser as any)?.id ||
         authUser?.$id ||
         flowWarmOwnerRef.current ||
         getCurrentUserSnapshot()?.$id ||
@@ -1177,7 +1178,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       unsubscribe();
     };
-  }, [authUser?.$id, getCachedData, getCachedDataAsync, dispatchSyncedData]);
+  }, [(authUser as any)?.id, authUser?.$id, getCachedData, getCachedDataAsync, dispatchSyncedData]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -1197,11 +1198,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     const init = async () => {
       try {
-        let userId = authUser?.$id || 'guest';
-        if (!authUser?.$id) {
+        let userId = (authUser as any)?.id || authUser?.$id || 'guest';
+        if (userId === 'guest') {
             try {
-                const user = await getCurrentUser();
-                userId = user.$id;
+                const { authClient } = await import('@/lib/auth/better-auth-client');
+                const session = await authClient.getSession();
+                userId = session?.data?.user?.id || 'guest';
             } catch {
                 // If we can't get user even here, we are truly guest
             }

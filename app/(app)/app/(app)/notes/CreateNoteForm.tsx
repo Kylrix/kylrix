@@ -32,6 +32,7 @@ import { APPWRITE_CONFIG } from '@/lib/data';
 import { serializeObjectBlock } from '@/lib/note-object-secondary';
 import type { ParsedObjectBlock } from '@/lib/note-object-secondary';
 import { useNotes } from '@/context/NotesContext';
+import { ulid } from '@/lib/utils/ulid';
 import { BareMetalInput } from '@/components/ui/BareMetalInput';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
@@ -163,7 +164,7 @@ export default function CreateNoteForm({
   const ensureLiveDraftId = useCallback(() => {
     const existingId = resolvedNoteId || liveDraftIdRef.current;
     if (existingId) return existingId;
-    const noteId = crypto.randomUUID();
+    const noteId = ulid();
     liveDraftIdRef.current = noteId;
     registerComposeSession(noteId);
     setResolvedNoteId(noteId);
@@ -286,7 +287,7 @@ export default function CreateNoteForm({
   const flushLiveNote = useCallback(() => {
     let draftId = resolvedNoteId || liveDraftIdRef.current;
     if (!draftId) {
-      draftId = crypto.randomUUID();
+      draftId = ulid();
       liveDraftIdRef.current = draftId;
       registerComposeSession(draftId);
       setResolvedNoteId(draftId);
@@ -554,7 +555,7 @@ export default function CreateNoteForm({
     if (!hasContent) return;
 
     hasBootstrappedDraftRef.current = true;
-    const id = crypto.randomUUID();
+    const id = ulid();
     liveDraftIdRef.current = id;
     setResolvedNoteId(id);
     registerComposeSession(id);
@@ -875,7 +876,7 @@ export default function CreateNoteForm({
     };
 
     if (!user?.$id) {
-      const id = isEphemeralComposeNoteId(source.$id) ? `thread-${crypto.randomUUID()}` : source.$id;
+      const id = isEphemeralComposeNoteId(source.$id) ? `thread-${ulid()}` : source.$id;
       const saved = {
         $id: id,
         $createdAt: source.$createdAt || new Date().toISOString(),

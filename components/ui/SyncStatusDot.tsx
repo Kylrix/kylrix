@@ -4,17 +4,6 @@ import { useSyncExternalStore } from 'react';
 import { autonomicSyncEngine } from '@/lib/services/sync-engine';
 import { getMissingRequiredColumns, TABLE_ID_FOR_KIND } from '@/lib/sync/required-columns';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
-import { getCurrentUserSnapshot, onCurrentUserChanged } from '@/lib/data';
-import { hasPaidKylrixPlan } from '@/lib/utils';
-
-function useIsProUser() {
-  return useSyncExternalStore(
-    (onStoreChange) => onCurrentUserChanged(onStoreChange),
-    () => hasPaidKylrixPlan(getCurrentUserSnapshot()),
-    () => false
-  );
-}
-
 function useEnginePending(resourceId?: string | null) {
   return useSyncExternalStore(
     (onStoreChange) => autonomicSyncEngine.subscribe(onStoreChange),
@@ -97,9 +86,8 @@ function useMissingForResource(
 /**
  * 3-state status dot for resource sync status:
  * 1. Static Red: Cannot sync (missing required columns).
- * 2. Slate/Gray (#64748B / bg-slate-500): Local Only for free users and guests ("Saved locally (Offline Mode)").
- * 3. Amber (#F59E0B / bg-amber-500): Syncing / Pending for Pro users ("Syncing changes...").
- * 4. Green (#10B981 / bg-emerald-500): Cloud Synced for Pro users ("Synced to cloud").
+ * 2. Amber (#F59E0B / bg-amber-500): The engine still owes a remote write.
+ * 3. Green (#10B981 / bg-emerald-500): The engine has acknowledged the remote write.
  */
 export function SyncStatusDot({
   noteId,
@@ -123,7 +111,6 @@ export function SyncStatusDot({
   /** Explicit tableId override */
   tableId?: string | null;
 }) {
-  const isPro = useIsProUser();
   const enginePending = useEnginePending(resourceId ?? noteId);
   const pending = typeof pendingOverride === 'boolean' ? pendingOverride : enginePending;
   const autoMissing = useMissingForResource(resourceId ?? noteId, row, kind, tableId);
@@ -134,15 +121,6 @@ export function SyncStatusDot({
       <span
         className="w-2 h-2 min-w-2 min-h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] shrink-0 flex-none block"
         title={`Cannot sync: missing ${missing.join(', ')}`}
-      />
-    );
-  }
-
-  if (!isPro) {
-    return (
-      <span
-        className="w-2 h-2 min-w-2 min-h-2 rounded-full bg-slate-500 dark:bg-muted-foreground shrink-0 flex-none block"
-        title="Saved locally (Offline Mode)"
       />
     );
   }
@@ -180,7 +158,6 @@ export function SyncStatusLabel({
   row?: Record<string, unknown> | null;
   tableId?: string | null;
 }) {
-  const isPro = useIsProUser();
   const pending = useEnginePending(resourceId ?? noteId);
   const autoMissing = useMissingForResource(resourceId ?? noteId, row, kind, tableId);
   const missing = missingColumns != null ? missingColumns : autoMissing;
@@ -189,14 +166,6 @@ export function SyncStatusLabel({
     return (
       <span className="text-[10px] font-semibold text-red-400">
         Cannot sync: missing {missing.join(', ')}
-      </span>
-    );
-  }
-
-  if (!isPro) {
-    return (
-      <span className="text-[10px] font-semibold text-slate-500 dark:text-muted-foreground">
-        Saved locally
       </span>
     );
   }

@@ -544,8 +544,13 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     if (typeof window === 'undefined') return;
 
     const handleVaultChange = async () => {
-      if (user?.$id) {
-        listTotpSecrets(user.$id).then((rows) => setTotpCodes(Array.isArray(rows) ? rows : rows.rows || [])).catch(() => {});
+      const userId = user?.id || user?.$id;
+      if (userId) {
+        import('@/lib/actions/turso-ops').then(({ listTotpSecretsTurso }) =>
+          listTotpSecretsTurso(userId).then((res) =>
+            setTotpCodes((res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }))),
+          ),
+        ).catch(() => {});
       }
     };
 
@@ -555,10 +560,10 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       window.removeEventListener('vault-unlocked', handleVaultChange);
       window.removeEventListener('vault-locked', handleVaultChange);
     };
-  }, [user?.$id]);
+  }, [user?.id, user?.$id]);
 
   useEffect(() => {
-    const activeUserId = user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.$id || '') : '');
+    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '');
     if (!activeUserId) return;
     let isCancelled = false;
     const cacheKey = `vault_totp_${activeUserId}`;
@@ -566,26 +571,15 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const { APPWRITE_CONFIG } = await import('@/lib/data');
-
         const rows = await LocalEngine.query<any[]>(
           cacheKey,
           async () => {
-            const { TablesDB, Client, Query } = await import('@/lib/data');
-            const client = new Client()
-              .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-              .setProject(APPWRITE_CONFIG.PROJECT_ID);
-            const tablesDB = new TablesDB(client);
-            const res = await tablesDB.listRows(
-              APPWRITE_CONFIG.DATABASES.VAULT,
-              APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS,
-              [Query.equal('userId', activeUserId)]
-            );
-            return Array.isArray(res?.rows) ? res.rows : [];
+            const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
+            const res = await listTotpSecretsTurso(activeUserId);
+            return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
           },
           {
             ttl: 1000 * 60 * 5,
-            realtimeChannel: `databases.${APPWRITE_CONFIG.DATABASES.VAULT}.collections.${APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS}.documents`
           }
         );
 
@@ -602,7 +596,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     return () => {
       isCancelled = true;
     };
-  }, [user?.$id]);
+  }, [user?.id, user?.$id]);
 
   useEffect(() => {
     if (unlockOnDemand) {

@@ -6,6 +6,7 @@ import {
   upsertNoteTurso,
 } from '@/lib/actions/turso-ops';
 import { getNamedListCache } from './list-cache';
+import { ulid } from '@/lib/utils/ulid';
 
 const notesCache = getNamedListCache<any>('eco_notes', 45000);
 const secretsCache = getNamedListCache<any>('eco_secrets', 45000);
@@ -21,7 +22,7 @@ export const EcosystemService = {
   },
 
   async createNote(userId: string, title: string, content: string) {
-    const id = crypto.randomUUID();
+    const id = ulid();
     const now = new Date().toISOString();
 
     await upsertNoteTurso({
