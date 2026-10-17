@@ -2,7 +2,6 @@
 
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
-import { systemTables } from '@/lib/data/system-tables';
 
 export type InitializeMasterPassVaultInput = {
   userId: string;
@@ -15,12 +14,8 @@ export type EnsureMasterPassVaultResult = 'initialized' | 'unlocked';
 
 async function userHasPasswordKeychain(userId: string): Promise<boolean> {
   try {
-    const tables = systemTables();
-    const res = await tables.listRows({
-      databaseId: 'vault',
-      tableId: 'keychain',
-      queries: [{ type: 'equal', attribute: 'userId', value: userId }],
-    });
+    const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+    const res = await listKeychainTurso(userId);
     return res.rows.some((entry: any) => entry.type === 'password');
   } catch {
     return false;

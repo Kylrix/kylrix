@@ -302,9 +302,29 @@ export const AppwriteService = {
   async getGlobalProfileStatus(...args: any[]): Promise<any> { return account.getGlobalProfileStatus(...args); },
   async getUserDoc(_userId: string): Promise<any> { return null; },
   async setMasterpassFlag(_userId: string, _email?: string): Promise<any> { return { success: true }; },
-  async listKeychainEntries(_userId: string): Promise<any[]> { return []; },
-  async deleteKeychainEntry(_id: string): Promise<any> { return { success: true }; },
-  async createKeychainEntry(_data: any): Promise<any> { return null; },
+  async listKeychainEntries(userId: string): Promise<any[]> { return KeychainService.listKeychainEntries(userId); },
+  async deleteKeychainEntry(id: string): Promise<any> { return KeychainService.deleteKeychainEntry(id); },
+  async createKeychainEntry(data: any): Promise<any> {
+    const { upsertKeychainTurso } = await import('@/lib/actions/turso-ops');
+    const now = new Date().toISOString();
+    const result = await upsertKeychainTurso({
+      id: data.id || data.$id || `keychain_${Date.now()}`,
+      userId: data.userId,
+      account: data.account || 'masterpass',
+      type: data.type || 'password',
+      encryptedPayload: data.encryptedPayload || data.wrappedKey || '',
+      nonce: data.nonce || data.salt || null,
+      metadata: JSON.stringify({
+        credentialId: data.credentialId || null,
+        params: data.params || null,
+        isArgon: data.isArgon ?? null,
+        isPending: data.isPending ?? false,
+      }),
+      createdAt: data.createdAt || now,
+      updatedAt: now,
+    });
+    return result.success ? { ...data, $id: data.id || data.$id } : null;
+  },
   async createSecurityLog(_data: any): Promise<any> { return { success: true }; },
   async hasMasterpass(userId?: string): Promise<boolean> { return KeychainService.hasMasterpass(userId); },
 };
@@ -811,12 +831,52 @@ export const ProjectsService = {
 };
 
 export const KeychainService = {
-  async getKeychainCount(): Promise<number> { return 0; },
-  async getMasterpassState(): Promise<any> { return null; },
+  async getKeychainCount(userId?: string): Promise<number> {
+    if (!userId) return 0;
+    const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+    const result = await listKeychainTurso(userId);
+    return result.rows?.length || 0;
+  },
+  async getMasterpassState(userId?: string): Promise<any> {
+    const rows = await this.listKeychainEntries(userId);
+    return {
+      hasMasterpass: rows.some((entry: any) => entry.type === 'password'),
+      hasPasskey: rows.some((entry: any) => entry.type === 'passkey'),
+      entries: rows,
+    };
+  },
   async unwrapDekWithPassword(): Promise<any> { return null; },
-  async listKeychainEntries(_userId?: string): Promise<any[]> { return []; },
-  async hasMasterpass(_userId?: string): Promise<boolean> { return false; },
-  async deleteKeychainEntry(_id: string): Promise<any> { return { success: true }; },
+  async listKeychainEntries(userId?: string): Promise<any[]> {
+    if (!userId) return [];
+    const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+    const result = await listKeychainTurso(userId);
+    return (result.rows || []).map((row: any) => {
+      const metadata = typeof row.metadata === 'string'
+        ? (() => { try { return JSON.parse(row.metadata); } catch { return {}; } })()
+        : (row.metadata || {});
+      let params = metadata.params;
+      if (typeof params === 'string') {
+        try { params = JSON.parse(params); } catch {}
+      }
+      return {
+        ...row,
+        $id: row.id,
+        wrappedKey: row.encryptedPayload,
+        salt: metadata.salt || row.nonce,
+        params,
+        isArgon: metadata.isArgon,
+        credentialId: metadata.credentialId || (row.type === 'passkey' ? row.account : null),
+      };
+    });
+  },
+  async hasMasterpass(userId?: string): Promise<boolean> {
+    const rows = await this.listKeychainEntries(userId);
+    return rows.some((entry: any) => entry.type === 'password');
+  },
+  async deleteKeychainEntry(id: string): Promise<any> {
+    const { deleteKeychainTurso } = await import('@/lib/actions/turso-ops');
+    return deleteKeychainTurso(id);
+  },
 };
 
 export const VaultService = {
@@ -824,8 +884,18 @@ export const VaultService = {
   async updateTOTPSecret(id: string, data: any): Promise<any> {
     return updateTotpSecret(id, data);
   },
-  async listAllCredentials(_userId?: string): Promise<any[]> { return []; },
-  async listTOTPSecrets(_userId?: string): Promise<any[]> { return []; },
+  async listAllCredentials(userId?: string): Promise<any[]> {
+    if (!userId) return [];
+    const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
+    const result = await listVaultItemsTurso(userId);
+    return (result.rows || []).map((row: any) => ({ ...row, $id: row.id }));
+  },
+  async listTOTPSecrets(userId?: string): Promise<any[]> {
+    if (!userId) return [];
+    const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
+    const result = await listTotpSecretsTurso(userId);
+    return (result.rows || []).map((row: any) => ({ ...row, $id: row.id }));
+  },
   async getCredential(_id: string): Promise<any> { return null; },
   async getTOTPSecret(_id: string): Promise<any> { return null; },
 };

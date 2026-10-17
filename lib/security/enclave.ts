@@ -263,16 +263,8 @@ export const SecurityEnclave = {
     }
 
     try {
-      const tables = systemTables();
-
-      const keychainRes = await tables
-        .listRows({
-          databaseId: 'vault',
-          tableId: 'keychain',
-          queries: [{ type: 'equal', attribute: 'userId', value: userId }, { type: 'limit', value: 50 }],
-        })
-        .catch(() => ({ rows: [] as any[] }));
-
+      const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+      const keychainRes = await listKeychainTurso(userId);
       const keychainRows = Array.isArray(keychainRes.rows) ? keychainRes.rows : [];
       if (keychainRows.length > 0) {
         await this.setKeychain(userId, keychainRows);
