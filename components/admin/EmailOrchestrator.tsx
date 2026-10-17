@@ -56,14 +56,13 @@ export default function EmailOrchestrator() {
 
     try {
       setUserLoadError(null);
-      const jwt = await getJWT();
       const cacheKey = getAdminVerifiedUsersCacheKey(user?.$id, cursorAfter);
 
       const fetcher = async () => await getAdminUsersAction({
         verifiedOnly: true,
         limit: 50,
         cursorAfter
-      }, jwt || undefined);
+      });
 
       const data = cacheKey
         ? await LocalEngine.query(cacheKey, fetcher, { ttl: 5 * 60 * 1000 })
