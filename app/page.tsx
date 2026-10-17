@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { ThreadNoteClaimer } from '@/components/landing/ThreadNoteClaimer';
+import Logo from '@/components/common/Logo';
 
 const FEATURES = [
   {
@@ -108,22 +109,22 @@ export default function LandingPage() {
         <div className="absolute left-1/2 top-16 h-[420px] w-[min(72vw,820px)] -translate-x-1/2 rounded-full border border-white/5" />
       </div>
 
-      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-24 pt-14 sm:px-8 sm:pt-20 lg:px-12 lg:pb-32">
-        <div className="grid items-end gap-14 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
+      <section className="relative z-10 mx-auto max-w-7xl px-5 pb-16 pt-14 sm:px-8 sm:pt-20 lg:px-12 lg:pb-20">
+        <div className="mx-auto max-w-5xl text-center">
           <div>
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.22em] text-emerald-400">
-              <span className="h-2 w-2 bg-emerald-400" />
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
               Private infrastructure for intelligent work
             </motion.div>
-            <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="max-w-4xl font-clash text-5xl font-bold leading-[0.94] tracking-[-0.04em] sm:text-7xl lg:text-[6.8rem]">
+            <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="font-clash text-5xl font-bold leading-[0.94] tracking-[-0.04em] sm:text-7xl lg:text-[6.8rem]">
               Give your agents
               <span className="block text-indigo-400">a memory.</span>
               Keep your secrets.
             </motion.h1>
-            <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mt-8 max-w-xl text-base font-medium leading-7 text-white sm:text-lg">
+            <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-8 max-w-2xl text-base font-medium leading-7 text-white sm:text-lg">
               Kylrix is the private workspace for humans and AI tools: encrypted credentials, persistent context, and local-first control in one place.
             </motion.p>
-            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-10 flex flex-col gap-3 sm:flex-row">
+            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }} className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
               <Link href="/app" className="inline-flex items-center justify-center gap-2 rounded-full bg-[#6366F1] px-6 py-4 text-sm font-bold text-white transition-colors hover:bg-[#818CF8]">
                 Open your workspace <ArrowRight size={17} />
               </Link>
@@ -131,38 +132,22 @@ export default function LandingPage() {
                 Connect an agent <ChevronRight size={17} />
               </a>
             </motion.div>
-            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 text-xs font-bold uppercase tracking-wider text-white">
+            <div className="mt-9 flex flex-wrap justify-center gap-x-6 gap-y-3 text-xs font-bold uppercase tracking-wider text-white">
               <span className="flex items-center gap-2"><ShieldCheck size={15} className="text-emerald-400" /> No plaintext secrets</span>
               <span className="flex items-center gap-2"><Database size={15} className="text-indigo-400" /> Local-first</span>
               <span className="flex items-center gap-2"><KeyRound size={15} className="text-amber-400" /> Open source</span>
             </div>
           </div>
-
-          <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="rounded-3xl border border-white/20 bg-[#161412] p-4 shadow-[0_30px_100px_rgba(99,102,241,0.18)] sm:p-5">
-            <div className="mb-4 flex items-center justify-between border-b border-white/15 pb-4 font-mono text-[11px] uppercase tracking-widest text-white">
-              <span>kylrix / local bridge</span>
-              <span className="flex items-center gap-2 text-emerald-400"><span className="h-2 w-2 bg-emerald-400" /> ready</span>
-            </div>
-            <div className="space-y-3 font-mono text-xs text-white">
-              <p><span className="text-indigo-400">01</span> &nbsp; vault encrypted locally</p>
-              <p><span className="text-indigo-400">02</span> &nbsp; workspace memory indexed</p>
-              <p><span className="text-indigo-400">03</span> &nbsp; agent permissions verified</p>
-              <div className="mt-5 border-t border-white/15 pt-5">
-                <p className="mb-2 text-white">Start in one command</p>
-                <Command onCopy={() => copy('npm i -g @kylrix/cli', setCopiedCli)} copied={copiedCli}>npm i -g @kylrix/cli</Command>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 
       <section className="relative z-10 -mt-8 px-4 pb-24 sm:px-8 lg:-mt-12 lg:px-12">
         <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[2rem] border border-white/20 bg-[#161412] p-2 shadow-[0_35px_120px_rgba(0,0,0,0.8)] sm:p-3">
-          <div className="pointer-events-none absolute -inset-1/2 bg-[radial-gradient(circle_at_50%_0%,rgba(99,102,241,0.22),transparent_45%)]" />
+          <div className="pointer-events-none absolute inset-x-16 top-0 h-px bg-[#6366F1] shadow-[0_0_30px_8px_rgba(99,102,241,0.45)]" />
           <div className="relative overflow-hidden rounded-[1.5rem] border border-white/15 bg-black">
             <div className="flex h-12 items-center justify-between border-b border-white/15 bg-[#161412] px-4 sm:px-6">
               <div className="flex items-center gap-3">
-                <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#6366F1] font-clash text-xs font-bold">K</span>
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-black p-1"><Logo app="root" variant="icon" size={22} /></span>
                 <span className="hidden font-clash text-sm font-bold sm:inline">Kylrix workspace</span>
               </div>
               <div className="h-7 w-32 rounded-full border border-white/15 bg-black sm:w-56" />
@@ -211,11 +196,11 @@ export default function LandingPage() {
             </div>
             <p className="max-w-sm text-sm font-medium leading-6 text-white">A durable layer between your work, your infrastructure, and the tools that help you move faster.</p>
           </div>
-          <div className="grid gap-px border border-white/15 bg-white/15 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             {FEATURES.map((feature) => {
               const Icon = feature.icon;
               return (
-                <article key={feature.title} className="bg-black p-7 sm:p-9">
+                <article key={feature.title} className="rounded-3xl border border-white/20 bg-black p-7 transition-colors hover:border-[#6366F1]/70 sm:p-9">
                   <Icon size={22} style={{ color: feature.accent }} />
                   <p className="mt-10 text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: feature.accent }}>{feature.eyebrow}</p>
                   <h3 className="mt-3 font-clash text-2xl font-bold">{feature.title}</h3>
@@ -223,6 +208,38 @@ export default function LandingPage() {
                 </article>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative z-10 mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-12 lg:py-28">
+        <div className="mb-12 max-w-2xl">
+          <p className="mb-4 text-xs font-bold uppercase tracking-[0.22em] text-emerald-400">One workspace, four surfaces</p>
+          <h2 className="font-clash text-4xl font-bold leading-tight sm:text-6xl">Everything your work needs, in one calm place.</h2>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-12">
+          <div className="rounded-3xl border border-white/20 bg-[#161412] p-7 lg:col-span-7 sm:p-9">
+            <div className="mb-8 flex items-center justify-between">
+              <div className="flex items-center gap-3"><span className="rounded-xl bg-[#EC4899]/15 p-2 text-[#EC4899]"><Database size={18} /></span><span className="font-clash text-xl font-bold">Ideas that stay connected</span></div>
+              <span className="rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white">Local-first</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {['Project brief', 'Agent handoff', 'Launch notes'].map((label, index) => (
+                <div key={label} className="rounded-2xl border border-white/15 bg-black p-4">
+                  <div className={`mb-8 h-2 w-2 rounded-full ${index === 0 ? 'bg-[#EC4899]' : index === 1 ? 'bg-[#6366F1]' : 'bg-[#10B981]'}`} />
+                  <p className="text-xs font-bold">{label}</p>
+                  <p className="mt-2 text-[10px] font-medium text-white">Updated just now</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/20 bg-black p-7 lg:col-span-5 sm:p-9">
+            <div className="mb-8 flex items-center gap-3"><span className="rounded-xl bg-[#10B981]/15 p-2 text-[#10B981]"><Lock size={18} /></span><span className="font-clash text-xl font-bold">A vault agents can use</span></div>
+            <div className="space-y-3">
+              {['API credentials', 'Private keys', 'Recovery phrases'].map((label) => (
+                <div key={label} className="flex items-center justify-between rounded-2xl border border-white/15 bg-[#161412] px-4 py-3 text-xs font-bold"><span>{label}</span><ShieldCheck size={15} className="text-emerald-400" /></div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -235,7 +252,7 @@ export default function LandingPage() {
             <p className="mt-6 max-w-md text-sm font-medium leading-6 text-white">Run the CLI locally, connect an MCP client, or put the full workspace on your own VPS. Kylrix stays useful wherever you run it.</p>
           </div>
           <div className="space-y-4">
-            <div className="border border-white/20 bg-[#161412] p-5">
+            <div className="rounded-3xl border border-white/20 bg-[#161412] p-5">
               <div className="mb-4 flex items-center justify-between">
                 <span className="font-clash text-lg font-bold">CLI + MCP</span>
                 <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Recommended</span>
@@ -243,7 +260,7 @@ export default function LandingPage() {
               <Command onCopy={() => copy('kylrix mcp', setCopiedCli)} copied={copiedCli}>kylrix mcp</Command>
               <p className="mt-3 text-xs font-medium text-white">Connect Claude Code, Cursor, and local tools to your private workspace.</p>
             </div>
-            <div className="border border-white/20 bg-[#161412] p-5">
+            <div className="rounded-3xl border border-white/20 bg-[#161412] p-5">
               <div className="mb-4 flex items-center justify-between">
                 <span className="font-clash text-lg font-bold">Self-host with Docker</span>
                 <span className="text-xs font-bold uppercase tracking-widest text-white">Your server</span>
@@ -265,7 +282,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="relative z-10 mx-auto flex max-w-7xl flex-col justify-between gap-5 px-5 py-8 text-xs font-bold text-white sm:flex-row sm:items-center sm:px-8 lg:px-12">
-        <div className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center bg-indigo-500 font-clash text-xs text-white">K</span><span>KYLRIX © {new Date().getFullYear()}</span></div>
+        <div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-[#161412] p-1"><Logo app="root" variant="icon" size={24} /></span><span>KYLRIX © {new Date().getFullYear()}</span></div>
         <div className="flex flex-wrap gap-5">
           <a href="#why" className="hover:text-indigo-300">Why Kylrix</a>
           <a href="#connect" className="hover:text-indigo-300">Connect</a>
