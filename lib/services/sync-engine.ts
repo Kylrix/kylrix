@@ -170,7 +170,10 @@ async function flushGoalPending(
     return;
   }
 
-  const dataPayload = pickGoalAutosavePayload(payload);
+  const dataPayload = {
+    ...pickGoalAutosavePayload(payload),
+    userId: activeUserId,
+  };
   if (!String(dataPayload.title || '').trim()) {
     dataPayload.title = String(dataPayload.description || '').trim().slice(0, 32) || 'Untitled Goal';
   }
