@@ -118,29 +118,23 @@ export async function getRowCached(params: { databaseId: string; tableId: string
 
 export async function getActor(jwt?: string) {
   try {
-    let actor = await Registry.getAuth().getActor(jwt);
-    if (!actor) {
-      try {
-        const { headers } = await import('next/headers');
-        const { auth } = await import('@/lib/auth/better-auth');
-        const h = await headers();
-        const session = await auth.api.getSession({ headers: h });
-        if (session?.user) {
-          actor = {
-            $id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.name || '',
-            emailVerification: Boolean((session.user as any).emailVerified),
-            isAdmin: false,
-            labels: [],
-            prefs: {},
-          };
-        }
-      } catch (_betterAuthErr) {
-        // Fallback safely ignored
-      }
+    const { headers } = await import('next/headers');
+    const { auth } = await import('@/lib/auth/better-auth');
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (session?.user) {
+      return {
+        $id: session.user.id,
+        email: session.user.email || '',
+        name: session.user.name || '',
+        emailVerification: Boolean((session.user as any).emailVerified),
+        isAdmin: false,
+        labels: [],
+        prefs: {},
+      };
     }
-    return actor;
+
+    if (!jwt) return null;
+    return await Registry.getAuth().getActor(jwt);
   } catch (err) {
     console.error('[secure-ops] getActor exception:', err);
     return null;
