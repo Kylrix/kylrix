@@ -5,6 +5,7 @@ import { Box, Chip, Stack, Typography } from '@/lib/openbricks/primitives';
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { Query } from '@/lib/data';
 export enum TargetType {
   NOTE = 'note',
   COMMENT = 'comment',
