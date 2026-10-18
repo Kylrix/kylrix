@@ -16,10 +16,13 @@ const mockUpdateStatus = vi.fn(async (_id: string, _status: boolean) => ({}));
 // Mock dependencies
 vi.mock('@/lib/db', () => ({
   db: {
-    select: vi.fn().mockReturnThis(),
-    from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue([]),
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue([]),
+        })),
+      })),
+    })),
   },
 }));
 
@@ -27,7 +30,7 @@ vi.mock('@/lib/actions/contributor-ops', () => ({
   verifyAndApplyContributorStatus: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@/lib/data-admin', () => ({
+vi.mock('@/lib/data', () => ({
   createSystemClient: vi.fn(() => ({
     databases: {
       listRows: mockListRows,
@@ -63,7 +66,6 @@ describe('Subscription Entitlement & Fraud Suspension', () => {
     expect(entitlement1.active).toBe(false);
     expect(entitlement1.uiTier).toBe('FREE');
 
-    // Second call should serve from memory cache instantly
     const entitlement2 = await getVerifiedProEntitlementForUser('user_free_123');
     expect(entitlement2.active).toBe(false);
     expect(entitlement2.uiTier).toBe('FREE');
