@@ -46,6 +46,16 @@ curl -X POST https://www.kylrix.space/api/v1/agents/provision \
 
 ---
 
+## 🧠 Agent Continuous Learning & Skill Capture
+
+When autonomous AI agents work within the Kylrix repository, they follow a strict anti-regression protocol:
+
+1. **Document Learnings**: Whenever an agent resolves a non-trivial issue, deciphers fragile logic, or modifies core behaviors, it MUST capture its learnings in `.agents/skills/<topic>/SKILL.md` (or create a new skill directory if needed).
+2. **Consult System Invariants**: Agents must consult `.agents/skills/invariants/SKILL.md` for non-negotiable rules regarding workspace filtering, entity stamping, and local storage tombstones.
+3. **Real-World Bug Primacy**: Real-world bug reports and broken user experiences ALWAYS supersede locked-in invariants. If an invariant causes a bug in practice, agents must fix the code and update the documented invariant.
+
+---
+
 ## Autonomous Agent Dogfooding
 
 Agents building **on** Kylrix (the repo) use `http://localhost:3005/api/v1` — see `AGENTS.md`. **Integrators** on production use `https://www.kylrix.space/api/v1` and MCP at `/api/v1/mcp`.

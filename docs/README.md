@@ -1,8 +1,15 @@
 # Kylrix Ecosystem Documentation
 
-Developer docs for **integrators** — mobile apps, agents, and custom clients on Kylrix.
+Comprehensive documentation for developers, integrators, and autonomous agents working with or extending the Kylrix platform.
 
 **Start here:** [**Wire any agent in 60 seconds →**](./integrations.md)
+
+---
+
+## 📚 Documentation vs. Agent Skills (`.agents/skills/`)
+
+- **System Documentation (`docs/`)**: Public and internal documentation answering all questions about system architecture, data models, edge cases, feature behavior, and API integrations. Intended for human developers, external integrators, and AI agents alike.
+- **Agent Skills (`.agents/skills/`)**: Operational guides specifically tailored for autonomous agents and developers actively writing or modifying code in real-time. Contains non-negotiables, code quirks, implementation rules, invariants, and step-by-step modification guidelines.
 
 ---
 
@@ -10,6 +17,7 @@ Developer docs for **integrators** — mobile apps, agents, and custom clients o
 
 | Section | Description | Link |
 |---|---|---|
+| **Workspaces Architecture** | Filtering rules, `project_objects` join mapping, edge cases | [workspaces.md](./workspaces.md) |
 | **CLI & Stdio MCP Bridge** | Local-first SQLite, 1-click pairing, commands | [cli.md](./cli.md) |
 | **Agent Integrations** | Copy-paste prompt, MCP + REST setup, verify checklist | [integrations.md](./integrations.md) |
 | **Model Context Protocol (MCP)** | Streamable HTTP & SSE for Cursor, Claude, agents | [mcp.md](./mcp.md) |
