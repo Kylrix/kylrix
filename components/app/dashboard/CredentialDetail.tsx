@@ -96,9 +96,40 @@ export default function CredentialDetail({
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(!!credential.isPublic);
+  const [isVaultUnlockedState, setIsVaultUnlockedState] = useState(() => {
+    try {
+      const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+      const { ecosystemSecurity } = require('@/lib/ecosystem/security');
+      return !!(ecosystemSecurity?.status?.isUnlocked || masterPassCrypto.isVaultUnlocked());
+    } catch {
+      return false;
+    }
+  });
+
   const { requestSudo } = useSudo();
   const { open: openUnified } = useUnifiedDrawer();
   const { activeWorkspace } = useWorkspace();
+
+  useEffect(() => {
+    const syncUnlock = () => {
+      try {
+        const { masterPassCrypto } = require('@/lib/masterpass-crypto');
+        const { ecosystemSecurity } = require('@/lib/ecosystem/security');
+        setIsVaultUnlockedState(!!(ecosystemSecurity?.status?.isUnlocked || masterPassCrypto.isVaultUnlocked()));
+      } catch {}
+    };
+    const onUnlock = () => setIsVaultUnlockedState(true);
+    const onLock = () => setIsVaultUnlockedState(false);
+    window.addEventListener('vault-unlocked', onUnlock);
+    window.addEventListener('kylrix:vault-unlocked', onUnlock);
+    window.addEventListener('vault-locked', onLock);
+    syncUnlock();
+    return () => {
+      window.removeEventListener('vault-unlocked', onUnlock);
+      window.removeEventListener('kylrix:vault-unlocked', onUnlock);
+      window.removeEventListener('vault-locked', onLock);
+    };
+  }, []);
 
   useEffect(() => {
     setLiveCredential(credential);
@@ -112,14 +143,20 @@ export default function CredentialDetail({
           activeWorkspace && !activeWorkspace.isPersonal && activeWorkspace.isShared,
         );
 
-        if (!masterPassCrypto.isVaultUnlocked() && !isAgentic) return;
+        if (!isVaultUnlockedState && !isAgentic) {
+          if (!isCancelled) setLiveCredential(credential);
+          return;
+        }
 
         const fieldsToDecrypt = ['name', 'username', 'password', 'url', 'notes', 'customFields'];
         const updated = { ...credential };
         let changed = false;
 
         if (!isAgentic && !isShared) {
-          if (!masterPassCrypto.isVaultUnlocked()) return;
+          if (!masterPassCrypto.isVaultUnlocked()) {
+            if (!isCancelled) setLiveCredential(credential);
+            return;
+          }
 
           let dekKey: CryptoKey | null = null;
           if (credential.dek) {
@@ -169,6 +206,7 @@ export default function CredentialDetail({
           }
 
           if (changed && !isCancelled) setLiveCredential(updated);
+          else if (!changed && !isCancelled) setLiveCredential(credential);
           return;
         }
 
@@ -226,6 +264,7 @@ export default function CredentialDetail({
         }
 
         if (changed && !isCancelled) setLiveCredential(updated);
+        else if (!changed && !isCancelled) setLiveCredential(credential);
       } catch (e) {
         console.error('[CredentialDetail] Decryption error:', e);
       }
@@ -235,7 +274,7 @@ export default function CredentialDetail({
     return () => {
       isCancelled = true;
     };
-  }, [credential, activeWorkspace]);
+  }, [credential, activeWorkspace, isVaultUnlockedState]);
 
   const handleShareLink = useCallback(async () => {
     try {
