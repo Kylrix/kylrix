@@ -65,6 +65,15 @@ function coerceCachedTask(row: any): Task | null {
   // Already a live Task shape (cache / pushLiveGoal) — do NOT re-run Appwrite mapper
   // (that expects tags[] and would wipe projectId/labels).
   if (row.id && !row.$id) {
+    const rawPid = row.projectId || 'inbox';
+    const isExplicitPersonal = !rawPid || rawPid === 'inbox' || rawPid === 'default' || rawPid === 'personal';
+    const isWs = !isExplicitPersonal && (
+      row.isWorkspace === true ||
+      String(row.isWorkspace) === 'true' ||
+      row.is_workspace === true ||
+      String(row.is_workspace) === 'true' ||
+      Boolean(rawPid)
+    );
     return {
       ...row,
       id,
@@ -72,7 +81,7 @@ function coerceCachedTask(row: any): Task | null {
       description: String(row.description || ''),
       status: (row.status as TaskStatus) || 'todo',
       priority: (row.priority as Priority) || 'medium',
-      projectId: row.projectId || 'inbox',
+      projectId: isExplicitPersonal ? undefined : rawPid,
       labels: Array.isArray(row.labels) ? row.labels : [],
       linkedNotes: Array.isArray(row.linkedNotes) ? row.linkedNotes : [],
       subtasks: Array.isArray(row.subtasks) ? row.subtasks : [],
@@ -96,7 +105,7 @@ function coerceCachedTask(row: any): Task | null {
       discussionId: row.discussionId || null,
       scheduled: row.scheduled === true || String(row.scheduled) === 'true',
       isAgentic: row.isAgentic === true || String(row.isAgentic) === 'true',
-      isWorkspace: row.isWorkspace === true || String(row.isWorkspace) === 'true' || row.is_workspace === true || String(row.is_workspace) === 'true' || (Boolean(row.projectId) && row.projectId !== 'inbox' && row.projectId !== 'default' && row.projectId !== 'personal'),
+      isWorkspace: isWs,
       dek: row.dek || null,
     } as Task;
   }
@@ -183,7 +192,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
   const raw = doc as any;
   // Extract project ID from tags if present (format: "project:ID")
   const projectTag = raw.tags?.find((t: string) => String(t).startsWith('project:'));
-  const projectId = projectTag ? projectTag.split(':')[1] : (raw.projectId || raw.project_id || raw.workspaceId || 'inbox');
+  const rawProjectId = projectTag ? projectTag.split(':')[1] : (raw.projectId || raw.project_id || raw.workspaceId || 'inbox');
   const userLabels = raw.tags
     ? raw.tags.filter((t: string) => !String(t).startsWith('project:') && !String(t).startsWith('source:'))
     : (Array.isArray(raw.labels) ? raw.labels : []);
@@ -203,9 +212,9 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
       ? String(rawParent).trim()
       : null;
 
-  const isPersonalOrInbox = !projectId || projectId === 'inbox' || projectId === 'default' || projectId === 'personal';
+  const isPersonalOrInbox = !rawProjectId || rawProjectId === 'inbox' || rawProjectId === 'default' || rawProjectId === 'personal';
   const isWs = !isPersonalOrInbox && Boolean(
-    projectId ||
+    rawProjectId ||
     raw.isWorkspace === true ||
     String(raw.isWorkspace) === 'true' ||
     raw.is_workspace === true ||
@@ -218,7 +227,7 @@ export const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     description: doc.description || raw.description || '',
     status: (doc.status as TaskStatus) || (raw.status as TaskStatus) || 'todo',
     priority: (doc.priority as Priority) || (raw.priority as Priority) || 'medium',
-    projectId: projectId,
+    projectId: rawProjectId,
     labels: userLabels,
     linkedNotes: linkedNotes.length ? linkedNotes : (Array.isArray(raw.linkedNotes) ? raw.linkedNotes : []),
     subtasks: Array.isArray(raw.subtasks) ? raw.subtasks : [],
