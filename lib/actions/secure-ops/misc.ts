@@ -348,9 +348,22 @@ export async function upgradeKeychainToArgonAction(payload: {
     throw new Error('Unauthorized');
   }
 
-  const { upsertKeychainTurso } = await import('@/lib/actions/turso-ops');
+  const { upsertKeychainTurso, listKeychainTurso, deleteKeychainTurso } = await import('@/lib/actions/turso-ops');
+  const targetId = `keychain_${payload.userId}_password`;
+
+  try {
+    const existing = await listKeychainTurso(payload.userId);
+    if (existing.rows && Array.isArray(existing.rows)) {
+      for (const row of existing.rows) {
+        if (row.type === 'password' && row.id !== targetId && row.$id !== targetId) {
+          await deleteKeychainTurso(row.id || row.$id).catch(() => {});
+        }
+      }
+    }
+  } catch {}
+
   await upsertKeychainTurso({
-    id: crypto.randomUUID(),
+    id: targetId,
     userId: payload.userId,
     account: 'masterpass',
     type: 'password',

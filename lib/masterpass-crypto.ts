@@ -127,12 +127,12 @@ class MasterPassCrypto {
    * Attempts to recover the MEK from the Service Worker memory.
    */
   async recoverFromServiceWorker(): Promise<boolean> {
-    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker?.controller) {
       return false;
     }
 
     return new Promise((resolve) => {
-      if (!navigator.serviceWorker.controller) {
+      if (!navigator.serviceWorker?.controller) {
         resolve(false);
         return;
       }
@@ -163,7 +163,7 @@ class MasterPassCrypto {
    * Syncs the current MEK to the Service Worker for reload preservation.
    */
   private async syncToServiceWorker() {
-    if (!this.masterKey || typeof window === 'undefined' || !navigator.serviceWorker.controller) return;
+    if (!this.masterKey || typeof window === 'undefined' || typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker?.controller) return;
 
     try {
       const rawMek = await crypto.subtle.exportKey('raw', this.masterKey);
@@ -223,11 +223,12 @@ class MasterPassCrypto {
         userId
       );
       if (keychainSuccess) {
-        // Ensure user document is marked as having masterpass if keychain exists
-        const { AppwriteService } = await import("@/lib/data");
-        const userDoc = await AppwriteService.getUserDoc(userId);
+        // Local-first check on user document
+        const { SecurityEnclave } = await import("@/lib/security/enclave");
+        const userDoc = await SecurityEnclave.getUserDoc(userId);
         if (userDoc && !userDoc.masterpass && userDoc.email) {
-          await AppwriteService.setMasterpassFlag(userId, userDoc.email);
+          const { AppwriteService } = await import("@/lib/data");
+          void AppwriteService.setMasterpassFlag(userId, userDoc.email).catch(() => {});
         }
 
         // Sync with EcosystemSecurity for identity logic
@@ -236,12 +237,9 @@ class MasterPassCrypto {
 
         // Check if we need to silently synchronize MasterPass with account password
         try {
-          const { account } = await import("@/lib/data");
-          const userPrefs = await account.getPrefs().catch(() => ({})) as any;
-          const masterpassForLoginEnabled = userPrefs?.masterpass_for_login_enabled !== false;
-
-          const entry = await ecosystemSecurity.fetchKeychain(userId);
-          if (entry && !entry.authPass && masterpassForLoginEnabled) {
+          const { SecurityEnclave } = await import("@/lib/security/enclave");
+          const entry = await SecurityEnclave.getPasswordEntry(userId);
+          if (entry && !entry.authPass) {
             const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
             syncMasterpassToAccountPassword(userId, masterPassword)
               .then(() => console.log('[Vault] Silently synchronized masterpass to account password.'))
@@ -407,6 +405,12 @@ class MasterPassCrypto {
 
       if (!keychainEntry) {
         return false; // No keychain entry found
+      }
+
+      const { normalizeKeychainRow } = await import("@/lib/vault/normalize-keychain");
+      keychainEntry = normalizeKeychainRow(keychainEntry);
+      if (!keychainEntry || !keychainEntry.wrappedKey || !keychainEntry.salt) {
+        return false;
       }
 
       // Deterministic Argon2id detection: check explicit boolean, 32-byte salt length, or JSON string/object param
@@ -954,7 +958,7 @@ class MasterPassCrypto {
     resetSudo();
 
     // Wipe from Service Worker
-    if (typeof window !== 'undefined' && navigator.serviceWorker.controller) {
+    if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker?.controller) {
         navigator.serviceWorker.controller.postMessage({ type: 'WIPE_CONTEXT' });
     }
 

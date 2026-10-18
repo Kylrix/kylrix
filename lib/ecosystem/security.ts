@@ -147,25 +147,9 @@ class EcosystemSecurity {
       if (!offline) {
         try {
           const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+          const { normalizeKeychainRow } = await import('@/lib/vault/normalize-keychain');
           const remoteResult = await listKeychainTurso(resolvedUserId);
-          keychainEntries = (remoteResult.rows || []).map((row: any) => {
-            const metadata = typeof row.metadata === 'string'
-              ? (() => { try { return JSON.parse(row.metadata); } catch { return {}; } })()
-              : (row.metadata || {});
-            let params = metadata.params;
-            if (typeof params === 'string') {
-              try { params = JSON.parse(params); } catch {}
-            }
-            return {
-              ...row,
-              $id: row.id,
-              wrappedKey: row.encryptedPayload,
-              salt: metadata.salt || row.nonce,
-              params,
-              isArgon: metadata.isArgon,
-              credentialId: metadata.credentialId || (row.type === 'passkey' ? row.account : null),
-            };
-          });
+          keychainEntries = (remoteResult.rows || []).map(normalizeKeychainRow).filter(Boolean);
           if (keychainEntries.length > 0) {
             await SecurityEnclave.setKeychain(resolvedUserId, keychainEntries);
           }
@@ -1183,11 +1167,13 @@ class EcosystemSecurity {
 
   async fetchKeychain(userId: string): Promise<any | null> {
     const { SecurityEnclave, raceNetworkOrLocal } = await import('@/lib/security/enclave');
+    const { normalizeKeychainRow } = await import('@/lib/vault/normalize-keychain');
 
     const pickPassword = (rows: any[]) => {
       if (!rows.length) return null;
-      const passwordEntries = rows.filter((r: any) => r.type === 'password');
-      if (passwordEntries.length === 0) return rows[0];
+      const normalized = (rows || []).map(normalizeKeychainRow).filter(Boolean);
+      const passwordEntries = normalized.filter((r: any) => r.type === 'password');
+      if (passwordEntries.length === 0) return normalized[0] || null;
       return passwordEntries.find((r: any) => !r.isPending) || passwordEntries[0];
     };
 
@@ -1213,10 +1199,11 @@ class EcosystemSecurity {
       },
       local: async () => localRows});
 
-    if (Array.isArray(rows) && rows.length > 0) {
-      await SecurityEnclave.setKeychain(userId, rows);
+    const normalizedRows = (Array.isArray(rows) ? rows : []).map(normalizeKeychainRow).filter(Boolean);
+    if (normalizedRows.length > 0) {
+      await SecurityEnclave.setKeychain(userId, normalizedRows);
     }
-    return pickPassword(rows);
+    return pickPassword(normalizedRows);
   }
 
   getConversationKey(conversationId: string): CryptoKey | null {
