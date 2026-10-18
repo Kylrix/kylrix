@@ -17,6 +17,24 @@
 *   **Phase 1 (Bootstrap):** On initialization, read `TOKENS.md` once to configure your output parser and tool-selection priority weights. For domain work, read `.agents/skills/SKILLS.md` first (catalog of every skill), then open only the matching skill — do not scan skills one-by-one. For **architecture, vendor choice, or long-term stack** decisions, read `.agents/skills/kylrix/SKILL.md` before proposing dependencies.
 *   **Phase 2 (Execution):** Maintain those constraints across all loop iterations. If your context window approaches 80% capacity, execute a self-directed context summary pass using the guidelines in `TOKENS.md`.
 
+## 🧠 Continuous Learning & Anti-Regression Mandate (STRICT)
+
+1. **Heavy Emphasis on Learning**: To eliminate "two steps forward, one step backward" scenarios (where consecutive agents undo prior fixes, misinterpret subtle behaviors, or break fragile code paths), agents MUST proactively capture and document learnings.
+2. **Document Every Non-Trivial Quirk**: Whenever you make changes, fix bugs, or decipher an implementation nuance that requires even the slightest brainpower to understand, you MUST document your findings in the `.agents/skills/<topic>/SKILL.md` subdirectories.
+   - If no existing skill subdirectory fits the domain, **create a new subdirectory** under `.agents/skills/<topic>/SKILL.md` and register it in `.agents/skills/SKILLS.md`.
+   - Never leave hard-learned codebase quirks undocumented.
+3. **Knowledge Base Hierarchy (`.agents/skills/` vs `docs/`)**:
+   - **Agent Skills (`.agents/skills/`)**: Operational knowledge specifically tailored for developers and autonomous AI agents actively modifying the codebase in real-time. Contains implementation rules, non-negotiables, code quirks, data models, and skill-based workflows.
+   - **System Documentation (`docs/`)**: Comprehensive public and internal reference documentation intended for human developers, integrators, and AI agents. Answers every possible question regarding system architecture, feature behavior, data flows, edge cases, and rationale.
+
+## 🔒 Invariants & Real-World Reality Principle (STRICT)
+
+1. **Non-Negotiable System Invariants**: System invariants represent locked-in architectural constraints (e.g. workspace item filtering rules, `isWorkspace` / `projectId` stamping, `project_objects` joins, single database `passwordManagerDb`, Table/Row terminology, LocalEngine tombstones, and real-time PartyKit event dispatches).
+2. **Real-World Reports Supersede Recorded Invariants**:
+   - There is a recognized possibility that a past or rogue agent implemented something incorrectly and recorded it as an "invariant".
+   - **Real-world bug reports and practical system behavior ALWAYS supersede locked-in invariants.**
+   - *Example*: If workspace item filtering logic in vault secrets causes valid user items to disappear or fail to load, any invariant enforcing that specific broken filtering logic is not just useless—it is a dangerous pothole. Use discretion! When real-world user reports indicate broken behavior, fix the root issue and update the invariant documentation accordingly.
+
 ## 🏗️ Architectural Mandates
 
 ### 🚫 IMMUTABLE FILES & CLI SAFETY (STRICT)

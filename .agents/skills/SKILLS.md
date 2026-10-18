@@ -14,6 +14,7 @@ Hard policy also lives in repo-root `AGENTS.md` (Table/Row terms, single DB `pas
 |---|---|
 | `kylrix` | **North Star:** Anti-fragility, vendor independence, decade survivability, bare-metal end state. Read before major architecture, backend, or dependency decisions. |
 | `guardrails` | Enforces Kylrix architecture rules, routing (`/flows`, `/workspace/[id]`), shipping velocity, same-tab navigation, and dead-code hygiene. |
+| `invariants` | Non-negotiable architectural constraints, workspace data rules, fragile filtering logic, and real-world bug override rules. |
 | `system.ops` | Hexagonal DI registry, Server SDK actions, query expression mappers, build error fixes, chat relay, and join gating. |
 | `why` | Architectural rationale library: zero-trust invariants, data sovereignty, E2EE vs UX balance, passkeys, crypto checkout, and Telegram notification bridges. |
 
