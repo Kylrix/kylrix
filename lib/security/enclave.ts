@@ -106,20 +106,25 @@ export const SecurityEnclave = {
 
   async getKeychain(userId: string): Promise<any[]> {
     if (!userId || userId.startsWith('guest')) return [];
+    const { normalizeKeychainRow } = await import('@/lib/vault/normalize-keychain');
     const primary = await LocalEngine.cacheGet<any[]>(keychainKey(userId));
-    if (Array.isArray(primary) && primary.length > 0) return primary;
+    if (Array.isArray(primary) && primary.length > 0) {
+      return primary.map(normalizeKeychainRow).filter(Boolean);
+    }
 
     const legacy = await readFirst<any[]>(LEGACY_KEYCHAIN(userId));
     if (Array.isArray(legacy) && legacy.length > 0) {
-      await this.setKeychain(userId, legacy);
-      return legacy;
+      const normalized = legacy.map(normalizeKeychainRow).filter(Boolean);
+      await this.setKeychain(userId, normalized);
+      return normalized;
     }
-    return Array.isArray(primary) ? primary : [];
+    return Array.isArray(primary) ? primary.map(normalizeKeychainRow).filter(Boolean) : [];
   },
 
   async setKeychain(userId: string, rows: any[]): Promise<void> {
     if (!userId) return;
-    const list = Array.isArray(rows) ? rows : [];
+    const { normalizeKeychainRow } = await import('@/lib/vault/normalize-keychain');
+    const list = (Array.isArray(rows) ? rows : []).map(normalizeKeychainRow).filter(Boolean);
     await LocalEngine.cacheSet(keychainKey(userId), list);
     // Keep legacy keys warm so older readers still work during rollout
     await LocalEngine.cacheSet(`kylrix_keychain_${userId}`, list);
@@ -263,8 +268,11 @@ export const SecurityEnclave = {
 
     try {
       const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+      const { normalizeKeychainRow } = await import('@/lib/vault/normalize-keychain');
       const keychainRes = await listKeychainTurso(userId);
-      const keychainRows = Array.isArray(keychainRes.rows) ? keychainRes.rows : [];
+      const keychainRows = Array.isArray(keychainRes.rows)
+        ? keychainRes.rows.map(normalizeKeychainRow).filter(Boolean)
+        : [];
       if (keychainRows.length > 0) {
         await this.setKeychain(userId, keychainRows);
       }

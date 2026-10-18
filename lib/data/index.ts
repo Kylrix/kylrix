@@ -849,25 +849,9 @@ export const KeychainService = {
   async listKeychainEntries(userId?: string): Promise<any[]> {
     if (!userId) return [];
     const { listKeychainTurso } = await import('@/lib/actions/turso-ops');
+    const { normalizeKeychainRow } = await import('@/lib/vault/normalize-keychain');
     const result = await listKeychainTurso(userId);
-    return (result.rows || []).map((row: any) => {
-      const metadata = typeof row.metadata === 'string'
-        ? (() => { try { return JSON.parse(row.metadata); } catch { return {}; } })()
-        : (row.metadata || {});
-      let params = metadata.params;
-      if (typeof params === 'string') {
-        try { params = JSON.parse(params); } catch {}
-      }
-      return {
-        ...row,
-        $id: row.id,
-        wrappedKey: row.encryptedPayload,
-        salt: metadata.salt || row.nonce,
-        params,
-        isArgon: metadata.isArgon,
-        credentialId: metadata.credentialId || (row.type === 'passkey' ? row.account : null),
-      };
-    });
+    return (result.rows || []).map(normalizeKeychainRow).filter(Boolean);
   },
   async hasMasterpass(userId?: string): Promise<boolean> {
     const rows = await this.listKeychainEntries(userId);

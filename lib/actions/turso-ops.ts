@@ -319,13 +319,20 @@ export async function upsertKeychainTurso(data: typeof schema.keychain.$inferIns
   }
 }
 
+import { normalizeKeychainRow as normalizeKeychainRowSync } from '@/lib/vault/normalize-keychain';
+
+export async function normalizeKeychainRow(row: any): Promise<any> {
+  return normalizeKeychainRowSync(row);
+}
+
 export async function listKeychainTurso(userId: string) {
   try {
     const rows = await db
       .select()
       .from(schema.keychain)
       .where(eq(schema.keychain.userId, userId));
-    return { success: true, rows };
+    const normalizedRows = Array.isArray(rows) ? rows.map(normalizeKeychainRowSync) : [];
+    return { success: true, rows: normalizedRows };
   } catch (err: any) {
     console.error('[turso-ops] listKeychainTurso failed:', err);
     return { success: false, rows: [], error: err.message };
