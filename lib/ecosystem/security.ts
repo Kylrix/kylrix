@@ -166,6 +166,9 @@ class EcosystemSecurity {
               credentialId: metadata.credentialId || (row.type === 'passkey' ? row.account : null),
             };
           });
+          if (keychainEntries.length > 0) {
+            await SecurityEnclave.setKeychain(resolvedUserId, keychainEntries);
+          }
           userDoc = await SecurityEnclave.getUserDoc(resolvedUserId);
 
           this.hasMasterpassState = !!(
