@@ -160,7 +160,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         return;
       }
 
-      if (!mpOk) {
+      if (!mpOk && !passkeyOk) {
         const dismissedStr = localStorage.getItem(`${MP_DISMISS_KEY}${user.$id}`);
         const dismissedUntil = dismissedStr ? parseInt(dismissedStr, 10) : 0;
         if (now > dismissedUntil) {

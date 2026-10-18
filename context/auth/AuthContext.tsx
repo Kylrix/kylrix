@@ -114,23 +114,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (user?.$id) {
       const initServices = async () => {
-        try {
-          const { CollaborationService } = await import('@/lib/services/collaboration');
-          await CollaborationService.setupReplication(user.$id);
-        } catch {}
-        try {
-          const { UsersService } = await import('@/lib/services/users');
-          await UsersService.ensureProfileForUser(user);
-        } catch {}
-        try {
-          const { ensureBetterAuthUserTurso } = await import('@/lib/actions/turso-ops');
-          await ensureBetterAuthUserTurso({
-            id: user.$id,
-            name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
-            email: user.email || `${user.$id}@kylrix.local`,
-            emailVerified: Boolean(user.emailVerified),
-          });
-        } catch {}
+        await Promise.allSettled([
+          import('@/lib/services/collaboration').then(({ CollaborationService }) =>
+            CollaborationService.setupReplication(user.$id)
+          ),
+          import('@/lib/services/users').then(({ UsersService }) =>
+            UsersService.ensureProfileForUser(user)
+          ),
+          import('@/lib/actions/turso-ops').then(({ ensureBetterAuthUserTurso }) =>
+            ensureBetterAuthUserTurso({
+              id: user.$id,
+              name: user.name || (user.email ? user.email.split('@')[0] : 'User'),
+              email: user.email || `${user.$id}@kylrix.local`,
+              emailVerified: Boolean(user.emailVerified),
+            })
+          ),
+        ]);
       };
       void initServices();
     }

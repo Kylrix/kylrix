@@ -188,6 +188,9 @@ export async function consolidateUserByEmail(
   }
 }
 
+const userSyncCache = new Map<string, number>();
+const USER_SYNC_TTL_MS = 10 * 60 * 1000;
+
 /**
  * Ensures a user exists in Turso/Better Auth table.
  */
@@ -199,6 +202,12 @@ export async function ensureBetterAuthUserTurso(data: {
   image?: string | null;
 }) {
   try {
+    const now = Date.now();
+    const lastSync = userSyncCache.get(data.id);
+    if (lastSync && now - lastSync < USER_SYNC_TTL_MS) {
+      return { success: true, user: { id: data.id } };
+    }
+
     const consolidated = await consolidateUserByEmail(data.email, {
       id: data.id,
       name: data.name,
@@ -207,6 +216,7 @@ export async function ensureBetterAuthUserTurso(data: {
     });
 
     if (consolidated) {
+      userSyncCache.set(data.id, Date.now());
       return {
         success: true,
         user: {
