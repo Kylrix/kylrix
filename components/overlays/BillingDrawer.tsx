@@ -63,6 +63,22 @@ export function BillingContent() {
     }
   }, [user, loadCoupons]);
 
+  useEffect(() => {
+    const handlePaymentRequired = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      openUnified('pricing', {
+        tier: customEvent.detail?.planId || 'PRO',
+        message: customEvent.detail?.message || 'Database storage requires an upgraded Kylrix plan.',
+      });
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('kylrix:payment-required', handlePaymentRequired);
+      return () => {
+        window.removeEventListener('kylrix:payment-required', handlePaymentRequired);
+      };
+    }
+  }, [openUnified]);
+
   const handleGiftCheckout = useCallback(async () => {
     const recipientQuery = giftUsername.trim();
     if (!recipientQuery) {
