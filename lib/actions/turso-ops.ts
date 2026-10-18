@@ -475,7 +475,7 @@ export async function deleteTotpSecretTurso(id: string) {
   }
 }
 
-export async function upsertProjectTurso(data: typeof schema.projects.$inferInsert) {
+export async function upsertProjectTurso(data: Partial<typeof schema.projects.$inferInsert> & { id: string; creatorId: string; name?: string; title?: string }) {
   try {
     const existing = await db
       .select({ id: schema.projects.id })
@@ -483,16 +483,47 @@ export async function upsertProjectTurso(data: typeof schema.projects.$inferInse
       .where(eq(schema.projects.id, data.id))
       .limit(1);
 
+    const now = new Date().toISOString();
+    const nameVal = data.name || data.title || 'Workspace';
+    const titleVal = data.title || data.name || nameVal;
+
+    const payload: typeof schema.projects.$inferInsert = {
+      id: data.id,
+      creatorId: data.creatorId,
+      ownerId: data.ownerId || data.creatorId,
+      name: nameVal,
+      title: titleVal,
+      description: data.description || data.summary || '',
+      summary: data.summary || data.description || '',
+      slug: data.slug || null,
+      inviteCode: data.inviteCode || null,
+      status: data.status || 'active',
+      visibility: data.visibility || (data.isPublic ? 'public' : 'private'),
+      parentProjectId: data.parentProjectId || null,
+      kind: data.kind || 'workspace',
+      dek: data.dek || null,
+      isPublic: Boolean(data.isPublic),
+      isAgentic: Boolean(data.isAgentic),
+      isExternal: Boolean(data.isExternal),
+      externalClient: data.externalClient || null,
+      isLocked: Boolean(data.isLocked),
+      privacyMode: Boolean(data.privacyMode),
+      metadata: data.metadata || null,
+      createdAt: data.createdAt || now,
+      updatedAt: data.updatedAt || now,
+    };
+
     if (existing.length > 0) {
+      const { id: _id, createdAt: _ca, ...updateData } = payload;
       await db
         .update(schema.projects)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...updateData,
+          updatedAt: now,
         })
         .where(eq(schema.projects.id, data.id));
     } else {
-      await db.insert(schema.projects).values(data);
+      await db.insert(schema.projects).values(payload);
     }
     return { success: true };
   } catch (err: any) {
@@ -501,23 +532,90 @@ export async function upsertProjectTurso(data: typeof schema.projects.$inferInse
   }
 }
 
+export async function deleteWorkspaceTurso(workspaceId: string) {
+  try {
+    await db.delete(schema.projectObjects).where(eq(schema.projectObjects.workspaceId, workspaceId)).catch(() => {});
+    await db.delete(schema.workspaceMembers).where(eq(schema.workspaceMembers.workspaceId, workspaceId)).catch(() => {});
+    await db.delete(schema.collaborators).where(
+      and(
+        eq(schema.collaborators.resourceId, workspaceId),
+        eq(schema.collaborators.resourceType, 'project')
+      )
+    ).catch(() => {});
+    await db.delete(schema.projects).where(eq(schema.projects.id, workspaceId));
+    return { success: true };
+  } catch (err: any) {
+    console.error('[turso-ops] deleteWorkspaceTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function listWorkspacesTurso(userId: string) {
   try {
+    let allUserIds = [userId];
+    const userRow = await db.select().from(schema.user).where(eq(schema.user.id, userId)).limit(1);
+    if (userRow.length > 0 && userRow[0].email) {
+      const emailUsers = await db.select({ id: schema.user.id }).from(schema.user).where(eq(schema.user.email, userRow[0].email));
+      allUserIds = Array.from(new Set([userId, ...emailUsers.map((u) => u.id)]));
+    }
+
     const ownedRows = await db
       .select()
       .from(schema.projects)
-      .where(eq(schema.projects.creatorId, userId));
-    const memberships = await db
+      .where(
+        or(
+          inArray(schema.projects.creatorId, allUserIds),
+          inArray(schema.projects.ownerId, allUserIds)
+        )
+      );
+
+    const projectObjMemberships = await db
       .select({ workspaceId: schema.projectObjects.workspaceId })
       .from(schema.projectObjects)
-      .where(eq(schema.projectObjects.userId, userId));
-    const memberIds = memberships.map((row) => row.workspaceId).filter(Boolean);
+      .where(inArray(schema.projectObjects.userId, allUserIds));
+
+    const wsMemberships = await db
+      .select({ workspaceId: schema.workspaceMembers.workspaceId })
+      .from(schema.workspaceMembers)
+      .where(inArray(schema.workspaceMembers.userId, allUserIds));
+
+    const collabMemberships = await db
+      .select({ resourceId: schema.collaborators.resourceId })
+      .from(schema.collaborators)
+      .where(
+        and(
+          inArray(schema.collaborators.userId, allUserIds),
+          eq(schema.collaborators.resourceType, 'project')
+        )
+      );
+
+    const memberIds = Array.from(new Set([
+      ...projectObjMemberships.map((r) => r.workspaceId),
+      ...wsMemberships.map((r) => r.workspaceId),
+      ...collabMemberships.map((r) => r.resourceId),
+    ])).filter(Boolean);
+
     const sharedRows = memberIds.length
       ? await db.select().from(schema.projects).where(inArray(schema.projects.id, memberIds))
       : [];
-    const rows = Array.from(new Map(
-      [...ownedRows, ...sharedRows].map((row) => [row.id, row]),
-    ).values());
+
+    const combinedMap = new Map<string, any>();
+    for (const r of [...ownedRows, ...sharedRows]) {
+      const nameVal = r.name || r.title || 'Workspace';
+      const titleVal = r.title || r.name || nameVal;
+      const ownerVal = r.ownerId || r.creatorId || userId;
+      combinedMap.set(r.id, {
+        ...r,
+        $id: r.id,
+        id: r.id,
+        name: nameVal,
+        title: titleVal,
+        ownerId: ownerVal,
+        creatorId: r.creatorId || ownerVal,
+      });
+    }
+
+    const rows = Array.from(combinedMap.values());
     return { success: true, rows };
   } catch (err: any) {
     console.error('[turso-ops] listWorkspacesTurso failed:', err);

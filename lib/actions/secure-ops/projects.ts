@@ -208,8 +208,8 @@ export async function deleteProjectSecure(
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  await db.delete(schema.projectObjects).where(eq(schema.projectObjects.workspaceId, projectId)).catch(() => {});
-  await db.delete(schema.projects).where(eq(schema.projects.id, projectId)).catch(() => {});
+  const { deleteWorkspaceTurso } = await import('@/lib/actions/turso-ops');
+  await deleteWorkspaceTurso(projectId);
 
   return { success: true, id: projectId, isTrash: true };
 }
