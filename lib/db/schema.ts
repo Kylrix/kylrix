@@ -312,10 +312,18 @@ export const notes = ideas;
 export const workspaces = sqliteTable('workspaces', {
   id: text('id').primaryKey(),
   creatorId: text('creator_id').notNull(),
+  ownerId: text('owner_id'),
   name: text('name').notNull(),
+  title: text('title'),
   description: text('description').default(''),
+  summary: text('summary'),
   slug: text('slug'),
   inviteCode: text('invite_code'),
+  status: text('status'),
+  visibility: text('visibility'),
+  parentProjectId: text('parent_project_id'),
+  kind: text('kind'),
+  dek: text('dek'),
   isPublic: integer('is_public', { mode: 'boolean' }).default(false),
   isAgentic: integer('is_agentic', { mode: 'boolean' }).default(false),
   isExternal: integer('is_external', { mode: 'boolean' }).default(false),
@@ -327,6 +335,14 @@ export const workspaces = sqliteTable('workspaces', {
   updatedAt: text('updated_at').notNull(),
 });
 export const projects = workspaces;
+
+export const workspaceMembers = sqliteTable('workspace_members', {
+  id: text('id').primaryKey(),
+  workspaceId: text('workspace_id').notNull(),
+  userId: text('user_id').notNull(),
+  role: text('role').notNull().default('member'),
+  createdAt: text('created_at').notNull(),
+});
 
 export const externalContexts = sqliteTable('external_contexts', {
   id: text('id').primaryKey(),

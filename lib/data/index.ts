@@ -773,22 +773,30 @@ export function getKylrixPulse(): any {
 
 export const ProjectsService = {
   async listUserProjects(): Promise<{ rows: any[]; total: number }> {
-    return { rows: [], total: 0 };
+    const rows = await this.fetchRemoteProjects(true);
+    return { rows, total: rows.length };
   },
-  async getProject(_id?: string): Promise<any> {
-    return null;
+  async getProject(id?: string): Promise<any> {
+    if (!id) return null;
+    const { getWorkspaceTurso } = await import('@/lib/actions/turso-ops');
+    const res = await getWorkspaceTurso(id);
+    return res.workspace ? { ...res.workspace, $id: res.workspace.id } : null;
   },
   async listProjects(..._args: any[]): Promise<any> {
-    return { rows: [], total: 0 };
+    const rows = await this.fetchRemoteProjects(true);
+    return { rows, total: rows.length };
   },
-  async createProject(..._args: any[]): Promise<any> {
-    return {};
+  async createProject(data: any): Promise<any> {
+    const { createProjectSecure } = await import('@/lib/actions/secure-ops/projects');
+    return createProjectSecure(data);
   },
-  async updateProject(..._args: any[]): Promise<any> {
-    return {};
+  async updateProject(id: string, data: any): Promise<any> {
+    const { updateProjectSecure } = await import('@/lib/actions/secure-ops/projects');
+    return updateProjectSecure(id, data);
   },
-  async deleteProject(..._args: any[]): Promise<any> {
-    return { success: true };
+  async deleteProject(id: string, deleteMode: 'detach' | 'created_within' | 'all' = 'detach'): Promise<any> {
+    const { deleteProjectSecure } = await import('@/lib/actions/secure-ops/projects');
+    return deleteProjectSecure(id, deleteMode);
   },
   async removeCollaborator(..._args: any[]): Promise<any> {
     return { success: true };
@@ -796,8 +804,9 @@ export const ProjectsService = {
   async addCollaborator(..._args: any[]): Promise<any> {
     return { success: true };
   },
-  async rotateInviteCode(..._args: any[]): Promise<any> {
-    return { inviteCode: 'code' };
+  async rotateInviteCode(workspaceId: string, explicitCode?: string): Promise<any> {
+    const { rotateWorkspaceInviteCodeSecure } = await import('@/lib/actions/secure-ops/projects');
+    return rotateWorkspaceInviteCodeSecure(workspaceId, undefined, explicitCode);
   },
   async listProjectCollaborators(..._args: any[]): Promise<any> {
     return { rows: [], total: 0 };
@@ -805,14 +814,31 @@ export const ProjectsService = {
   async approveJoinRequest(..._args: any[]): Promise<any> {
     return { success: true };
   },
-  async listProjectObjectsByKind(..._args: any[]): Promise<any[]> {
-    return [];
+  async listProjectObjectsByKind(workspaceId: string, entityKind: string): Promise<any[]> {
+    try {
+      const { db } = await import('@/lib/db');
+      const schema = await import('@/lib/db/schema');
+      const { eq, and } = await import('drizzle-orm');
+      const rows = await db
+        .select()
+        .from(schema.projectObjects)
+        .where(
+          and(
+            eq(schema.projectObjects.workspaceId, workspaceId),
+            eq(schema.projectObjects.entityKind, entityKind)
+          )
+        );
+      return rows.map((r) => ({ ...r, $id: r.id }));
+    } catch {
+      return [];
+    }
   },
   async listTaggedResources(_wsId: string): Promise<any> {
     return { totps: [], notes: [], tasks: [], events: [] };
   },
-  async addObjectToProject(..._args: any[]): Promise<any> {
-    return { success: true };
+  async addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string): Promise<any> {
+    const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops/projects');
+    return addObjectToProjectSecure(projectId, entityKind, entityId, role);
   },
   async fetchRemoteProjects(..._args: any[]): Promise<any[]> {
     try {
