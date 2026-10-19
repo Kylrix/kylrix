@@ -4,22 +4,119 @@ import { getClient, hasAuth } from '@/packages/cli/src/client';
 
 export async function loginCommand(refreshCb?: () => void) {
   try {
-    const token = await vscode.window.showInputBox({
-      prompt: 'Enter your Kylrix Personal Access Token (PAT) or Agent Key',
-      placeHolder: 'kyl_pat_...',
-      password: true,
-    });
+    const method = await vscode.window.showQuickPick(
+      [
+        {
+          label: '$(globe) Sign in with browser',
+          description: 'Authorize this extension without copying a secret',
+          value: 'browser' as const,
+        },
+        {
+          label: '$(key) Use an API key',
+          description: 'Paste a Kylrix PAT or agent key',
+          value: 'apiKey' as const,
+        },
+      ],
+      {
+        title: 'Connect Kylrix',
+        placeHolder: 'Choose a secure sign-in method',
+      }
+    );
 
-    if (!token) return;
-
-    const apiUrl = vscode.workspace.getConfiguration('kylrix').get<string>('apiUrl') || 'https://www.kylrix.space';
-    saveConfig({ token, apiUrl });
-
-    vscode.window.showInformationMessage('Successfully authenticated with Kylrix!');
-    if (refreshCb) refreshCb();
+    if (!method) return;
+    if (method.value === 'browser') {
+      await loginWithBrowser(refreshCb);
+      return;
+    }
+    await loginWithApiKey(refreshCb);
   } catch (err: any) {
-    vscode.window.showErrorMessage(`Login failed: ${err.message}`);
+    vscode.window.showErrorMessage(`Login failed: ${err?.message || String(err)}`);
   }
+}
+
+export async function loginWithApiKey(refreshCb?: () => void) {
+  const token = await vscode.window.showInputBox({
+    title: 'Kylrix API key',
+    prompt: 'Enter a Kylrix Personal Access Token or agent key',
+    placeHolder: 'kyl_pat_...',
+    password: true,
+    ignoreFocusOut: true,
+  });
+
+  if (!token) return;
+
+  const apiUrl = vscode.workspace.getConfiguration('kylrix').get<string>('apiUrl') || 'https://www.kylrix.space';
+  const client = getClient({ url: apiUrl, token });
+  const profile = await client.auth.me();
+
+  saveConfig({
+    token,
+    apiUrl,
+    userId: profile.id,
+    email: profile.email,
+    tier: profile.tier,
+  });
+
+  vscode.window.showInformationMessage(`Connected to Kylrix as ${profile.email || profile.id}.`);
+  refreshCb?.();
+}
+
+export async function loginWithBrowser(refreshCb?: () => void) {
+  const apiUrl = vscode.workspace.getConfiguration('kylrix').get<string>('apiUrl') || 'https://www.kylrix.space';
+  const client = getClient({ url: apiUrl });
+  const session = await client.pairing.requestPairing({
+    clientName: 'Kylrix VS Code',
+    clientType: 'cli',
+    requestedScopes: ['*'],
+  });
+  const baseWebUrl = apiUrl.replace(/\/api\/v1$/, '');
+  const verificationUrl =
+    session.verificationUriComplete ||
+    `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
+
+  await vscode.env.openExternal(vscode.Uri.parse(verificationUrl));
+  const choice = await vscode.window.showInformationMessage(
+    `Approve Kylrix in your browser, then return here. Code: ${session.userCode}`,
+    'Copy code',
+  );
+  if (choice === 'Copy code') {
+    await vscode.env.clipboard.writeText(session.userCode);
+    vscode.window.showInformationMessage('Pairing code copied to your clipboard.');
+  }
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: 'Waiting for Kylrix approval',
+      cancellable: false,
+    },
+    async (progress) => {
+      const result = await client.pairing.pollExchange(session.deviceCode, {
+        intervalSeconds: Math.max(session.interval || 5, 5),
+        timeoutSeconds: session.expiresIn || 600,
+        onPoll: () => progress.report({ message: 'Approve the sign-in in your browser...' }),
+      });
+      let email: string | undefined;
+      let tier: string | undefined;
+      try {
+        const profile = await getClient({ url: apiUrl, token: result.token }).auth.me();
+        email = profile.email;
+        tier = profile.tier;
+      } catch {
+        // The pairing token is still valid when profile enrichment is unavailable.
+      }
+      saveConfig({
+        token: result.token,
+        apiUrl,
+        userId: result.userId,
+        email,
+        tier,
+      });
+    },
+  );
+
+  vscode.window.showInformationMessage('Kylrix browser sign-in complete.');
+  refreshCb?.();
 }
 
 export async function logoutCommand(refreshCb?: () => void) {

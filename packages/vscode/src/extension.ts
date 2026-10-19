@@ -11,6 +11,8 @@ import { TrashTreeProvider } from './views/trash';
 
 import {
   loginCommand,
+  loginWithApiKey,
+  loginWithBrowser,
   logoutCommand,
   whoamiCommand,
   switchAccountCommand,
@@ -78,6 +80,16 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('kylrix.refreshViews', refreshAllViews),
     vscode.commands.registerCommand('kylrix.login', () => loginCommand(refreshAllViews)),
+    vscode.commands.registerCommand('kylrix.loginWithApiKey', () =>
+      loginWithApiKey(refreshAllViews).catch((err: any) =>
+        vscode.window.showErrorMessage(`API key login failed: ${err?.message || String(err)}`)
+      )
+    ),
+    vscode.commands.registerCommand('kylrix.loginWithBrowser', () =>
+      loginWithBrowser(refreshAllViews).catch((err: any) =>
+        vscode.window.showErrorMessage(`Browser login failed: ${err?.message || String(err)}`)
+      )
+    ),
     vscode.commands.registerCommand('kylrix.logout', () => logoutCommand(refreshAllViews)),
     vscode.commands.registerCommand('kylrix.whoami', whoamiCommand),
     vscode.commands.registerCommand('kylrix.switchAccount', () => switchAccountCommand(refreshAllViews)),

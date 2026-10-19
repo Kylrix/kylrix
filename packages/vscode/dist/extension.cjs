@@ -956,15 +956,15 @@ var KylrixClient = class {
 
 // ../cli/src/client.ts
 function hasAuth(cliOptions = {}) {
-  const env2 = resolveEnvironment(cliOptions);
-  return Boolean(env2.token);
+  const env3 = resolveEnvironment(cliOptions);
+  return Boolean(env3.token);
 }
 function getClient(cliOptions = {}) {
-  const env2 = resolveEnvironment(cliOptions);
+  const env3 = resolveEnvironment(cliOptions);
   return new KylrixClient({
-    baseUrl: env2.apiUrl,
-    token: env2.token,
-    workspaceId: env2.workspaceId
+    baseUrl: env3.apiUrl,
+    token: env3.token,
+    workspaceId: env3.workspaceId
   });
 }
 
@@ -1015,8 +1015,8 @@ function getNativeSqlite() {
   }
 }
 function getDatabase(targetDbPath, cliOptions) {
-  const env2 = resolveEnvironment(cliOptions);
-  const dbPath = targetDbPath || env2.siloDbPath;
+  const env3 = resolveEnvironment(cliOptions);
+  const dbPath = targetDbPath || env3.siloDbPath;
   if (dbInstances.has(dbPath)) {
     return dbInstances.get(dbPath);
   }
@@ -1242,8 +1242,8 @@ function initSqliteSchema(db) {
 // ../cli/src/local/store.ts
 function loadFallback() {
   try {
-    const env2 = resolveEnvironment();
-    const fallbackPath = env2.siloFallbackPath;
+    const env3 = resolveEnvironment();
+    const fallbackPath = env3.siloFallbackPath;
     if (!fs3.existsSync(fallbackPath)) {
       return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
     }
@@ -1254,8 +1254,8 @@ function loadFallback() {
 }
 function saveFallback(data) {
   try {
-    const env2 = resolveEnvironment();
-    const fallbackPath = env2.siloFallbackPath;
+    const env3 = resolveEnvironment();
+    const fallbackPath = env3.siloFallbackPath;
     const dir = path3.dirname(fallbackPath);
     if (!fs3.existsSync(dir)) {
       fs3.mkdirSync(dir, { recursive: true });
@@ -2535,20 +2535,20 @@ var StatusTreeProvider = class {
     if (element) return [];
     const items = [];
     try {
-      const env2 = resolveEnvironment();
+      const env3 = resolveEnvironment();
       const _config = loadConfig();
       const isAuthed = hasAuth();
-      const accountLabel = isAuthed ? `Account: ${env2.email || env2.userId || "Logged In"}` : "Account: Anonymous (Local Mode)";
-      const accountDesc = env2.tier ? `Tier: ${env2.tier}` : isAuthed ? "Cloud Connected" : "Local Only";
+      const accountLabel = isAuthed ? `Account: ${env3.email || env3.userId || "Logged In"}` : "Account: Anonymous (Local Mode)";
+      const accountDesc = env3.tier ? `Tier: ${env3.tier}` : isAuthed ? "Cloud Connected" : "Local Only";
       items.push(new StatusItem(accountLabel, accountDesc, "account", {
         command: "kylrix.whoami",
         title: "View Identity"
       }));
-      items.push(new StatusItem(`Server: ${env2.apiUrl}`, env2.partitionKey === "default" ? "Default Cloud" : "Self-Hosted", "server", {
+      items.push(new StatusItem(`Server: ${env3.apiUrl}`, env3.partitionKey === "default" ? "Default Cloud" : "Self-Hosted", "server", {
         command: "kylrix.switchServer",
         title: "Switch Server"
       }));
-      items.push(new StatusItem(`Workspace: ${env2.workspaceId || "Personal Virtual Workspace"}`, "Active Context", "briefcase", {
+      items.push(new StatusItem(`Workspace: ${env3.workspaceId || "Personal Virtual Workspace"}`, "Active Context", "briefcase", {
         command: "kylrix.switchWorkspace",
         title: "Switch Workspace"
       }));
@@ -3157,19 +3157,106 @@ var TrashTreeProvider = class {
 var vscode10 = __toESM(require("vscode"), 1);
 async function loginCommand(refreshCb) {
   try {
-    const token = await vscode10.window.showInputBox({
-      prompt: "Enter your Kylrix Personal Access Token (PAT) or Agent Key",
-      placeHolder: "kyl_pat_...",
-      password: true
-    });
-    if (!token) return;
-    const apiUrl = vscode10.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
-    saveConfig({ token, apiUrl });
-    vscode10.window.showInformationMessage("Successfully authenticated with Kylrix!");
-    if (refreshCb) refreshCb();
+    const method = await vscode10.window.showQuickPick(
+      [
+        {
+          label: "$(globe) Sign in with browser",
+          description: "Authorize this extension without copying a secret",
+          value: "browser"
+        },
+        {
+          label: "$(key) Use an API key",
+          description: "Paste a Kylrix PAT or agent key",
+          value: "apiKey"
+        }
+      ],
+      {
+        title: "Connect Kylrix",
+        placeHolder: "Choose a secure sign-in method"
+      }
+    );
+    if (!method) return;
+    if (method.value === "browser") {
+      await loginWithBrowser(refreshCb);
+      return;
+    }
+    await loginWithApiKey(refreshCb);
   } catch (err) {
-    vscode10.window.showErrorMessage(`Login failed: ${err.message}`);
+    vscode10.window.showErrorMessage(`Login failed: ${err?.message || String(err)}`);
   }
+}
+async function loginWithApiKey(refreshCb) {
+  const token = await vscode10.window.showInputBox({
+    title: "Kylrix API key",
+    prompt: "Enter a Kylrix Personal Access Token or agent key",
+    placeHolder: "kyl_pat_...",
+    password: true,
+    ignoreFocusOut: true
+  });
+  if (!token) return;
+  const apiUrl = vscode10.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
+  const client = getClient({ url: apiUrl, token });
+  const profile = await client.auth.me();
+  saveConfig({
+    token,
+    apiUrl,
+    userId: profile.id,
+    email: profile.email,
+    tier: profile.tier
+  });
+  vscode10.window.showInformationMessage(`Connected to Kylrix as ${profile.email || profile.id}.`);
+  refreshCb?.();
+}
+async function loginWithBrowser(refreshCb) {
+  const apiUrl = vscode10.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
+  const client = getClient({ url: apiUrl });
+  const session = await client.pairing.requestPairing({
+    clientName: "Kylrix VS Code",
+    clientType: "cli",
+    requestedScopes: ["*"]
+  });
+  const baseWebUrl = apiUrl.replace(/\/api\/v1$/, "");
+  const verificationUrl = session.verificationUriComplete || `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
+  await vscode10.env.openExternal(vscode10.Uri.parse(verificationUrl));
+  const choice = await vscode10.window.showInformationMessage(
+    `Approve Kylrix in your browser, then return here. Code: ${session.userCode}`,
+    "Copy code"
+  );
+  if (choice === "Copy code") {
+    await vscode10.env.clipboard.writeText(session.userCode);
+    vscode10.window.showInformationMessage("Pairing code copied to your clipboard.");
+  }
+  await vscode10.window.withProgress(
+    {
+      location: vscode10.ProgressLocation.Notification,
+      title: "Waiting for Kylrix approval",
+      cancellable: false
+    },
+    async (progress) => {
+      const result = await client.pairing.pollExchange(session.deviceCode, {
+        intervalSeconds: Math.max(session.interval || 5, 5),
+        timeoutSeconds: session.expiresIn || 600,
+        onPoll: () => progress.report({ message: "Approve the sign-in in your browser..." })
+      });
+      let email;
+      let tier;
+      try {
+        const profile = await getClient({ url: apiUrl, token: result.token }).auth.me();
+        email = profile.email;
+        tier = profile.tier;
+      } catch {
+      }
+      saveConfig({
+        token: result.token,
+        apiUrl,
+        userId: result.userId,
+        email,
+        tier
+      });
+    }
+  );
+  vscode10.window.showInformationMessage("Kylrix browser sign-in complete.");
+  refreshCb?.();
 }
 async function logoutCommand(refreshCb) {
   try {
@@ -3182,16 +3269,16 @@ async function logoutCommand(refreshCb) {
 }
 async function whoamiCommand() {
   try {
-    const env2 = resolveEnvironment();
+    const env3 = resolveEnvironment();
     const isAuthed = hasAuth();
     if (!isAuthed) {
       vscode10.window.showInformationMessage("Kylrix: Currently in Anonymous / Local-First mode.");
       return;
     }
     const client = getClient();
-    let detail = `Account: ${env2.email || env2.userId || "Authenticated"}
-Server: ${env2.apiUrl}
-Workspace: ${env2.workspaceId || "Personal"}`;
+    let detail = `Account: ${env3.email || env3.userId || "Authenticated"}
+Server: ${env3.apiUrl}
+Workspace: ${env3.workspaceId || "Personal"}`;
     try {
       const user = await client.auth.me();
       if (user?.email) detail += `
@@ -3854,6 +3941,18 @@ function activate(context) {
   context.subscriptions.push(
     vscode17.commands.registerCommand("kylrix.refreshViews", refreshAllViews),
     vscode17.commands.registerCommand("kylrix.login", () => loginCommand(refreshAllViews)),
+    vscode17.commands.registerCommand(
+      "kylrix.loginWithApiKey",
+      () => loginWithApiKey(refreshAllViews).catch(
+        (err) => vscode17.window.showErrorMessage(`API key login failed: ${err?.message || String(err)}`)
+      )
+    ),
+    vscode17.commands.registerCommand(
+      "kylrix.loginWithBrowser",
+      () => loginWithBrowser(refreshAllViews).catch(
+        (err) => vscode17.window.showErrorMessage(`Browser login failed: ${err?.message || String(err)}`)
+      )
+    ),
     vscode17.commands.registerCommand("kylrix.logout", () => logoutCommand(refreshAllViews)),
     vscode17.commands.registerCommand("kylrix.whoami", whoamiCommand),
     vscode17.commands.registerCommand("kylrix.switchAccount", () => switchAccountCommand(refreshAllViews)),
@@ -3887,11 +3986,11 @@ function activate(context) {
 function updateStatusBar() {
   if (!statusBarItem) return;
   try {
-    const env2 = resolveEnvironment();
+    const env3 = resolveEnvironment();
     const isAuthed = hasAuth();
-    const ws = env2.workspaceId ? ` [ws:${env2.workspaceId}]` : "";
+    const ws = env3.workspaceId ? ` [ws:${env3.workspaceId}]` : "";
     statusBarItem.text = `$(shield) Kylrix${ws}`;
-    statusBarItem.tooltip = `Server: ${env2.apiUrl}
+    statusBarItem.tooltip = `Server: ${env3.apiUrl}
 Status: ${isAuthed ? "Logged In" : "Local Mode"}
 Click to view identity`;
     statusBarItem.show();
@@ -3907,4 +4006,4 @@ function deactivate() {
   activate,
   deactivate
 });
-//# sourceMappingURL=extension.js.map
+//# sourceMappingURL=extension.cjs.map

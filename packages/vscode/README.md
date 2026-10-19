@@ -17,7 +17,14 @@ Official VS Code Extension for **Kylrix** — Sovereign AI Vault, Notes, 2FA Aut
 
 - **Full Command Palette Integration**:
   - Access all Kylrix commands directly via `Ctrl+Shift+P` / `Cmd+Shift+P` -> `Kylrix: ...`.
+- **Modern sign-in options**:
+  - Use **Login with API Key** for the same PAT/agent-key flow as `@kylrix/cli`.
+  - Use **Login with Browser** for browser approval and device pairing; the returned session is saved to the shared CLI config.
 
 - **Shared Backend & Sovereign Storage**:
   - Automatically reuses local SQLite database (`~/.kylrix/silos/...`), account sessions, and encryption state shared with `@kylrix/cli`.
   - Works 100% standalone whether the CLI binary is installed or not.
+
+The extension bundle is emitted as CommonJS (`dist/extension.cjs`) even though the package uses
+ES modules elsewhere. This is required by the VS Code extension host and avoids loading the
+CommonJS bundle as an ES module.

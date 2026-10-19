@@ -9,7 +9,7 @@
     "type": "git",
     "url": "https://github.com/Kylrix/kylrix"
   },
-  "main": "./dist/extension.js",
+  "main": "./dist/extension.cjs",
   "type": "module",
   "engines": {
     "vscode": "^1.80.0"
@@ -35,39 +35,48 @@
       "kylrix-sidebar": [
         {
           "id": "kylrix.view.status",
-          "name": "Identity & Session"
+          "name": "Home",
+          "icon": "$(home)"
         },
         {
           "id": "kylrix.view.ideas",
-          "name": "Notes & Ideas"
+          "name": "Notes",
+          "icon": "$(notebook)"
         },
         {
           "id": "kylrix.view.goals",
-          "name": "Goals & Progress"
+          "name": "Goals",
+          "icon": "$(target)"
         },
         {
           "id": "kylrix.view.vault",
-          "name": "Vault & Credentials"
+          "name": "Vault",
+          "icon": "$(lock)"
         },
         {
           "id": "kylrix.view.totp",
-          "name": "2FA Authenticator"
+          "name": "Authenticator",
+          "icon": "$(shield)"
         },
         {
           "id": "kylrix.view.events",
-          "name": "Events, Forms & Flows"
+          "name": "Activity",
+          "icon": "$(calendar)"
         },
         {
           "id": "kylrix.view.chats",
-          "name": "Chats & Discussions"
+          "name": "Conversations",
+          "icon": "$(comment-discussion)"
         },
         {
           "id": "kylrix.view.agents",
-          "name": "Agents & Context"
+          "name": "Assistant",
+          "icon": "$(sparkle)"
         },
         {
           "id": "kylrix.view.trash",
-          "name": "Trash & Tags"
+          "name": "Archive",
+          "icon": "$(archive)"
         }
       ]
     },
@@ -75,6 +84,16 @@
       {
         "command": "kylrix.login",
         "title": "Login / Pair Device",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.loginWithApiKey",
+        "title": "Login with API Key",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.loginWithBrowser",
+        "title": "Login with Browser",
         "category": "Kylrix"
       },
       {
@@ -188,7 +207,21 @@
         "category": "Kylrix"
       }
     ],
+    "viewsWelcome": [
+      {
+        "view": "kylrix.view.status",
+        "contents": "Connect Kylrix to bring your notes, goals, and secure workspace into VS Code.\n\n[Sign in with browser](command:kylrix.loginWithBrowser)  [Use an API key](command:kylrix.loginWithApiKey)"
+      }
+    ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "kylrix.loginWithApiKey"
+        },
+        {
+          "command": "kylrix.loginWithBrowser"
+        }
+      ],
       "view/title": [
         {
           "command": "kylrix.refreshViews",
@@ -223,12 +256,12 @@
         "kylrix.apiUrl": {
           "type": "string",
           "default": "https://www.kylrix.space",
-          "description": "Kylrix API backend base URL"
+          "description": "Kylrix server URL. API requests use its /api/v1 endpoint."
         },
         "kylrix.autoSync": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically sync local items with cloud workspace"
+          "description": "Automatically sync local items with your Kylrix workspace"
         }
       }
     }

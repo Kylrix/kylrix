@@ -12,7 +12,7 @@ export default defineConfig({
   noExternal: [/@kylrix\/.*/, /picocolors/],
   outExtension() {
     return {
-      js: '.js',
+      js: '.cjs',
     };
   },
 });
