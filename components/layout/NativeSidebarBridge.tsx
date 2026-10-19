@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
-import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import {
   NATIVE_SIDEBAR_WIDTHS,
@@ -20,11 +19,6 @@ import { isCommChatOverlayContent } from '@/components/objects/CommObjectDetail'
 import { AgenticPanelContent } from '@/components/overlays/AgenticPanelContent';
 import { useSelection } from '@/context/SelectionContext';
 import { UniversalSelectionActions } from '@/components/selection/UniversalSelectionActions';
-
-const WalletSidebar = dynamic(
-  () => import('@/components/overlays/WalletSidebar').then((m) => m.WalletSidebar),
-  { ssr: false },
-);
 
 const DESKTOP_MQ = '(min-width: 768px)';
 
@@ -52,7 +46,6 @@ export function NativeSidebarBridge() {
   const overlay = useOverlay();
   const dynamic = useDynamicSidebar();
   const agentic = useAgenticDrawer();
-  const wallet = useWalletOverlay();
   const unified = useUnifiedDrawer();
   const selection = useSelection();
   const isDesktop = useIsDesktopRail();
@@ -134,49 +127,6 @@ export function NativeSidebarBridge() {
           },
         },
       });
-      return;
-    }
-
-    if (wallet.isWalletOpen) {
-      if (!isDesktop) {
-        if (lastKeyRef.current === 'wallet_mobile') return;
-        lastKeyRef.current = 'wallet_mobile';
-        overlay.openOverlay(
-          <WalletSidebar
-            isOpen
-            embedded
-            onClose={() => {
-              lastKeyRef.current = null;
-              wallet.closeWallet();
-              overlay.closeOverlay();
-            }}
-            tokenIntent={wallet.tokenIntent}
-            onConsumeTokenIntent={wallet.consumeTokenIntent}
-          />
-        );
-        return;
-      }
-      if (lastKeyRef.current === 'wallet') return;
-      lastKeyRef.current = 'wallet';
-      openRef.current(
-        <WalletSidebar
-          isOpen
-          embedded
-          onClose={() => {
-            lastKeyRef.current = null;
-            wallet.closeWallet();
-            dismissRef.current();
-          }}
-          tokenIntent={wallet.tokenIntent}
-          onConsumeTokenIntent={wallet.consumeTokenIntent}
-        />,
-        {
-          key: 'wallet',
-          width: NATIVE_SIDEBAR_WIDTHS.default,
-          title: 'Wallet',
-          restore: { type: 'wallet' },
-        },
-      );
       return;
     }
 
@@ -286,7 +236,6 @@ export function NativeSidebarBridge() {
     agentic.isOpen,
     agentic.pendingPrompt,
     agentic.pendingAutoRun,
-    wallet.isWalletOpen,
     unified.activeContent,
     unified.drawerData,
     dynamic.isOpen,
@@ -303,11 +252,7 @@ export function NativeSidebarBridge() {
       agentic.closeAgenticDrawer();
       lastKeyRef.current = null;
     }
-    if (!isOpen && wallet.isWalletOpen && (lastKeyRef.current === 'wallet' || lastKeyRef.current === 'wallet_mobile')) {
-      wallet.closeWallet();
-      lastKeyRef.current = null;
-    }
-  }, [isOpen, agentic.isOpen, wallet.isWalletOpen]);
+  }, [isOpen, agentic.isOpen]);
 
   void activeKey;
 

@@ -13,8 +13,7 @@ import type { SubscriptionTier, PaymentMethod, RegionConfig } from '@/lib/subscr
 import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { account } from '@/lib/data';
 import { useAuth } from '@/context/auth/AuthContext';
-import { BillingCacheService } from '@/lib/services/billing';
-import type { WalletSummary } from '@/lib/services/wallets';
+import { BillingCacheService, type WalletSummary } from '@/lib/services/billing';
 
 export type { BillingUiTier };
 

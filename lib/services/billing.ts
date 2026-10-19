@@ -1,5 +1,3 @@
-import { KylrixTokenService } from './token';
-import { WalletService, type WalletSummary } from './wallets';
 import { verifyProEntitlementAction, hydrateSessionAction } from '@/lib/actions/billing/billing';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { type BillingUiTier } from '../subscription/tier-resolution';
@@ -9,109 +7,39 @@ interface BalanceData {
   symbol: string;
 }
 
+export interface WalletSummary {
+  id: string;
+  chain: string;
+  label: string;
+  symbol: string;
+  family: string;
+  address: string;
+  type?: string;
+  publicProfile?: boolean;
+}
+
 interface EntitlementData {
   uiTier: BillingUiTier;
   active: boolean;
   expiresAt: string | null;
 }
 
-let balanceCache: { data: BalanceData; expiresAt: number } | null = null;
-let walletsCache: { data: WalletSummary[]; expiresAt: number } | null = null;
 let entitlementCache: { data: EntitlementData; expiresAt: number } | null = null;
-
-let balanceInFlight: Promise<BalanceData> | null = null;
-let walletsInFlight: Promise<WalletSummary[]> | null = null;
 let entitlementInFlight: Promise<EntitlementData> | null = null;
 let hydrationInFlight: Promise<any> | null = null;
 
 const TTL = 30000;
 const DEBOUNCE_MS = 2000;
 
-let lastBalanceFetch = 0;
-let lastWalletsFetch = 0;
 let lastEntitlementFetch = 0;
 
 export const BillingCacheService = {
-  async getBalance(userId: string, force = false): Promise<BalanceData> {
-    const now = Date.now();
-    if (!force && balanceCache && balanceCache.expiresAt > now) {
-      return balanceCache.data;
-    }
-
-    if (force && now - lastBalanceFetch < DEBOUNCE_MS && balanceCache) {
-      return balanceCache.data;
-    }
-
-    if (balanceInFlight) return balanceInFlight;
-
-    balanceInFlight = (async () => {
-      try {
-        const { getUserTokenBalanceAction } = await import('@/lib/actions/turso-ops');
-        const res = await getUserTokenBalanceAction(userId);
-        if (res && res.amountMicro) {
-          const data = { amount: res.amount, symbol: res.symbol };
-          balanceCache = { data, expiresAt: Date.now() + TTL };
-          lastBalanceFetch = Date.now();
-          return data;
-        }
-      } catch {}
-
-      return KylrixTokenService.getUserBalance(userId).then((res) => {
-        const data = { amount: res.amount, symbol: res.symbol };
-        balanceCache = { data, expiresAt: Date.now() + TTL };
-        lastBalanceFetch = Date.now();
-        return data;
-      });
-    })().finally(() => {
-      balanceInFlight = null;
-    });
-
-    return balanceInFlight;
+  async getBalance(_userId: string, _force = false): Promise<BalanceData> {
+    return { amount: '0', symbol: 'KYLRIX' };
   },
 
-  async getWallets(userId: string, force = false): Promise<WalletSummary[]> {
-    const now = Date.now();
-    if (!force && walletsCache && walletsCache.expiresAt > now) {
-      return walletsCache.data;
-    }
-
-    if (force && now - lastWalletsFetch < DEBOUNCE_MS && walletsCache) {
-      return walletsCache.data;
-    }
-
-    if (walletsInFlight) return walletsInFlight;
-
-    walletsInFlight = (async () => {
-      try {
-        const { getUserWalletsAction } = await import('@/lib/actions/turso-ops');
-        const tursoWallets = await getUserWalletsAction(userId);
-        if (tursoWallets && Array.isArray(tursoWallets) && tursoWallets.length > 0) {
-          const mapped: WalletSummary[] = tursoWallets.map((w: any) => ({
-            id: w.id,
-            chain: w.chain,
-            label: w.chain.toUpperCase(),
-            symbol: w.chain.toUpperCase(),
-            family: 'evm',
-            address: w.address,
-            type: w.type || 'main',
-            publicProfile: true,
-          }));
-          walletsCache = { data: mapped, expiresAt: Date.now() + TTL };
-          lastWalletsFetch = Date.now();
-          return mapped;
-        }
-      } catch {}
-
-      return WalletService.listMainWallets(userId).then((data) => {
-        walletsCache = { data, expiresAt: Date.now() + TTL };
-        lastWalletsFetch = Date.now();
-        return data;
-      });
-    })().finally(() => {
-      walletsInFlight = null;
-    });
-
-    return walletsInFlight;
+  async getWallets(_userId: string, _force = false): Promise<WalletSummary[]> {
+    return [];
   },
 
   async getEntitlement(userId: string, force = false): Promise<EntitlementData> {
@@ -189,8 +117,6 @@ export const BillingCacheService = {
     if (hydrationInFlight) return hydrationInFlight;
 
     hydrationInFlight = Promise.all([
-      this.getBalance(userId, force),
-      this.getWallets(userId, force),
       this.getEntitlement(userId, force),
     ]).finally(() => {
       hydrationInFlight = null;
@@ -205,16 +131,8 @@ export const BillingCacheService = {
 
       if (data.billing) {
         const b = data.billing;
-        balanceCache = {
-          data: { amount: b.balance.amount, symbol: b.balance.symbol },
-          expiresAt: Date.now() + TTL,
-        };
         entitlementCache = {
           data: { uiTier: b.tier, active: b.active, expiresAt: b.expiresAt },
-          expiresAt: Date.now() + TTL,
-        };
-        walletsCache = {
-          data: b.wallets as WalletSummary[],
           expiresAt: Date.now() + TTL,
         };
       }
@@ -226,8 +144,6 @@ export const BillingCacheService = {
   },
 
   invalidate() {
-    balanceCache = null;
-    walletsCache = null;
     entitlementCache = null;
   },
 };
