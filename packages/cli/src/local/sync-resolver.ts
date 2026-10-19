@@ -443,7 +443,7 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
             description: item.description,
             status: item.status || 'not_started',
             workspaceId: opts.workspace,
-          });
+          } as any);
           db.prepare("UPDATE goals SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
           pushedGoals++;
         } catch (err: any) {
@@ -510,7 +510,7 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
             title: item.title,
             description: item.description,
             status: item.status || 'draft',
-          });
+          } as any);
           db.prepare("UPDATE flows SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
           pushedFlows++;
         } catch (err: any) {
@@ -554,7 +554,7 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
                   description: item.description,
                   status: item.status || 'not_started',
                   workspaceId: opts.workspace,
-                });
+                } as any);
                 item.syncStatus = 'synced';
                 item.cloudId = created.id;
                 pushedGoals++;
@@ -614,7 +614,7 @@ export async function pushLocalItemsToCloud(opts: { url?: string; token?: string
                   title: item.title,
                   description: item.description,
                   status: item.status || 'draft',
-                });
+                } as any);
                 item.syncStatus = 'synced';
                 item.cloudId = created.id;
                 pushedFlows++;

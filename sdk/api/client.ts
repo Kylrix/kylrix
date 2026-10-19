@@ -119,7 +119,7 @@ export class KylrixClient {
   }
 
   public async request<T = any>(
-    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
     path: string,
     options: ApiRequestOptions = {},
   ): Promise<T> {
@@ -160,17 +160,18 @@ export class KylrixClient {
     const data = isJson ? await res.json().catch(() => null) : await res.text();
 
     if (!res.ok) {
+      const errObj: any = typeof data === 'object' && data !== null ? data : {};
       const errMsg =
-        data?.error?.message ||
-        data?.error ||
-        data?.message ||
+        errObj?.error?.message ||
+        errObj?.error ||
+        errObj?.message ||
         `Kylrix API error HTTP ${res.status}: ${res.statusText}`;
-      const errCode = data?.error?.code || data?.code || (res.status === 401 ? 'unauthorized' : 'api_error');
+      const errCode = errObj?.error?.code || errObj?.code || (res.status === 401 ? 'unauthorized' : 'api_error');
       throw new KylrixApiError(errMsg, res.status, errCode, data);
     }
 
     if (data && typeof data === 'object' && 'ok' in data && 'data' in data) {
-      return data.data as T;
+      return (data as any).data as T;
     }
 
     return data as T;

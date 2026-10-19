@@ -23,7 +23,7 @@ export class PairingClient {
       body: JSON.stringify(input),
     });
 
-    const json = await res.json().catch(() => null);
+    const json: any = await res.json().catch(() => null);
     if (!res.ok || !json?.ok || !json?.data) {
       throw new Error(json?.error?.message || `Failed to initiate pairing: HTTP ${res.status}`);
     }
@@ -54,7 +54,7 @@ export class PairingClient {
         body: JSON.stringify({ device_code: deviceCode }),
       });
 
-      const json = await res.json().catch(() => null);
+      const json: any = await res.json().catch(() => null);
 
       if (res.ok && json?.ok && json?.data?.access_token) {
         return {

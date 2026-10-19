@@ -12,6 +12,7 @@
     "dev": "next dev --turbopack -H 0.0.0.0 -p ${PORT:-3005}",
     "build": "next build --turbopack",
     "build:cli": "pnpm --filter @kylrix/cli build",
+    "build:vscode": "pnpm --filter kylrix-vscode build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern '.agents' --max-warnings 50",
     "test": "echo \"No unit tests specified\" && exit 0"
