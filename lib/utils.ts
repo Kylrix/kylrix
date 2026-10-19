@@ -40,25 +40,30 @@ export function getUserSubscriptionTier(user: any): string {
   if (!user) return 'FREE';
 
   let cacheTier: BillingUiTier | null = null;
-  if (typeof window !== 'undefined') {
-    const cached = localStorage.getItem(`kylrix_entitlement_${user.$id}`);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed.expiresAt) {
-          const end = new Date(parsed.expiresAt);
-          if (end > new Date()) {
-            cacheTier = String(parsed.uiTier || 'FREE').toUpperCase() as BillingUiTier;
-          }
-        } else if (parsed.active && (parsed.uiTier === 'PRO' || parsed.uiTier === 'TEAMS' || parsed.uiTier === 'LIFETIME' || parsed.uiTier === 'ORG')) {
-          cacheTier = parsed.uiTier as BillingUiTier;
+  if (user.$id && typeof window !== 'undefined') {
+    const peeked = BillingCacheService.peekEntitlement(user.$id);
+    if (peeked) {
+      if (peeked.expiresAt) {
+        const end = new Date(peeked.expiresAt);
+        if (end > new Date()) {
+          cacheTier = String(peeked.uiTier || 'FREE').toUpperCase() as BillingUiTier;
         }
-      } catch {}
+      } else if (
+        peeked.active &&
+        (peeked.uiTier === 'PRO' ||
+          peeked.uiTier === 'TEAMS' ||
+          peeked.uiTier === 'LIFETIME' ||
+          peeked.uiTier === 'ORG' ||
+          peeked.uiTier === 'CONTRIBUTOR')
+      ) {
+        cacheTier = peeked.uiTier as BillingUiTier;
+      }
     }
   }
 
+  const contribTier: BillingUiTier = user.isContributor || user.prefs?.isContributor ? 'CONTRIBUTOR' : 'FREE';
   const prefsTier = user.prefs ? resolveEffectiveBillingTier(user.prefs) : 'FREE';
-  return maxBillingUiTier(cacheTier || 'FREE', prefsTier);
+  return maxBillingUiTier(cacheTier || 'FREE', prefsTier, contribTier);
 }
 
 /** Prefer this over comparing to PRO only — includes ORG/LIFETIME. Self-hosted always true. */

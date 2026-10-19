@@ -139,8 +139,13 @@ export function IdentityAvatar({
   const resolvedIsAvatar = profileRecord ? profileRecord.isAvatar : isAvatar;
   const resolvedIsPublic = profileRecord ? profileRecord.isPublic : isPublic;
   const resolvedIsGuest = profileRecord ? profileRecord.isGuest : isGuest;
+  const resolvedProfileTier = String(profileRecord?.tier || '').toUpperCase();
   const resolvedPro = profileRecord
-    ? String(profileRecord.tier || '').toUpperCase() === 'PRO'
+    ? resolvedProfileTier === 'PRO' ||
+      resolvedProfileTier === 'CONTRIBUTOR' ||
+      resolvedProfileTier === 'TEAMS' ||
+      resolvedProfileTier === 'ORG' ||
+      resolvedProfileTier === 'LIFETIME'
     : pro;
   const resolvedVerified = profileRecord
     ? computeIdentityFlags(profileRecord).verified
