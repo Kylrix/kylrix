@@ -2,7 +2,7 @@
 
 import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from '@/lib/notes/compose-draft-registry';
 import { updateNote, createNote } from '@/lib/actions/client-ops';
-import { getLiveNoteForSync, getLiveGoalForSync } from '@/lib/sync/pending-sync-bridge';
+import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 import { parseGoalPendingKey, goalPendingKey } from '@/lib/sync/goal-keys';
@@ -193,6 +193,46 @@ async function flushGoalPending(
   autonomicSyncEngine.ack(goalId, flushRevision);
 }
 
+async function flushEventPending(
+  pendingKey: string,
+  eventId: string,
+  queuedRevision: string,
+  db: any,
+  activeUserId: string | null
+) {
+  let payload = pendingPayloads.get(pendingKey) || pendingPayloads.get(eventId) || getLiveEventForSync(eventId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`event_${eventId}`).exec();
+      payload = doc?.data || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload || !activeUserId) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    return;
+  }
+
+  const flushRevision = queuedRevision;
+  const { updateEvent, createEvent } = await import('@/lib/actions/client-ops');
+
+  try {
+    await updateEvent(eventId, { ...payload, userId: activeUserId });
+  } catch {
+    await createEvent({ ...payload, $id: eventId, userId: activeUserId });
+  }
+
+  failedSyncAttempts.delete(pendingKey);
+  failedSyncAttempts.delete(eventId);
+  autonomicSyncEngine.ack(pendingKey, flushRevision);
+  autonomicSyncEngine.ack(eventId, flushRevision);
+}
+
 async function flushNotePending(
   noteId: string,
   queuedRevision: string,
@@ -342,7 +382,13 @@ export const autonomicSyncEngine = {
     if (goalId) {
       pendingById.delete(goalId);
       pendingPayloads.delete(goalId);
+    } else if (id.startsWith('event:')) {
+      const rawEventId = id.replace(/^event:/, '');
+      pendingById.delete(rawEventId);
+      pendingPayloads.delete(rawEventId);
     } else {
+      pendingById.delete(`event:${id}`);
+      pendingPayloads.delete(`event:${id}`);
       pendingById.delete(goalPendingKey(id));
       pendingPayloads.delete(goalPendingKey(id));
     }
@@ -376,7 +422,15 @@ export const autonomicSyncEngine = {
       pendingById.delete(goalId);
       pendingPayloads.delete(goalId);
       failedSyncAttempts.delete(goalId);
+    } else if (id.startsWith('event:')) {
+      const rawEventId = id.replace(/^event:/, '');
+      pendingById.delete(rawEventId);
+      pendingPayloads.delete(rawEventId);
+      failedSyncAttempts.delete(rawEventId);
     } else {
+      pendingById.delete(`event:${id}`);
+      pendingPayloads.delete(`event:${id}`);
+      failedSyncAttempts.delete(`event:${id}`);
       pendingById.delete(goalPendingKey(id));
       pendingPayloads.delete(goalPendingKey(id));
       failedSyncAttempts.delete(goalPendingKey(id));
@@ -421,11 +475,16 @@ export const autonomicSyncEngine = {
       for (const pendingId of pendingIds) {
         const queuedRevision = pendingById.get(pendingId) || '';
         try {
-          const goalId = parseGoalPendingKey(pendingId);
-          if (goalId) {
-            await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
+          if (pendingId.startsWith('event:')) {
+            const rawEventId = pendingId.replace(/^event:/, '');
+            await flushEventPending(pendingId, rawEventId, queuedRevision, db, activeUserId);
           } else {
-            await flushNotePending(pendingId, queuedRevision, db, activeUserId);
+            const goalId = parseGoalPendingKey(pendingId);
+            if (goalId) {
+              await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
+            } else {
+              await flushNotePending(pendingId, queuedRevision, db, activeUserId);
+            }
           }
         } catch {}
       }

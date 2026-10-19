@@ -336,7 +336,7 @@ export default function TaskList() {
         kind="goal"
         onClose={() => setCreateOpen(false)}
         onGoalCreated={() => {
-          toast.success('Goal saved locally');
+          toast.success('Goal saved — syncing in background');
         }}
       />
     </>
