@@ -145,6 +145,143 @@ function goalRevisionOf(task: any): string {
   }
 }
 
+function getRelatedKeys(rawId: string): string[] {
+  const clean = String(rawId || '').trim();
+  if (!clean) return [];
+  const keys = new Set<string>([clean]);
+  if (clean.includes(':')) {
+    const parts = clean.split(':');
+    if (parts[1]) keys.add(parts[1]);
+  } else {
+    keys.add(`cred:${clean}`);
+    keys.add(`totp:${clean}`);
+    keys.add(`form:${clean}`);
+    keys.add(`event:${clean}`);
+    keys.add(goalPendingKey(clean));
+  }
+  return Array.from(keys);
+}
+
+async function flushCredentialPending(
+  pendingKey: string,
+  credId: string,
+  queuedRevision: string,
+  db: any,
+  activeUserId: string | null
+) {
+  let payload = pendingPayloads.get(pendingKey) || pendingPayloads.get(credId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`cred_${credId}`).exec();
+      payload = doc?.data || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload || !activeUserId) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    return;
+  }
+
+  const flushRevision = queuedRevision;
+  const { createCredential, updateCredential } = await import('@/lib/data');
+
+  try {
+    await updateCredential(credId, { ...payload, userId: activeUserId }, { skipPending: true });
+  } catch {
+    await createCredential({ ...payload, id: credId, userId: activeUserId }, { skipPending: true });
+  }
+
+  failedSyncAttempts.delete(pendingKey);
+  failedSyncAttempts.delete(credId);
+  autonomicSyncEngine.ack(pendingKey, flushRevision);
+  autonomicSyncEngine.ack(credId, flushRevision);
+}
+
+async function flushTotpPending(
+  pendingKey: string,
+  totpId: string,
+  queuedRevision: string,
+  db: any,
+  activeUserId: string | null
+) {
+  let payload = pendingPayloads.get(pendingKey) || pendingPayloads.get(totpId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`totp_${totpId}`).exec();
+      payload = doc?.data || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload || !activeUserId) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    return;
+  }
+
+  const flushRevision = queuedRevision;
+  const { createTotpSecret, updateTotpSecret } = await import('@/lib/data');
+
+  try {
+    await updateTotpSecret(totpId, { ...payload, userId: activeUserId }, { skipPending: true });
+  } catch {
+    await createTotpSecret({ ...payload, id: totpId, userId: activeUserId }, { skipPending: true });
+  }
+
+  failedSyncAttempts.delete(pendingKey);
+  failedSyncAttempts.delete(totpId);
+  autonomicSyncEngine.ack(pendingKey, flushRevision);
+  autonomicSyncEngine.ack(totpId, flushRevision);
+}
+
+async function flushFormPending(
+  pendingKey: string,
+  formId: string,
+  queuedRevision: string,
+  db: any,
+  activeUserId: string | null
+) {
+  let payload = pendingPayloads.get(pendingKey) || pendingPayloads.get(formId);
+
+  if (!payload && db) {
+    try {
+      const doc = await db.cache.findOne(`form_${formId}`).exec();
+      payload = doc?.data || null;
+    } catch {
+      payload = null;
+    }
+  }
+
+  if (!payload || !activeUserId) {
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
+    return;
+  }
+
+  const flushRevision = queuedRevision;
+  const { updateForm, createForm } = await import('@/lib/actions/client-ops');
+
+  try {
+    await updateForm(formId, { ...payload, userId: activeUserId }, { skipPending: true });
+  } catch {
+    await createForm({ ...payload, $id: formId, id: formId, userId: activeUserId }, { skipPending: true });
+  }
+
+  failedSyncAttempts.delete(pendingKey);
+  failedSyncAttempts.delete(formId);
+  autonomicSyncEngine.ack(pendingKey, flushRevision);
+  autonomicSyncEngine.ack(formId, flushRevision);
+}
+
 async function flushGoalPending(
   pendingKey: string,
   goalId: string,
@@ -222,9 +359,9 @@ async function flushEventPending(
   const { updateEvent, createEvent } = await import('@/lib/actions/client-ops');
 
   try {
-    await updateEvent(eventId, { ...payload, userId: activeUserId });
+    await updateEvent(eventId, { ...payload, userId: activeUserId }, { skipPending: true });
   } catch {
-    await createEvent({ ...payload, $id: eventId, userId: activeUserId });
+    await createEvent({ ...payload, $id: eventId, userId: activeUserId }, { skipPending: true });
   }
 
   failedSyncAttempts.delete(pendingKey);
@@ -322,7 +459,7 @@ export const autonomicSyncEngine = {
     const rev = String(revision || Date.now()).trim() || String(Date.now());
 
     let id = rawId;
-    if (!parseGoalPendingKey(rawId) && getLiveGoalForSync(rawId)) {
+    if (!parseGoalPendingKey(rawId) && !rawId.includes(':') && getLiveGoalForSync(rawId)) {
       id = goalPendingKey(rawId);
     }
 
@@ -334,9 +471,13 @@ export const autonomicSyncEngine = {
     if (payload) {
       pendingPayloads.set(id, payload);
       pendingPayloads.set(rawId, payload);
+      if (rawId.includes(':')) {
+        const unPrefixed = rawId.split(':')[1];
+        if (unPrefixed) pendingPayloads.set(unPrefixed, payload);
+      }
     }
 
-    if (!parseGoalPendingKey(id)) {
+    if (!parseGoalPendingKey(id) && !id.includes(':')) {
       markComposeDraft(id);
     }
     writePersistedQueue();
@@ -356,8 +497,10 @@ export const autonomicSyncEngine = {
     if (!id) return false;
     if (id.startsWith('live-') || id.startsWith('thread-')) return true;
     if (pendingById.has(id)) return true;
-    if (pendingById.has(`event:${id}`)) return true;
+    if (pendingById.has(`cred:${id}`)) return true;
+    if (pendingById.has(`totp:${id}`)) return true;
     if (pendingById.has(`form:${id}`)) return true;
+    if (pendingById.has(`event:${id}`)) return true;
     if (pendingById.has(`tag:${id}`)) return true;
     return pendingById.has(goalPendingKey(id));
   },
@@ -376,27 +519,20 @@ export const autonomicSyncEngine = {
       return;
     }
     const cleanPayload = pendingPayloads.get(id) || (parseGoalPendingKey(id) ? pendingPayloads.get(parseGoalPendingKey(id)!) : null);
-    pendingById.delete(id);
-    pendingPayloads.delete(id);
-    const goalId = parseGoalPendingKey(id);
-    if (goalId) {
-      pendingById.delete(goalId);
-      pendingPayloads.delete(goalId);
-    } else if (id.startsWith('event:')) {
-      const rawEventId = id.replace(/^event:/, '');
-      pendingById.delete(rawEventId);
-      pendingPayloads.delete(rawEventId);
-    } else {
-      pendingById.delete(`event:${id}`);
-      pendingPayloads.delete(`event:${id}`);
-      pendingById.delete(goalPendingKey(id));
-      pendingPayloads.delete(goalPendingKey(id));
+
+    const related = getRelatedKeys(id);
+    for (const k of related) {
+      pendingById.delete(k);
+      pendingPayloads.delete(k);
+      failedSyncAttempts.delete(k);
     }
+
     if (cleanPayload) {
-      LocalEngine.snapshotBaseline(id, cleanPayload);
-      if (goalId) LocalEngine.snapshotBaseline(goalId, cleanPayload);
+      for (const k of related) {
+        LocalEngine.snapshotBaseline(k, cleanPayload);
+      }
     }
-    if (!parseGoalPendingKey(id)) {
+    if (!parseGoalPendingKey(id) && !id.includes(':')) {
       markComposePersisted(id);
       markNotePersistedRemote(id);
     }
@@ -414,32 +550,17 @@ export const autonomicSyncEngine = {
   cancelPending(noteOrGoalId: string) {
     const id = String(noteOrGoalId || '').trim();
     if (!id) return;
-    const goalId = parseGoalPendingKey(id);
-    pendingById.delete(id);
-    pendingPayloads.delete(id);
-    failedSyncAttempts.delete(id);
-    if (goalId) {
-      pendingById.delete(goalId);
-      pendingPayloads.delete(goalId);
-      failedSyncAttempts.delete(goalId);
-    } else if (id.startsWith('event:')) {
-      const rawEventId = id.replace(/^event:/, '');
-      pendingById.delete(rawEventId);
-      pendingPayloads.delete(rawEventId);
-      failedSyncAttempts.delete(rawEventId);
-    } else {
-      pendingById.delete(`event:${id}`);
-      pendingPayloads.delete(`event:${id}`);
-      failedSyncAttempts.delete(`event:${id}`);
-      pendingById.delete(goalPendingKey(id));
-      pendingPayloads.delete(goalPendingKey(id));
-      failedSyncAttempts.delete(goalPendingKey(id));
+    const related = getRelatedKeys(id);
+    for (const k of related) {
+      pendingById.delete(k);
+      pendingPayloads.delete(k);
+      failedSyncAttempts.delete(k);
+      LocalEngine.clearBaseline(k);
     }
-    if (!parseGoalPendingKey(id)) {
+    if (!parseGoalPendingKey(id) && !id.includes(':')) {
       markComposePersisted(id);
       markNotePersistedRemote(id);
     }
-    LocalEngine.clearBaseline(id);
     writePersistedQueue();
     notifyStatusListeners();
   },
@@ -475,7 +596,16 @@ export const autonomicSyncEngine = {
       for (const pendingId of pendingIds) {
         const queuedRevision = pendingById.get(pendingId) || '';
         try {
-          if (pendingId.startsWith('event:')) {
+          if (pendingId.startsWith('cred:')) {
+            const rawId = pendingId.replace(/^cred:/, '');
+            await flushCredentialPending(pendingId, rawId, queuedRevision, db, activeUserId);
+          } else if (pendingId.startsWith('totp:')) {
+            const rawId = pendingId.replace(/^totp:/, '');
+            await flushTotpPending(pendingId, rawId, queuedRevision, db, activeUserId);
+          } else if (pendingId.startsWith('form:')) {
+            const rawId = pendingId.replace(/^form:/, '');
+            await flushFormPending(pendingId, rawId, queuedRevision, db, activeUserId);
+          } else if (pendingId.startsWith('event:')) {
             const rawEventId = pendingId.replace(/^event:/, '');
             await flushEventPending(pendingId, rawEventId, queuedRevision, db, activeUserId);
           } else {

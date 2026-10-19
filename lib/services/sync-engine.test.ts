@@ -60,7 +60,7 @@ describe('autonomicSyncEngine', () => {
     const clientOps = await import('../actions/client-ops');
     expect(clientOps.updateNote).toHaveBeenCalledWith('note_999', expect.anything());
     expect(clientOps.updateGoal).toHaveBeenCalledWith('goal_999', expect.anything());
-    expect(clientOps.updateEvent).toHaveBeenCalledWith('event_999', expect.anything());
+    expect(clientOps.updateEvent).toHaveBeenCalledWith('event_999', expect.anything(), expect.anything());
 
     expect(autonomicSyncEngine.isPending('note_999')).toBe(false);
     expect(autonomicSyncEngine.isPending('goal_999')).toBe(false);
