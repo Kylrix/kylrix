@@ -61,6 +61,10 @@ class PartyKitRealtimeClient {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
+        // Trigger instant flush when socket connects or reconnects
+        import('@/lib/services/sync-engine').then(({ autonomicSyncEngine }) => {
+          autonomicSyncEngine.flushImmediately();
+        }).catch(() => {});
       };
 
       this.socket.onmessage = (event) => {
@@ -103,7 +107,7 @@ class PartyKitRealtimeClient {
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       this.connect();
-    }, 2000);
+    }, 500);
   }
 
   private dispatchToSubscribers(data: {
