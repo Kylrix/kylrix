@@ -195,7 +195,7 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
     case 'agent-create':
       return <AgentCreateDrawer />;
     case 'share-context':
-      return <ShareContextDrawer />;
+      return <ShareContextDrawer data={drawerData} onClose={onClose} />;
     case 'share-note':
       return (
         <ShareNoteDrawer

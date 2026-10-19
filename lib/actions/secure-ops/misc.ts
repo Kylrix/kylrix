@@ -269,8 +269,87 @@ export async function toggleResourcePublicGuestSecure(params: {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { resourceType, resourceId, mode, projectId } = params;
-  const isPublic = mode === 'publish' || mode === 'guest_on';
-  const isGuest = mode === 'publish' || mode === 'guest_on';
+  const isPublic = mode === 'publish' || mode === 'guest_on' || mode === 'copy_only';
+  const isGuest = mode === 'publish' || mode === 'guest_on' || mode === 'copy_only';
+  const now = new Date().toISOString();
+
+  const kind = String(resourceType);
+  try {
+    if (kind === 'note' || kind === 'idea') {
+      await db.update(schema.notes).set({
+        isPublished: isPublic,
+        updatedAt: now,
+      }).where(eq(schema.notes.id, resourceId));
+    } else if (kind === 'goal' || kind === 'task') {
+      await db.update(schema.goals).set({
+        updatedAt: now,
+      }).where(eq(schema.goals.id, resourceId));
+    } else if (kind === 'form') {
+      await db.update(schema.forms).set({
+        isPublic,
+        isGuest,
+        updatedAt: now,
+      }).where(eq(schema.forms.id, resourceId));
+    } else if (kind === 'event') {
+      await db.update(schema.events).set({
+        isPublic,
+        isGuest,
+        updatedAt: now,
+      }).where(eq(schema.events.id, resourceId));
+    } else if (kind === 'project' || kind === 'workspace') {
+      await db.update(schema.workspaces).set({
+        isPublic,
+        visibility: isPublic ? 'public' : 'private',
+        updatedAt: now,
+      }).where(eq(schema.workspaces.id, resourceId));
+    } else if (kind === 'agentic' || kind === 'agent_session') {
+      await db.update(schema.agenticSessions).set({
+        isPublic,
+        isGuest,
+        updatedAt: now,
+      }).where(eq(schema.agenticSessions.id, resourceId));
+    } else if (kind === 'workflow' || kind === 'flow') {
+      await db.update(schema.workflows).set({
+        isPublic,
+        isGuest,
+      }).where(eq(schema.workflows.id, resourceId));
+    }
+  } catch (dbErr) {
+    console.warn('[toggleResourcePublicGuestSecure] DB update warning:', dbErr);
+  }
+
+  try {
+    const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+    const tableMap: Record<string, string> = {
+      note: 'ideas',
+      idea: 'ideas',
+      goal: 'goals',
+      task: 'goals',
+      form: 'forms',
+      event: 'events',
+      project: 'projects',
+      workspace: 'projects',
+      agentic: 'agentic_sessions',
+      workflow: 'workflows',
+      flow: 'workflows',
+    };
+    const tableId = tableMap[resourceType] || 'ideas';
+    void broadcastRealtimeEvent({
+      tableId,
+      rowId: resourceId,
+      action: 'update',
+      payload: {
+        id: resourceId,
+        $id: resourceId,
+        isPublic,
+        isGuest,
+        isPublished: isPublic,
+        updatedAt: now,
+      },
+    });
+  } catch (rtErr) {
+    console.warn('[toggleResourcePublicGuestSecure] Realtime broadcast warning:', rtErr);
+  }
 
   const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
 
@@ -282,11 +361,63 @@ export async function toggleResourcePublicGuestSecure(params: {
   };
 }
 
-export async function getResourcePublicGuestSecure(_params: {
+export async function getResourcePublicGuestSecure(params: {
   resourceType: PublicResourceType;
   resourceId: string;
   jwt?: string;
 }) {
+  const { resourceType, resourceId } = params;
+  const kind = String(resourceType);
+  try {
+    if (kind === 'note' || kind === 'idea') {
+      const rows = await db.select().from(schema.notes).where(eq(schema.notes.id, resourceId));
+      if (rows.length > 0) {
+        const row = rows[0];
+        return {
+          isPublic: Boolean(row.isPublished),
+          isGuest: Boolean(row.isPublished),
+          isPinned: Boolean(row.isPinned),
+          userId: row.userId,
+        };
+      }
+    } else if (kind === 'form') {
+      const rows = await db.select().from(schema.forms).where(eq(schema.forms.id, resourceId));
+      if (rows.length > 0) {
+        const row = rows[0];
+        return {
+          isPublic: Boolean(row.isPublic),
+          isGuest: Boolean(row.isGuest),
+          isPinned: Boolean(row.isPinned),
+          userId: row.userId,
+        };
+      }
+    } else if (kind === 'event') {
+      const rows = await db.select().from(schema.events).where(eq(schema.events.id, resourceId));
+      if (rows.length > 0) {
+        const row = rows[0];
+        return {
+          isPublic: Boolean(row.isPublic),
+          isGuest: Boolean(row.isGuest),
+          isPinned: Boolean(row.isPinned),
+          userId: row.userId,
+        };
+      }
+    } else if (kind === 'project' || kind === 'workspace') {
+      const rows = await db.select().from(schema.workspaces).where(eq(schema.workspaces.id, resourceId));
+      if (rows.length > 0) {
+        const row = rows[0];
+        return {
+          isPublic: Boolean(row.isPublic),
+          isGuest: Boolean(row.isPublic),
+          isPinned: false,
+          userId: row.creatorId,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[getResourcePublicGuestSecure] Read warning:', err);
+  }
+
   return {
     isPublic: true,
     isGuest: true,

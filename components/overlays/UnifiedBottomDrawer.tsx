@@ -24,10 +24,19 @@ export function UnifiedBottomDrawer() {
   }, []);
 
   if (!activeContent || (activeContent as string) === 'navbar' || (activeContent as string) === 'note') return null;
-  // Desktop: native right rail only — never render bottom drawer for sidebar surfaces (nuclear wipe = right sidebar, not drawer)
-  if ((['new-chat', 'delete-confirm', 'delete-note', 'security-confirm', 'project-join-request-confirm'] as string[]).includes(activeContent as string)) {
-    if (isDesktop) return null;
-    // mobile stays as bottom drawer — fall through
+  // Desktop: native right rail only — never render bottom drawer for sidebar surfaces
+  if (isDesktop && ([
+    'share-context',
+    'share-note',
+    'access-control',
+    'ecosystem-send',
+    'new-chat',
+    'delete-confirm',
+    'delete-note',
+    'security-confirm',
+    'project-join-request-confirm',
+  ] as string[]).includes(activeContent as string)) {
+    return null;
   }
 
   const content = (

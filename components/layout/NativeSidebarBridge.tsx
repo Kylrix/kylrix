@@ -150,7 +150,9 @@ export function NativeSidebarBridge() {
           sticky: unified.activeContent === 'agentic',
           title: unified.activeContent === 'new-project'
             ? 'New Workspace'
-            : unified.activeContent.replace(/-/g, ' '),
+            : unified.activeContent === 'share-context'
+              ? 'Share'
+              : unified.activeContent.replace(/-/g, ' '),
           restore: {
             type: 'unified',
             payload: { content: unified.activeContent },

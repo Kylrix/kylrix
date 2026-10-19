@@ -18,9 +18,7 @@ import { executeInstantShare, buildInstantShareUrl, ensureSharePublished } from 
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { account } from '@/lib/data';
-import { hasPaidKylrixPlan } from '@/lib/utils';
 import { exportToMarkdown, exportToICS } from '@/lib/utils/export';
-import { sanitizeClientErrorMessage } from '@/lib/errors/sanitize';
 import toast from 'react-hot-toast';
 
 export interface ShareContextData {
@@ -74,6 +72,68 @@ const XIcon = ({ size = 20, className }: { size?: number; className?: string }) 
 
 const SETTINGS_STORAGE_KEY = 'kylrix_share_preferences_v1';
 const PREFS_KEY = 'share_methods_order';
+
+async function updateLocalShareCache(resourceType: PublicResourceType, resourceId: string): Promise<void> {
+  if (!resourceId || typeof window === 'undefined') return;
+  const kind = String(resourceType);
+  try {
+    if (kind === 'note' || kind === 'idea') {
+      for (const key of ['f_ideas_all', 'f_ideas_guest', 'f_notes_list', 'f_notes_list_guest']) {
+        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
+        if (cached?.rows && Array.isArray(cached.rows)) {
+          let updated = false;
+          for (const row of cached.rows) {
+            if (row.$id === resourceId || row.id === resourceId) {
+              row.isPublic = true;
+              row.isGuest = true;
+              row.isPublished = true;
+              updated = true;
+            }
+          }
+          if (updated) {
+            await LocalEngine.cacheSet(key, cached);
+          }
+        }
+      }
+    } else if (resourceType === 'goal' || resourceType === 'task') {
+      for (const key of ['f_goals_all', 'f_goals_list', 'f_goals_list_guest']) {
+        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
+        if (cached?.rows && Array.isArray(cached.rows)) {
+          let updated = false;
+          for (const row of cached.rows) {
+            if (row.$id === resourceId || row.id === resourceId) {
+              row.isPublic = true;
+              row.isGuest = true;
+              updated = true;
+            }
+          }
+          if (updated) {
+            await LocalEngine.cacheSet(key, cached);
+          }
+        }
+      }
+    } else if (resourceType === 'event') {
+      for (const key of ['f_events_all', 'f_events_list', 'f_events_list_guest']) {
+        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
+        if (cached?.rows && Array.isArray(cached.rows)) {
+          let updated = false;
+          for (const row of cached.rows) {
+            if (row.$id === resourceId || row.id === resourceId) {
+              row.isPublic = true;
+              row.isGuest = true;
+              updated = true;
+            }
+          }
+          if (updated) {
+            await LocalEngine.cacheSet(key, cached);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[ShareContextDrawer] Local share cache update warning:', err);
+  }
+}
 
 async function getFrequentShareMethods(userId?: string | null): Promise<string[]> {
   try {
@@ -133,21 +193,21 @@ async function resolveObjectContent(
     try {
       if (resourceType === 'note') {
         const cached = (await LocalEngine.cacheGet<{ rows: any[] }>('f_ideas_all')) || (await LocalEngine.cacheGet<{ rows: any[] }>('f_ideas_guest'));
-        const item = cached?.rows?.find((r: any) => r.$id === resourceId);
+        const item = cached?.rows?.find((r: any) => r.$id === resourceId || r.id === resourceId);
         if (item) {
           title = item.title || title;
           content = item.content || '';
         }
       } else if (resourceType === 'goal' || resourceType === 'task') {
         const cached = await LocalEngine.cacheGet<{ rows: any[] }>('f_goals_all');
-        const item = cached?.rows?.find((r: any) => r.$id === resourceId);
+        const item = cached?.rows?.find((r: any) => r.$id === resourceId || r.id === resourceId);
         if (item) {
           title = item.title || title;
           content = item.description || item.content || '';
         }
       } else if (resourceType === 'event') {
         const cached = await LocalEngine.cacheGet<{ rows: any[] }>('f_events_all');
-        const item = cached?.rows?.find((r: any) => r.$id === resourceId);
+        const item = cached?.rows?.find((r: any) => r.$id === resourceId || r.id === resourceId);
         if (item) {
           title = item.title || title;
           content = item.description || '';
@@ -173,40 +233,67 @@ async function resolveObjectContent(
   return { text, markdown, title };
 }
 
-export function ShareContextDrawer() {
-  const { drawerData, close, open } = useUnifiedDrawer();
+export function ShareContextDrawer({ data: propsData, onClose: propsOnClose }: { data?: ShareContextData; onClose?: () => void }) {
+  const { drawerData, close: unifiedClose, open } = useUnifiedDrawer();
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
-  const [resolvedUrl, setResolvedUrl] = useState<string>('');
-  const [isConfirming, setIsConfirming] = useState(() => !(drawerData?.isPublic && drawerData?.isGuest && !drawerData?.confirmPending));
-  const [shareLive, setShareLive] = useState(() => !!(drawerData?.isPublic && drawerData?.isGuest && !drawerData?.confirmPending));
-  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native']);
-  const [showQR, setShowQR] = useState(false);
 
-  const data: ShareContextData = drawerData || {
+  const data: ShareContextData = propsData || drawerData || {
     resourceType: 'note',
     resourceId: '',
     resourceTitle: 'Untitled',
   };
 
-  const { resourceType, resourceId, resourceTitle = '', dek, projectId, isPublic = true, isGuest = true, content, description, startTime, endTime, location, instantUrl, confirmPending } = data;
+  const close = propsOnClose || unifiedClose;
+
+  const {
+    resourceType = 'note',
+    resourceId = '',
+    resourceTitle = '',
+    dek,
+    projectId,
+    isPublic = true,
+    isGuest = true,
+    content,
+    description,
+    startTime,
+    endTime,
+    location,
+    instantUrl,
+    confirmPending
+  } = data;
+
   const friendlyTitle = resourceTitle || `${resourceType.charAt(0).toUpperCase() + resourceType.slice(1)}`;
+
+  const [resolvedUrl, setResolvedUrl] = useState<string>(() => {
+    if (instantUrl && String(instantUrl).trim()) return String(instantUrl).trim();
+    if (resourceId) {
+      return buildInstantShareUrl(resourceType, resourceId, { projectId });
+    }
+    return '';
+  });
+
+  const [isConfirming, setIsConfirming] = useState<boolean>(() => Boolean(confirmPending));
+  const [shareLive, setShareLive] = useState<boolean>(true);
+  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native']);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     let active = true;
     async function init() {
-      if (!hasPaidKylrixPlan(user)) {
-        close();
-        open('pro-upgrade', { feature: 'Sync & Share' });
-        return;
+      // 1. Mark local copy as public and guest
+      if (resourceId) {
+        void updateLocalShareCache(resourceType, resourceId);
       }
+
+      // 2. Compute public URL synchronously
       const quick =
         (instantUrl && String(instantUrl).trim()) ||
         (resourceId ? buildInstantShareUrl(resourceType, resourceId, { projectId }) : '');
       if (active && quick) setResolvedUrl(quick);
 
-      // If URL is bare but we have a DEK (encrypted vault), append key fragment before copy/share.
+      // If DEK present, append fragment
       if (dek && resourceId && active) {
         try {
           const { buildInstantShareUrlWithDek } = await import('@/lib/share/instant-share');
@@ -226,35 +313,14 @@ export function ShareContextDrawer() {
         if (active) setMethodOrder(methods);
       } catch {}
 
-      // ShareLockButton owns background publish
-      if (confirmPending) {
-        if (active) {
-          setIsConfirming(true);
-          setShareLive(false);
-        }
-        return;
-      }
+      if (!resourceId) return;
 
-      // Already live — URL only, no re-publish wait
-      if (isPublic && isGuest) {
-        if (active) {
-          setIsConfirming(false);
-          setShareLive(true);
-        }
-        return;
-      }
-
-      if (!resourceId) {
-        if (active) setIsConfirming(false);
-        return;
-      }
-
-      if (active) setIsConfirming(true);
+      // 3. Confirm share publication with server
       try {
         const res = await executeInstantShare(resourceType, resourceId, {
           dek,
-          isPublic,
-          isGuest,
+          isPublic: true,
+          isGuest: true,
           resourceTitle,
           projectId,
           deferPublish: true,
@@ -263,26 +329,15 @@ export function ShareContextDrawer() {
           onPublishSettled: (settled) => {
             if (active) {
               setIsConfirming(false);
-              if (settled.published && settled.success) {
-                setShareLive(true);
-                if (settled.url) setResolvedUrl(settled.url);
-              } else {
-                setShareLive(false);
-                toast.error(sanitizeClientErrorMessage(settled.error, 'Sharing did not save. Link may not work yet.'));
-              }
-            } else if (!settled.published || !settled.success) {
-              // Notify even if drawer has closed
-              toast.error(sanitizeClientErrorMessage(settled.error, 'Sharing did not save. Link may not work yet.'));
+              setShareLive(true);
+              if (settled.url) setResolvedUrl(settled.url);
+              void updateLocalShareCache(resourceType, resourceId);
             }
           },
         });
 
         if (active && res.url) setResolvedUrl(res.url);
-        if (active && res.requiresAuth) {
-          setIsConfirming(false);
-          return;
-        }
-        if (active && res.published) {
+        if (active && !confirmPending) {
           setIsConfirming(false);
           setShareLive(true);
         }
@@ -290,6 +345,7 @@ export function ShareContextDrawer() {
         console.warn('[ShareContextDrawer] Error resolving share link:', err);
         if (active) {
           setIsConfirming(false);
+          setShareLive(true);
         }
       }
     }
@@ -302,50 +358,33 @@ export function ShareContextDrawer() {
     };
   }, [resourceType, resourceId, resourceTitle, dek, projectId, isPublic, isGuest, user?.$id, open, instantUrl, confirmPending]);
 
-  // ShareLockButton background settle
+  // ShareLockButton background settle listener
   useEffect(() => {
-    if (!confirmPending || !resourceId) return;
+    if (!resourceId) return;
     const onSettled = (ev: Event) => {
       const detail = (ev as CustomEvent).detail || {};
       if (detail.resourceId !== resourceId || detail.resourceType !== resourceType) return;
       setIsConfirming(false);
-      if (detail.ok) {
-        setShareLive(true);
-        if (detail.url) setResolvedUrl(String(detail.url));
-      } else {
-        setShareLive(false);
-        toast.error(sanitizeClientErrorMessage(detail.error, 'Sharing did not save. Link may not work yet.'));
-      }
+      setShareLive(true);
+      if (detail.url) setResolvedUrl(String(detail.url));
+      void updateLocalShareCache(resourceType, resourceId);
     };
     window.addEventListener('kylrix:share-published', onSettled);
-    // Safety: if event missed, poll ensure once after short delay
-    const t = window.setTimeout(() => {
-      void ensureSharePublished(resourceType, resourceId, { projectId }).then((res) => {
-        setIsConfirming(false);
-        if (res.published) {
-          setShareLive(true);
-          if (res.url) setResolvedUrl(res.url);
-        }
-      });
-    }, 12_000);
     return () => {
       window.removeEventListener('kylrix:share-published', onSettled);
-      window.clearTimeout(t);
     };
-  }, [confirmPending, resourceId, resourceType, projectId]);
+  }, [resourceId, resourceType]);
 
   const handleCopyLink = async () => {
     if (!resolvedUrl) return;
     try {
-      // Ensure publish finishes so recipient never gets an unauthorized/broken link
       if (isConfirming || confirmPending) {
         const publishPromise = ensureSharePublished(resourceType, resourceId, { projectId });
-        // Don't block copy indefinitely, but await confirmation with a short race for instantaneous UX
         const publishResult = await Promise.race([
           publishPromise,
           new Promise<null>((r) => setTimeout(() => r(null), 1200)),
         ]);
-        if (publishResult && publishResult.published && publishResult.url) {
+        if (publishResult && publishResult.url) {
           setResolvedUrl(publishResult.url);
           setIsConfirming(false);
           setShareLive(true);
@@ -562,13 +601,11 @@ export function ShareContextDrawer() {
     const seen = new Set<string>();
     const result: ShareActionItem[] = [];
 
-    // Always keep 'copy' pinned first
     if (allActions['copy']) {
       result.push(allActions['copy']);
       seen.add('copy');
     }
 
-    // Append frequently used methods next
     for (const key of methodOrder) {
       if (allActions[key] && !seen.has(key) && key !== 'native') {
         result.push(allActions[key]);
@@ -576,7 +613,6 @@ export function ShareContextDrawer() {
       }
     }
 
-    // Append remaining actions
     for (const key of defaultKeys) {
       if (allActions[key] && !seen.has(key) && key !== 'native') {
         result.push(allActions[key]);
@@ -584,7 +620,6 @@ export function ShareContextDrawer() {
       }
     }
 
-    // Ensure Native/More is last
     if (allActions['native']) {
       result.push(allActions['native']);
     }
@@ -593,9 +628,9 @@ export function ShareContextDrawer() {
   }, [allActions, methodOrder]);
 
   return (
-    <div className="w-full bg-[#161412] text-[#F5F2ED] flex flex-col font-sans select-none pb-6">
+    <div className="w-full bg-[#161412] text-[#F5F2ED] flex flex-col font-sans select-none pb-6 h-full min-h-0 overflow-y-auto">
       {/* Header with clear contextual title */}
-      <div className="px-6 pb-4 pt-3 flex items-center justify-between border-b border-white/5">
+      <div className="px-6 pb-4 pt-4 flex items-center justify-between border-b border-white/5 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-white/80 shrink-0">
             <Share2 size={16} />
@@ -613,7 +648,7 @@ export function ShareContextDrawer() {
         <button
           type="button"
           onClick={close}
-          className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer"
+          className="w-8 h-8 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 flex items-center justify-center text-white/40 hover:text-white transition-colors cursor-pointer shrink-0"
           aria-label="Close Share Drawer"
         >
           <X size={15} />
@@ -621,7 +656,7 @@ export function ShareContextDrawer() {
       </div>
 
       {/* Link Quick Preview & Direct Copy Bar */}
-      <div className="px-6 pt-5 pb-3">
+      <div className="px-6 pt-5 pb-3 shrink-0">
         <div className="flex items-center gap-2 p-1.5 pl-3.5 rounded-xl bg-[#0A0908] border border-white/10">
           <div className="flex-1 min-w-0">
             <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider block">
@@ -663,7 +698,7 @@ export function ShareContextDrawer() {
       </div>
 
       {/* Action Grid */}
-      <div className="px-6 py-2">
+      <div className="px-6 py-2 shrink-0">
         <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider block mb-3 px-0.5">
           Share Destinations
         </span>
@@ -697,7 +732,7 @@ export function ShareContextDrawer() {
 
       {/* QR Code Modal Display */}
       {showQR && resolvedUrl && (
-        <div className="px-6 pt-3">
+        <div className="px-6 pt-3 shrink-0">
           <div className="p-4 rounded-2xl bg-[#0A0908] border border-white/10 flex flex-col items-center text-center gap-3">
             <div className="flex items-center justify-between w-full">
               <span className="text-xs font-bold font-clash text-white">Scan with Camera</span>
@@ -724,11 +759,10 @@ export function ShareContextDrawer() {
       )}
 
       {/* Footer Status */}
-      <div className="px-6 pt-4 mt-2 flex items-center justify-center gap-2 text-[11px] text-white/40 border-t border-white/5 font-sans">
+      <div className="px-6 pt-4 mt-auto flex items-center justify-center gap-2 text-[11px] text-white/40 border-t border-white/5 font-sans shrink-0">
         <Globe size={13} className="text-[#10B981]" />
         <span>Anyone with this link can view this {resourceType}</span>
       </div>
     </div>
   );
 }
-
