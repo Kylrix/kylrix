@@ -1,0 +1,248 @@
+{
+  "name": "kylrix-vscode",
+  "displayName": "Kylrix - AI Vault, Notes & Sovereign Assistant",
+  "description": "Zero-leak vault, sovereign local notes, 2FA authenticator, and AI context sidebar for VS Code",
+  "version": "1.0.0",
+  "publisher": "kylrix",
+  "homepage": "https://www.kylrix.space",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kylrix/kylrix"
+  },
+  "main": "./dist/extension.js",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Productivity"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kylrix-sidebar",
+          "title": "Kylrix",
+          "icon": "$(shield)"
+        }
+      ]
+    },
+    "views": {
+      "kylrix-sidebar": [
+        {
+          "id": "kylrix.view.status",
+          "name": "Identity & Session"
+        },
+        {
+          "id": "kylrix.view.ideas",
+          "name": "Notes & Ideas"
+        },
+        {
+          "id": "kylrix.view.goals",
+          "name": "Goals & Progress"
+        },
+        {
+          "id": "kylrix.view.vault",
+          "name": "Vault & Credentials"
+        },
+        {
+          "id": "kylrix.view.totp",
+          "name": "2FA Authenticator"
+        },
+        {
+          "id": "kylrix.view.events",
+          "name": "Events, Forms & Flows"
+        },
+        {
+          "id": "kylrix.view.chats",
+          "name": "Chats & Discussions"
+        },
+        {
+          "id": "kylrix.view.agents",
+          "name": "Agents & Context"
+        },
+        {
+          "id": "kylrix.view.trash",
+          "name": "Trash & Tags"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "kylrix.login",
+        "title": "Login / Pair Device",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.logout",
+        "title": "Logout Account",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.whoami",
+        "title": "WhoAmI / Account Info",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.switchAccount",
+        "title": "Switch Account",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.switchServer",
+        "title": "Switch Server",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.switchWorkspace",
+        "title": "Switch Workspace",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.createNote",
+        "title": "Create Note / Idea",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.openNote",
+        "title": "Open Note in Editor",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.deleteNote",
+        "title": "Delete Note / Idea",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.createGoal",
+        "title": "Create Goal",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.updateGoalProgress",
+        "title": "Update Goal Progress",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.unlockVault",
+        "title": "Unlock Vault",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.lockVault",
+        "title": "Lock Vault",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.createSecret",
+        "title": "Create Secret / .env",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.pullEnv",
+        "title": "Pull Environment (.env) to Workspace",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.pushEnv",
+        "title": "Push Workspace .env to Vault",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.copyTotpCode",
+        "title": "Copy 2FA TOTP Code",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.addTotp",
+        "title": "Add 2FA TOTP Account",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.createEvent",
+        "title": "Create Event",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.search",
+        "title": "Global Sovereign Search",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.sync",
+        "title": "Synchronize Local to Cloud",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.connectWorkspace",
+        "title": "Connect Workspace Tool Context",
+        "category": "Kylrix"
+      },
+      {
+        "command": "kylrix.refreshViews",
+        "title": "Refresh Kylrix Sidebar",
+        "category": "Kylrix"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "kylrix.refreshViews",
+          "when": "view =~ /^kylrix\\.view\\./",
+          "group": "navigation"
+        },
+        {
+          "command": "kylrix.createNote",
+          "when": "view == kylrix.view.ideas",
+          "group": "navigation"
+        },
+        {
+          "command": "kylrix.createGoal",
+          "when": "view == kylrix.view.goals",
+          "group": "navigation"
+        },
+        {
+          "command": "kylrix.unlockVault",
+          "when": "view == kylrix.view.vault",
+          "group": "navigation"
+        },
+        {
+          "command": "kylrix.sync",
+          "when": "view == kylrix.view.status",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Kylrix",
+      "properties": {
+        "kylrix.apiUrl": {
+          "type": "string",
+          "default": "https://www.kylrix.space",
+          "description": "Kylrix API backend base URL"
+        },
+        "kylrix.autoSync": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically sync local items with cloud workspace"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "tsc --noEmit --skipLibCheck"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.0",
+    "@types/vscode": "^1.80.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.9.3"
+  },
+  "license": "AGPL-3.0-or-later"
+}

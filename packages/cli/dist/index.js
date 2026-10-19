@@ -202,8 +202,9 @@ var init_client = __esm({
         const isJson = res.headers.get("content-type")?.includes("application/json");
         const data = isJson ? await res.json().catch(() => null) : await res.text();
         if (!res.ok) {
-          const errMsg = data?.error?.message || data?.error || data?.message || `Kylrix API error HTTP ${res.status}: ${res.statusText}`;
-          const errCode = data?.error?.code || data?.code || (res.status === 401 ? "unauthorized" : "api_error");
+          const errObj = typeof data === "object" && data !== null ? data : {};
+          const errMsg = errObj?.error?.message || errObj?.error || errObj?.message || `Kylrix API error HTTP ${res.status}: ${res.statusText}`;
+          const errCode = errObj?.error?.code || errObj?.code || (res.status === 401 ? "unauthorized" : "api_error");
           throw new KylrixApiError(errMsg, res.status, errCode, data);
         }
         if (data && typeof data === "object" && "ok" in data && "data" in data) {
@@ -1544,13 +1545,14 @@ var init_store = __esm({
           UPDATE ideas SET title = ?, content = ?, category = ?, tags = ?, sync_status = 'synced', cloud_id = ?, updated_at = ?
           WHERE id = ?
         `).run(item.title, item.content || "", item.category || "general", tagsJson, item.id, updatedAt, existing.id);
-            return { id: existing.id, ...item, syncStatus: "synced", cloudId: item.id, isLocal: true };
+            const { id: _unusedId, ...itemRest } = item;
+            return { ...itemRest, id: existing.id, syncStatus: "synced", cloudId: item.id, isLocal: true };
           } else {
             db.prepare(`
           INSERT INTO ideas (id, title, content, category, tags, is_local, sync_status, cloud_id, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, 1, 'synced', ?, ?, ?)
         `).run(item.id, item.title, item.content || "", item.category || "general", tagsJson, item.id, createdAt, updatedAt);
-            return { id: item.id, ...item, syncStatus: "synced", cloudId: item.id, isLocal: true };
+            return { ...item, syncStatus: "synced", cloudId: item.id, isLocal: true };
           }
         }
         const store = loadFallback();

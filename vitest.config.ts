@@ -1,10 +1,14 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import * as path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     tsconfigPaths: true,
+    alias: {
+      vscode: path.resolve(__dirname, '__tests__/vscode-mock.ts'),
+    },
   },
   test: {
     environment: 'happy-dom',
@@ -25,4 +29,4 @@ export default defineConfig({
       },
     },
   },
-})
+});
