@@ -123,20 +123,30 @@ export default function CredentialItem({
               const dekBase64 = await decryptField(credential.dek);
               const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
               dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
-            } catch {}
+            } catch (err) {
+              console.warn('[CredentialItem] Failed to unwrap DEK:', err);
+            }
           }
 
-          for (const field of ['name', 'username', 'url'] as const) {
+          for (const field of ['name', 'username', 'password', 'url', 'notes', 'customFields'] as const) {
             const val = (credential as any)[field];
             if (val && typeof val === 'string' && val.trim().length > 0) {
+              if (!looksEncrypted(val)) {
+                updated[field] = val;
+                continue;
+              }
               try {
                 let plain: string | null = null;
                 if (dekKey) {
-                  const dataBytes = atob(val).split('').map((c) => c.charCodeAt(0));
-                  const dataIv = new Uint8Array(dataBytes.slice(0, 16));
-                  const dataEncrypted = new Uint8Array(dataBytes.slice(16));
-                  const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, dekKey, dataEncrypted);
-                  plain = new TextDecoder().decode(dec);
+                  try {
+                    const dataBytes = atob(val).split('').map((c) => c.charCodeAt(0));
+                    const dataIv = new Uint8Array(dataBytes.slice(0, 16));
+                    const dataEncrypted = new Uint8Array(dataBytes.slice(16));
+                    const dec = await crypto.subtle.decrypt({ name: "AES-GCM", iv: dataIv }, dekKey, dataEncrypted);
+                    plain = new TextDecoder().decode(dec);
+                  } catch {
+                    plain = await decryptField(val);
+                  }
                 } else {
                   plain = await decryptField(val);
                 }
@@ -144,7 +154,9 @@ export default function CredentialItem({
                   updated[field] = plain;
                   changed = true;
                 }
-              } catch {}
+              } catch (fieldErr) {
+                console.warn(`[CredentialItem] Failed to decrypt field ${field}:`, fieldErr);
+              }
             }
           }
 
@@ -158,24 +170,43 @@ export default function CredentialItem({
         let dekKey: CryptoKey | null = null;
         if (credential.dek && typeof credential.dek === 'string' && credential.dek.trim().length > 0) {
           try {
-            const dekBase64 = await ecosystemSecurity.decryptWithWorkspace(credential.dek, activeWorkspace);
-            const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
-            dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            let dekBase64: string | null = null;
+            try {
+              dekBase64 = await ecosystemSecurity.decryptWithWorkspace(credential.dek, activeWorkspace);
+            } catch {
+              dekBase64 = await decryptField(credential.dek);
+            }
+            if (dekBase64) {
+              const rawKey = new Uint8Array(atob(dekBase64).split('').map((c) => c.charCodeAt(0)));
+              dekKey = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+            }
           } catch {}
         }
-        for (const field of ['name', 'username', 'url'] as const) {
+        for (const field of ['name', 'username', 'password', 'url', 'notes', 'customFields'] as const) {
           const val = (credential as any)[field];
           if (val && typeof val === 'string' && val.trim().length > 0) {
+            if (!looksEncrypted(val)) {
+              updated[field] = val;
+              continue;
+            }
             try {
               let plain: string | null = null;
               if (dekKey) {
                 try {
                   plain = await ecosystemSecurity.decryptWithKey(val, dekKey);
                 } catch {
-                  plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                  try {
+                    plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                  } catch {
+                    plain = await decryptField(val);
+                  }
                 }
               } else {
-                plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                try {
+                  plain = await ecosystemSecurity.decryptWithWorkspace(val, activeWorkspace, credential.dek);
+                } catch {
+                  plain = await decryptField(val);
+                }
               }
               if (plain && plain !== val) {
                 updated[field] = plain;
