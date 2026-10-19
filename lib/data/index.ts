@@ -240,6 +240,7 @@ export const account = {
   async createOAuth2Session(provider: string, success?: string, _failure?: string) {
     if (typeof window !== 'undefined') {
       const callbackURL = success || `${window.location.origin}/app?auth=success`;
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign(
         `/api/auth/oauth/${encodeURIComponent(provider)}?callbackURL=${encodeURIComponent(callbackURL)}`,
       );
@@ -836,9 +837,9 @@ export const ProjectsService = {
   async listTaggedResources(_wsId: string): Promise<any> {
     return { totps: [], notes: [], tasks: [], events: [] };
   },
-  async addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string): Promise<any> {
+  async addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string, metadata?: any): Promise<any> {
     const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops/projects');
-    return addObjectToProjectSecure(projectId, entityKind, entityId, role);
+    return addObjectToProjectSecure(projectId, entityKind, entityId, role, metadata);
   },
   async fetchRemoteProjects(..._args: any[]): Promise<any[]> {
     try {
