@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { resolveEnvironment, saveConfig, switchAccount, switchServer, listAccounts, listServers } from '@/packages/cli/src/config';
 import { getClient, hasAuth } from '@/packages/cli/src/client';
+import { autoSyncOnStartup } from './sync';
 
 export async function loginCommand(refreshCb?: () => void) {
   try {
@@ -58,6 +59,7 @@ export async function loginWithApiKey(refreshCb?: () => void) {
   });
 
   vscode.window.showInformationMessage(`Connected to Kylrix as ${profile.email || profile.id}.`);
+  await autoSyncOnStartup();
   refreshCb?.();
 }
 
@@ -115,6 +117,7 @@ export async function loginWithBrowser(refreshCb?: () => void) {
     },
   );
 
+  await autoSyncOnStartup();
   vscode.window.showInformationMessage('Kylrix browser sign-in complete.');
   refreshCb?.();
 }
@@ -171,6 +174,7 @@ export async function switchAccountCommand(refreshCb?: () => void) {
 
     if (selected) {
       switchAccount(selected.accountId);
+      await autoSyncOnStartup();
       vscode.window.showInformationMessage(`Switched active account profile to ${selected.label}`);
       if (refreshCb) refreshCb();
     }
@@ -206,11 +210,13 @@ export async function switchServerCommand(refreshCb?: () => void) {
       });
       if (customUrl) {
         switchServer(customUrl);
+        await autoSyncOnStartup();
         vscode.window.showInformationMessage(`Switched server base URL to ${customUrl}`);
         if (refreshCb) refreshCb();
       }
     } else {
       switchServer(selected.serverUrl);
+      await autoSyncOnStartup();
       vscode.window.showInformationMessage(`Switched server base URL to ${selected.serverUrl}`);
       if (refreshCb) refreshCb();
     }
@@ -247,6 +253,7 @@ export async function switchWorkspaceCommand(refreshCb?: () => void) {
 
     if (selected !== undefined) {
       saveConfig({ workspaceId: selected.workspaceId });
+      await autoSyncOnStartup();
       vscode.window.showInformationMessage(`Switched active workspace to "${selected.label}"`);
       if (refreshCb) refreshCb();
     }

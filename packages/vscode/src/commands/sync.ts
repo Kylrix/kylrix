@@ -1,7 +1,19 @@
 import * as vscode from 'vscode';
-import { LocalStore } from '@/packages/cli/src/local/store';
-import { getClient, hasAuth } from '@/packages/cli/src/client';
-import { extractItems } from '@/packages/cli/src/local/sync-resolver';
+import { hasAuth } from '@/packages/cli/src/client';
+import { bidirectionalSync, pullCloudItemsToLocal } from '@/packages/cli/src/local/sync-resolver';
+
+async function runSyncAttempt(): Promise<void> {
+  try {
+    await bidirectionalSync();
+    return;
+  } catch (err: any) {
+    const message = String(err?.message || err || '');
+    if (message.includes('Free accounts operate 100% offline')) {
+      return;
+    }
+  }
+  await pullCloudItemsToLocal();
+}
 
 export async function syncCommand(refreshCb?: () => void) {
   try {
@@ -19,58 +31,27 @@ export async function syncCommand(refreshCb?: () => void) {
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: 'Kylrix: Synchronizing local items to cloud workspace...',
+        title: 'Kylrix: Syncing your workspace...',
         cancellable: false,
       },
-      async (progress) => {
-        const client = getClient();
-
-        // 1. Sync ideas
-        progress.report({ message: 'Syncing notes & ideas...' });
-        const localIdeas = LocalStore.listIdeas().items;
-        for (const idea of localIdeas) {
-          if (idea.syncStatus === 'unsynced') {
-            try {
-              const res = await client.ideas.create({ title: idea.title, content: idea.content || '' });
-              LocalStore.markIdeaSynced(idea.id, res.id);
-            } catch {}
-          }
-        }
-
-        // Pull latest ideas from cloud
-        try {
-          const cloudIdeas = await client.ideas.list({ limit: 100 });
-          for (const item of extractItems(cloudIdeas)) {
-            LocalStore.upsertIdeaFromCloud(item);
-          }
-        } catch {}
-
-        // 2. Sync goals
-        progress.report({ message: 'Syncing goals & habits...' });
-        const localGoals = LocalStore.listGoals().items;
-        for (const goal of localGoals) {
-          if (goal.syncStatus === 'unsynced') {
-            try {
-              const res = await client.goals.create({ title: goal.title, targetValue: goal.targetValue } as any);
-              LocalStore.markGoalSynced(goal.id, res.id);
-            } catch {}
-          }
-        }
-
-        try {
-          const cloudGoals = await client.goals.list({ limit: 100 });
-          for (const item of extractItems(cloudGoals)) {
-            LocalStore.upsertGoalFromCloud(item);
-          }
-        } catch {}
-      }
+      async () => {
+        await runSyncAttempt();
+      },
     );
 
-    vscode.window.showInformationMessage('Synchronization completed successfully!');
+    vscode.window.showInformationMessage('Kylrix sync completed.');
     if (refreshCb) refreshCb();
   } catch (err: any) {
     vscode.window.showErrorMessage(`Sync failed: ${err.message}`);
   }
+}
+
+export async function autoSyncOnStartup(refreshCb?: () => void) {
+  if (!hasAuth()) return;
+  try {
+    await runSyncAttempt();
+    refreshCb?.();
+  } catch {}
 }
 
 export async function connectWorkspaceCommand(refreshCb?: () => void) {

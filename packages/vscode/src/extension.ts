@@ -30,7 +30,7 @@ import {
 } from './commands/vault';
 import { copyTotpCodeCommand, addTotpCommand } from './commands/totp';
 import { globalSearchCommand } from './commands/search';
-import { syncCommand, connectWorkspaceCommand } from './commands/sync';
+import { syncCommand, connectWorkspaceCommand, autoSyncOnStartup } from './commands/sync';
 import { resolveEnvironment } from '@/packages/cli/src/config';
 import { hasAuth } from '@/packages/cli/src/client';
 
@@ -127,6 +127,7 @@ export function activate(context: vscode.ExtensionContext) {
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
     connectWorkspaceCommand(refreshAllViews);
   }
+  autoSyncOnStartup(refreshAllViews);
 
   console.log('[Kylrix] Kylrix Extension successfully activated.');
 }
