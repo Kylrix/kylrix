@@ -5,6 +5,9 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -26,6 +29,79 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// ../../node_modules/.pnpm/picocolors@1.1.1/node_modules/picocolors/picocolors.js
+var require_picocolors = __commonJS({
+  "../../node_modules/.pnpm/picocolors@1.1.1/node_modules/picocolors/picocolors.js"(exports2, module2) {
+    "use strict";
+    var p = process || {};
+    var argv = p.argv || [];
+    var env3 = p.env || {};
+    var isColorSupported = !(!!env3.NO_COLOR || argv.includes("--no-color")) && (!!env3.FORCE_COLOR || argv.includes("--color") || p.platform === "win32" || (p.stdout || {}).isTTY && env3.TERM !== "dumb" || !!env3.CI);
+    var formatter = (open, close, replace = open) => (input) => {
+      let string = "" + input, index = string.indexOf(close, open.length);
+      return ~index ? open + replaceClose(string, close, replace, index) + close : open + string + close;
+    };
+    var replaceClose = (string, close, replace, index) => {
+      let result = "", cursor = 0;
+      do {
+        result += string.substring(cursor, index) + replace;
+        cursor = index + close.length;
+        index = string.indexOf(close, cursor);
+      } while (~index);
+      return result + string.substring(cursor);
+    };
+    var createColors = (enabled = isColorSupported) => {
+      let f = enabled ? formatter : () => String;
+      return {
+        isColorSupported: enabled,
+        reset: f("\x1B[0m", "\x1B[0m"),
+        bold: f("\x1B[1m", "\x1B[22m", "\x1B[22m\x1B[1m"),
+        dim: f("\x1B[2m", "\x1B[22m", "\x1B[22m\x1B[2m"),
+        italic: f("\x1B[3m", "\x1B[23m"),
+        underline: f("\x1B[4m", "\x1B[24m"),
+        inverse: f("\x1B[7m", "\x1B[27m"),
+        hidden: f("\x1B[8m", "\x1B[28m"),
+        strikethrough: f("\x1B[9m", "\x1B[29m"),
+        black: f("\x1B[30m", "\x1B[39m"),
+        red: f("\x1B[31m", "\x1B[39m"),
+        green: f("\x1B[32m", "\x1B[39m"),
+        yellow: f("\x1B[33m", "\x1B[39m"),
+        blue: f("\x1B[34m", "\x1B[39m"),
+        magenta: f("\x1B[35m", "\x1B[39m"),
+        cyan: f("\x1B[36m", "\x1B[39m"),
+        white: f("\x1B[37m", "\x1B[39m"),
+        gray: f("\x1B[90m", "\x1B[39m"),
+        bgBlack: f("\x1B[40m", "\x1B[49m"),
+        bgRed: f("\x1B[41m", "\x1B[49m"),
+        bgGreen: f("\x1B[42m", "\x1B[49m"),
+        bgYellow: f("\x1B[43m", "\x1B[49m"),
+        bgBlue: f("\x1B[44m", "\x1B[49m"),
+        bgMagenta: f("\x1B[45m", "\x1B[49m"),
+        bgCyan: f("\x1B[46m", "\x1B[49m"),
+        bgWhite: f("\x1B[47m", "\x1B[49m"),
+        blackBright: f("\x1B[90m", "\x1B[39m"),
+        redBright: f("\x1B[91m", "\x1B[39m"),
+        greenBright: f("\x1B[92m", "\x1B[39m"),
+        yellowBright: f("\x1B[93m", "\x1B[39m"),
+        blueBright: f("\x1B[94m", "\x1B[39m"),
+        magentaBright: f("\x1B[95m", "\x1B[39m"),
+        cyanBright: f("\x1B[96m", "\x1B[39m"),
+        whiteBright: f("\x1B[97m", "\x1B[39m"),
+        bgBlackBright: f("\x1B[100m", "\x1B[49m"),
+        bgRedBright: f("\x1B[101m", "\x1B[49m"),
+        bgGreenBright: f("\x1B[102m", "\x1B[49m"),
+        bgYellowBright: f("\x1B[103m", "\x1B[49m"),
+        bgBlueBright: f("\x1B[104m", "\x1B[49m"),
+        bgMagentaBright: f("\x1B[105m", "\x1B[49m"),
+        bgCyanBright: f("\x1B[106m", "\x1B[49m"),
+        bgWhiteBright: f("\x1B[107m", "\x1B[49m")
+      };
+    };
+    module2.exports = createColors();
+    module2.exports.createColors = createColors;
+  }
+});
 
 // src/extension.ts
 var extension_exports = {};
@@ -2959,12 +3035,305 @@ var vscode7 = __toESM(require("vscode"), 1);
 // ../cli/src/local/sync-resolver.ts
 var fs4 = __toESM(require("fs"), 1);
 var path4 = __toESM(require("path"), 1);
+var import_picocolors = __toESM(require_picocolors(), 1);
 function extractItems(res) {
   if (!res) return [];
   if (Array.isArray(res.items)) return res.items;
   if (Array.isArray(res)) return res;
   if (Array.isArray(res.data)) return res.data;
   return [];
+}
+async function pushLocalItemsToCloud(opts = {}) {
+  const client = getClient(opts);
+  const env3 = resolveEnvironment(opts);
+  const DatabaseSync = getNativeSqlite();
+  const db = DatabaseSync ? getDatabase(env3.siloDbPath) : null;
+  let pushedIdeas = 0;
+  let pushedGoals = 0;
+  let pushedEvents = 0;
+  let pushedForms = 0;
+  let pushedFlows = 0;
+  if (db) {
+    try {
+      const ideas = db.prepare("SELECT * FROM ideas WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of ideas) {
+        try {
+          const rawTags = item.tags ? typeof item.tags === "string" ? JSON.parse(item.tags) : item.tags : [];
+          const tags = Array.isArray(rawTags) ? [...rawTags] : [];
+          if (item.category && !tags.includes(`category:${item.category}`)) {
+            tags.push(`category:${item.category}`);
+          }
+          const created = await client.ideas.create({
+            title: item.title,
+            content: item.content,
+            tags: tags.length > 0 ? tags : void 0,
+            workspaceId: opts.workspace
+          });
+          db.prepare("UPDATE ideas SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedIdeas++;
+        } catch (err) {
+          console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local idea "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+    try {
+      const goals = db.prepare("SELECT * FROM goals WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of goals) {
+        try {
+          const created = await client.goals.create({
+            title: item.title,
+            description: item.description,
+            status: item.status || "not_started",
+            workspaceId: opts.workspace
+          });
+          db.prepare("UPDATE goals SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedGoals++;
+        } catch (err) {
+          console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local goal "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+    try {
+      const events = db.prepare("SELECT * FROM events WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of events) {
+        try {
+          const created = await client.events.create({
+            title: item.title,
+            startTime: item.start_time,
+            endTime: item.end_time,
+            description: item.description,
+            workspaceId: opts.workspace
+          });
+          db.prepare("UPDATE events SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedEvents++;
+        } catch (err) {
+          console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local event "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+    try {
+      const forms = db.prepare("SELECT * FROM forms WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of forms) {
+        try {
+          let schemaObj = [];
+          try {
+            schemaObj = typeof item.schema === "string" ? JSON.parse(item.schema) : item.schema || [];
+          } catch {
+          }
+          const created = await client.forms.create({
+            title: item.title,
+            description: item.description,
+            schema: schemaObj,
+            workspaceId: opts.workspace
+          });
+          db.prepare("UPDATE forms SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedForms++;
+        } catch (err) {
+          console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local form "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+    try {
+      const flows = db.prepare("SELECT * FROM flows WHERE sync_status IN ('unsynced', 'local') OR (sync_status IS NULL AND (cloud_id IS NULL OR cloud_id = ''))").all();
+      for (const item of flows) {
+        try {
+          const created = await client.flows.create({
+            title: item.title,
+            description: item.description,
+            status: item.status || "draft"
+          });
+          db.prepare("UPDATE flows SET sync_status = 'synced', cloud_id = ?, is_local = 1 WHERE id = ?").run(created.id, item.id);
+          pushedFlows++;
+        } catch (err) {
+          console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local flow "${item.title}": ${err?.message || err}`));
+        }
+      }
+    } catch {
+    }
+  } else {
+    const fallbackPath = env3.siloFallbackPath;
+    if (fs4.existsSync(fallbackPath)) {
+      try {
+        const store = JSON.parse(fs4.readFileSync(fallbackPath, "utf-8"));
+        let changed = false;
+        if (Array.isArray(store.ideas)) {
+          for (const item of store.ideas) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.ideas.create({
+                  title: item.title,
+                  content: item.content,
+                  tags: Array.isArray(item.tags) && item.tags.length > 0 ? item.tags : void 0,
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedIdeas++;
+                changed = true;
+              } catch (err) {
+                console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local idea "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.goals)) {
+          for (const item of store.goals) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.goals.create({
+                  title: item.title,
+                  description: item.description,
+                  status: item.status || "not_started",
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedGoals++;
+                changed = true;
+              } catch (err) {
+                console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local goal "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.events)) {
+          for (const item of store.events) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.events.create({
+                  title: item.title,
+                  startTime: item.startTime,
+                  endTime: item.endTime,
+                  description: item.description,
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedEvents++;
+                changed = true;
+              } catch (err) {
+                console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local event "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.forms)) {
+          for (const item of store.forms) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.forms.create({
+                  title: item.title,
+                  description: item.description,
+                  schema: Array.isArray(item.schema) ? item.schema : [],
+                  workspaceId: opts.workspace
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedForms++;
+                changed = true;
+              } catch (err) {
+                console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local form "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (Array.isArray(store.flows)) {
+          for (const item of store.flows) {
+            if (item.syncStatus === "unsynced" || item.syncStatus === "local" || !item.syncStatus && !item.cloudId) {
+              try {
+                const created = await client.flows.create({
+                  title: item.title,
+                  description: item.description,
+                  status: item.status || "draft"
+                });
+                item.syncStatus = "synced";
+                item.cloudId = created.id;
+                pushedFlows++;
+                changed = true;
+              } catch (err) {
+                console.warn(import_picocolors.default.yellow(`\u26A0 [sync] Failed to push local flow "${item.title}": ${err?.message || err}`));
+              }
+            }
+          }
+        }
+        if (changed) {
+          fs4.writeFileSync(fallbackPath, JSON.stringify(store, null, 2), { encoding: "utf-8", mode: 384 });
+        }
+      } catch {
+      }
+    }
+  }
+  const total = pushedIdeas + pushedGoals + pushedEvents + pushedForms + pushedFlows;
+  return { pushedIdeas, pushedGoals, pushedEvents, pushedForms, pushedFlows, total };
+}
+async function pullCloudItemsToLocal(opts = {}) {
+  const client = getClient(opts);
+  let pulledIdeas = 0;
+  let pulledGoals = 0;
+  let pulledEvents = 0;
+  let pulledForms = 0;
+  let pulledFlows = 0;
+  try {
+    const res = await client.ideas.list({ limit: 100, workspaceId: opts.workspace });
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertIdeaFromCloud(item);
+      pulledIdeas++;
+    }
+  } catch {
+  }
+  try {
+    const res = await client.goals.list({ limit: 100, workspaceId: opts.workspace });
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertGoalFromCloud(item);
+      pulledGoals++;
+    }
+  } catch {
+  }
+  try {
+    const res = await client.events.list({ limit: 100, workspaceId: opts.workspace });
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertEventFromCloud(item);
+      pulledEvents++;
+    }
+  } catch {
+  }
+  try {
+    const res = await client.forms.list({ limit: 100, workspaceId: opts.workspace });
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertFormFromCloud(item);
+      pulledForms++;
+    }
+  } catch {
+  }
+  try {
+    const res = await client.flows.list(100);
+    const items = extractItems(res);
+    for (const item of items) {
+      LocalStore.upsertFlowFromCloud(item);
+      pulledFlows++;
+    }
+  } catch {
+  }
+  const total = pulledIdeas + pulledGoals + pulledEvents + pulledForms + pulledFlows;
+  return { pulledIdeas, pulledGoals, pulledEvents, pulledForms, pulledFlows, total };
+}
+async function bidirectionalSync(opts = {}) {
+  const env3 = resolveEnvironment(opts);
+  const userTier = (env3.tier || "").toUpperCase();
+  if (userTier === "FREE") {
+    throw new Error("Free accounts operate 100% offline and do not sync to cloud. Cloud sync requires Kylrix Pro.");
+  }
+  const pushed = await pushLocalItemsToCloud(opts);
+  const pulled = await pullCloudItemsToLocal(opts);
+  return { pushed, pulled };
 }
 
 // src/views/chats.ts
@@ -3154,10 +3523,88 @@ var TrashTreeProvider = class {
 };
 
 // src/commands/auth.ts
+var vscode11 = __toESM(require("vscode"), 1);
+
+// src/commands/sync.ts
 var vscode10 = __toESM(require("vscode"), 1);
+async function runSyncAttempt() {
+  try {
+    await bidirectionalSync();
+    return;
+  } catch (err) {
+    const message = String(err?.message || err || "");
+    if (message.includes("Free accounts operate 100% offline")) {
+      return;
+    }
+  }
+  await pullCloudItemsToLocal();
+}
+async function syncCommand(refreshCb) {
+  try {
+    if (!hasAuth()) {
+      const login = await vscode10.window.showWarningMessage(
+        "Authentication required to sync local storage with cloud workspace.",
+        "Login Now"
+      );
+      if (login === "Login Now") {
+        vscode10.commands.executeCommand("kylrix.login");
+      }
+      return;
+    }
+    await vscode10.window.withProgress(
+      {
+        location: vscode10.ProgressLocation.Notification,
+        title: "Kylrix: Syncing your workspace...",
+        cancellable: false
+      },
+      async () => {
+        await runSyncAttempt();
+      }
+    );
+    vscode10.window.showInformationMessage("Kylrix sync completed.");
+    if (refreshCb) refreshCb();
+  } catch (err) {
+    vscode10.window.showErrorMessage(`Sync failed: ${err.message}`);
+  }
+}
+async function autoSyncOnStartup(refreshCb) {
+  if (!hasAuth()) return;
+  try {
+    await runSyncAttempt();
+    refreshCb?.();
+  } catch (err) {
+    vscode10.window.showWarningMessage(`Kylrix could not load cloud data: ${err?.message || String(err)}`);
+  }
+}
+async function connectWorkspaceCommand(refreshCb) {
+  try {
+    const workspaceFolder = vscode10.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!workspaceFolder) {
+      vscode10.window.showErrorMessage("No workspace folder opened in VS Code.");
+      return;
+    }
+    LocalStore.connectTool({
+      client: "vscode",
+      name: "VS Code Extension",
+      directory: workspaceFolder
+    });
+    LocalStore.saveExternalContext({
+      client: "vscode",
+      directory: workspaceFolder,
+      title: "VS Code Extension Connected",
+      summary: `Workspace directory ${workspaceFolder} connected to Kylrix context engine.`
+    });
+    vscode10.window.showInformationMessage(`Connected directory context: ${workspaceFolder}`);
+    if (refreshCb) refreshCb();
+  } catch (err) {
+    vscode10.window.showErrorMessage(`Connect workspace failed: ${err.message}`);
+  }
+}
+
+// src/commands/auth.ts
 async function loginCommand(refreshCb) {
   try {
-    const method = await vscode10.window.showQuickPick(
+    const method = await vscode11.window.showQuickPick(
       [
         {
           label: "$(globe) Sign in with browser",
@@ -3182,11 +3629,11 @@ async function loginCommand(refreshCb) {
     }
     await loginWithApiKey(refreshCb);
   } catch (err) {
-    vscode10.window.showErrorMessage(`Login failed: ${err?.message || String(err)}`);
+    vscode11.window.showErrorMessage(`Login failed: ${err?.message || String(err)}`);
   }
 }
 async function loginWithApiKey(refreshCb) {
-  const token = await vscode10.window.showInputBox({
+  const token = await vscode11.window.showInputBox({
     title: "Kylrix API key",
     prompt: "Enter a Kylrix Personal Access Token or agent key",
     placeHolder: "kyl_pat_...",
@@ -3194,7 +3641,7 @@ async function loginWithApiKey(refreshCb) {
     ignoreFocusOut: true
   });
   if (!token) return;
-  const apiUrl = vscode10.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
+  const apiUrl = vscode11.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
   const client = getClient({ url: apiUrl, token });
   const profile = await client.auth.me();
   saveConfig({
@@ -3204,11 +3651,12 @@ async function loginWithApiKey(refreshCb) {
     email: profile.email,
     tier: profile.tier
   });
-  vscode10.window.showInformationMessage(`Connected to Kylrix as ${profile.email || profile.id}.`);
+  vscode11.window.showInformationMessage(`Connected to Kylrix as ${profile.email || profile.id}.`);
+  await autoSyncOnStartup();
   refreshCb?.();
 }
 async function loginWithBrowser(refreshCb) {
-  const apiUrl = vscode10.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
+  const apiUrl = vscode11.workspace.getConfiguration("kylrix").get("apiUrl") || "https://www.kylrix.space";
   const client = getClient({ url: apiUrl });
   const session = await client.pairing.requestPairing({
     clientName: "Kylrix VS Code",
@@ -3217,18 +3665,18 @@ async function loginWithBrowser(refreshCb) {
   });
   const baseWebUrl = apiUrl.replace(/\/api\/v1$/, "");
   const verificationUrl = session.verificationUriComplete || `${baseWebUrl}/pair?code=${encodeURIComponent(session.userCode)}`;
-  await vscode10.env.openExternal(vscode10.Uri.parse(verificationUrl));
-  const choice = await vscode10.window.showInformationMessage(
+  await vscode11.env.openExternal(vscode11.Uri.parse(verificationUrl));
+  const choice = await vscode11.window.showInformationMessage(
     `Approve Kylrix in your browser, then return here. Code: ${session.userCode}`,
     "Copy code"
   );
   if (choice === "Copy code") {
-    await vscode10.env.clipboard.writeText(session.userCode);
-    vscode10.window.showInformationMessage("Pairing code copied to your clipboard.");
+    await vscode11.env.clipboard.writeText(session.userCode);
+    vscode11.window.showInformationMessage("Pairing code copied to your clipboard.");
   }
-  await vscode10.window.withProgress(
+  await vscode11.window.withProgress(
     {
-      location: vscode10.ProgressLocation.Notification,
+      location: vscode11.ProgressLocation.Notification,
       title: "Waiting for Kylrix approval",
       cancellable: false
     },
@@ -3255,16 +3703,17 @@ async function loginWithBrowser(refreshCb) {
       });
     }
   );
-  vscode10.window.showInformationMessage("Kylrix browser sign-in complete.");
+  await autoSyncOnStartup();
+  vscode11.window.showInformationMessage("Kylrix browser sign-in complete.");
   refreshCb?.();
 }
 async function logoutCommand(refreshCb) {
   try {
     saveConfig({ token: void 0 });
-    vscode10.window.showInformationMessage("Logged out from Kylrix session.");
+    vscode11.window.showInformationMessage("Logged out from Kylrix session.");
     if (refreshCb) refreshCb();
   } catch (err) {
-    vscode10.window.showErrorMessage(`Logout failed: ${err.message}`);
+    vscode11.window.showErrorMessage(`Logout failed: ${err.message}`);
   }
 }
 async function whoamiCommand() {
@@ -3272,7 +3721,7 @@ async function whoamiCommand() {
     const env3 = resolveEnvironment();
     const isAuthed = hasAuth();
     if (!isAuthed) {
-      vscode10.window.showInformationMessage("Kylrix: Currently in Anonymous / Local-First mode.");
+      vscode11.window.showInformationMessage("Kylrix: Currently in Anonymous / Local-First mode.");
       return;
     }
     const client = getClient();
@@ -3285,17 +3734,17 @@ Workspace: ${env3.workspaceId || "Personal"}`;
 Verified Email: ${user.email}`;
     } catch {
     }
-    vscode10.window.showInformationMessage(`Kylrix Identity:
+    vscode11.window.showInformationMessage(`Kylrix Identity:
 ${detail}`, { modal: true });
   } catch (err) {
-    vscode10.window.showErrorMessage(`WhoAmI error: ${err.message}`);
+    vscode11.window.showErrorMessage(`WhoAmI error: ${err.message}`);
   }
 }
 async function switchAccountCommand(refreshCb) {
   try {
     const { accounts } = listAccounts();
     if (accounts.length === 0) {
-      vscode10.window.showInformationMessage("No additional account profiles found. Login first.");
+      vscode11.window.showInformationMessage("No additional account profiles found. Login first.");
       return;
     }
     const pickItems = accounts.map((a) => ({
@@ -3303,16 +3752,17 @@ async function switchAccountCommand(refreshCb) {
       description: a.lastUsedAt ? `Last used: ${a.lastUsedAt.substring(0, 10)}` : void 0,
       accountId: a.userId
     }));
-    const selected = await vscode10.window.showQuickPick(pickItems, {
+    const selected = await vscode11.window.showQuickPick(pickItems, {
       placeHolder: "Select an account profile to switch to"
     });
     if (selected) {
       switchAccount(selected.accountId);
-      vscode10.window.showInformationMessage(`Switched active account profile to ${selected.label}`);
+      await autoSyncOnStartup();
+      vscode11.window.showInformationMessage(`Switched active account profile to ${selected.label}`);
       if (refreshCb) refreshCb();
     }
   } catch (err) {
-    vscode10.window.showErrorMessage(`Switch account failed: ${err.message}`);
+    vscode11.window.showErrorMessage(`Switch account failed: ${err.message}`);
   }
 }
 async function switchServerCommand(refreshCb) {
@@ -3328,27 +3778,29 @@ async function switchServerCommand(refreshCb) {
       description: "Enter custom self-hosted endpoint URL",
       serverUrl: "__ADD_NEW__"
     });
-    const selected = await vscode10.window.showQuickPick(pickItems, {
+    const selected = await vscode11.window.showQuickPick(pickItems, {
       placeHolder: "Select active Kylrix server base URL"
     });
     if (!selected) return;
     if (selected.serverUrl === "__ADD_NEW__") {
-      const customUrl = await vscode10.window.showInputBox({
+      const customUrl = await vscode11.window.showInputBox({
         prompt: "Enter self-hosted Kylrix base URL",
         placeHolder: "https://kylrix.my-domain.com"
       });
       if (customUrl) {
         switchServer(customUrl);
-        vscode10.window.showInformationMessage(`Switched server base URL to ${customUrl}`);
+        await autoSyncOnStartup();
+        vscode11.window.showInformationMessage(`Switched server base URL to ${customUrl}`);
         if (refreshCb) refreshCb();
       }
     } else {
       switchServer(selected.serverUrl);
-      vscode10.window.showInformationMessage(`Switched server base URL to ${selected.serverUrl}`);
+      await autoSyncOnStartup();
+      vscode11.window.showInformationMessage(`Switched server base URL to ${selected.serverUrl}`);
       if (refreshCb) refreshCb();
     }
   } catch (err) {
-    vscode10.window.showErrorMessage(`Switch server failed: ${err.message}`);
+    vscode11.window.showErrorMessage(`Switch server failed: ${err.message}`);
   }
 }
 async function switchWorkspaceCommand(refreshCb) {
@@ -3372,34 +3824,35 @@ async function switchWorkspaceCommand(refreshCb) {
       } catch {
       }
     }
-    const selected = await vscode10.window.showQuickPick(workspaceOptions, {
+    const selected = await vscode11.window.showQuickPick(workspaceOptions, {
       placeHolder: "Select active workspace context"
     });
     if (selected !== void 0) {
       saveConfig({ workspaceId: selected.workspaceId });
-      vscode10.window.showInformationMessage(`Switched active workspace to "${selected.label}"`);
+      await autoSyncOnStartup();
+      vscode11.window.showInformationMessage(`Switched active workspace to "${selected.label}"`);
       if (refreshCb) refreshCb();
     }
   } catch (err) {
-    vscode10.window.showErrorMessage(`Switch workspace failed: ${err.message}`);
+    vscode11.window.showErrorMessage(`Switch workspace failed: ${err.message}`);
   }
 }
 
 // src/commands/notes.ts
-var vscode11 = __toESM(require("vscode"), 1);
+var vscode12 = __toESM(require("vscode"), 1);
 async function createNoteCommand(refreshCb) {
   try {
-    const title = await vscode11.window.showInputBox({
+    const title = await vscode12.window.showInputBox({
       prompt: "Enter note / idea title",
       placeHolder: "e.g. System Architecture Notes"
     });
     if (!title) return;
-    const category = await vscode11.window.showInputBox({
+    const category = await vscode12.window.showInputBox({
       prompt: "Enter category (default: general)",
       placeHolder: "general, architecture, draft, article",
       value: "general"
     });
-    const content = await vscode11.window.showInputBox({
+    const content = await vscode12.window.showInputBox({
       prompt: "Enter note initial body / content (Markdown supported)",
       placeHolder: "Content details..."
     });
@@ -3420,11 +3873,11 @@ async function createNoteCommand(refreshCb) {
       } catch {
       }
     }
-    vscode11.window.showInformationMessage(`Created note "${title}"`);
+    vscode12.window.showInformationMessage(`Created note "${title}"`);
     if (refreshCb) refreshCb();
     openNoteCommand(item.id);
   } catch (err) {
-    vscode11.window.showErrorMessage(`Failed to create note: ${err.message}`);
+    vscode12.window.showErrorMessage(`Failed to create note: ${err.message}`);
   }
 }
 async function openNoteCommand(noteId) {
@@ -3433,10 +3886,10 @@ async function openNoteCommand(noteId) {
       const res = LocalStore.listIdeas();
       const items = res.items || [];
       if (items.length === 0) {
-        vscode11.window.showInformationMessage("No notes available to open.");
+        vscode12.window.showInformationMessage("No notes available to open.");
         return;
       }
-      const selected = await vscode11.window.showQuickPick(
+      const selected = await vscode12.window.showQuickPick(
         items.map((i) => ({ label: i.title || i.id, description: i.category, noteId: i.id })),
         { placeHolder: "Select a note to open in editor" }
       );
@@ -3445,7 +3898,7 @@ async function openNoteCommand(noteId) {
     }
     const note = LocalStore.getIdea(noteId);
     if (!note) {
-      vscode11.window.showErrorMessage(`Note not found: ${noteId}`);
+      vscode12.window.showErrorMessage(`Note not found: ${noteId}`);
       return;
     }
     const docContent = `# ${note.title || "Untitled Note"}
@@ -3456,13 +3909,13 @@ Updated: ${note.updatedAt || note.createdAt || "N/A"}
 ---
 
 ${note.content || ""}`;
-    const doc = await vscode11.workspace.openTextDocument({
+    const doc = await vscode12.workspace.openTextDocument({
       language: "markdown",
       content: docContent
     });
-    await vscode11.window.showTextDocument(doc, { preview: false });
+    await vscode12.window.showTextDocument(doc, { preview: false });
   } catch (err) {
-    vscode11.window.showErrorMessage(`Failed to open note: ${err.message}`);
+    vscode12.window.showErrorMessage(`Failed to open note: ${err.message}`);
   }
 }
 async function deleteNoteCommand(noteId, refreshCb) {
@@ -3471,45 +3924,45 @@ async function deleteNoteCommand(noteId, refreshCb) {
       const res = LocalStore.listIdeas();
       const items = res.items || [];
       if (items.length === 0) {
-        vscode11.window.showInformationMessage("No notes available to delete.");
+        vscode12.window.showInformationMessage("No notes available to delete.");
         return;
       }
-      const selected = await vscode11.window.showQuickPick(
+      const selected = await vscode12.window.showQuickPick(
         items.map((i) => ({ label: i.title || i.id, description: i.category, noteId: i.id })),
         { placeHolder: "Select a note to delete" }
       );
       if (!selected) return;
       noteId = selected.noteId;
     }
-    const confirm = await vscode11.window.showWarningMessage(
+    const confirm = await vscode12.window.showWarningMessage(
       `Are you sure you want to delete note "${noteId}"?`,
       { modal: true },
       "Delete"
     );
     if (confirm === "Delete") {
       LocalStore.deleteIdea(noteId);
-      vscode11.window.showInformationMessage(`Deleted note ${noteId}`);
+      vscode12.window.showInformationMessage(`Deleted note ${noteId}`);
       if (refreshCb) refreshCb();
     }
   } catch (err) {
-    vscode11.window.showErrorMessage(`Failed to delete note: ${err.message}`);
+    vscode12.window.showErrorMessage(`Failed to delete note: ${err.message}`);
   }
 }
 
 // src/commands/goals.ts
-var vscode12 = __toESM(require("vscode"), 1);
+var vscode13 = __toESM(require("vscode"), 1);
 async function createGoalCommand(refreshCb) {
   try {
-    const title = await vscode12.window.showInputBox({
+    const title = await vscode13.window.showInputBox({
       prompt: "Enter goal title",
       placeHolder: "e.g. Complete VS Code Extension Parity"
     });
     if (!title) return;
-    const targetVal = await vscode12.window.showInputBox({
+    const targetVal = await vscode13.window.showInputBox({
       prompt: "Enter target numeric value (default: 100)",
       value: "100"
     });
-    const unit = await vscode12.window.showInputBox({
+    const unit = await vscode13.window.showInputBox({
       prompt: "Enter unit (default: %)",
       value: "%"
     });
@@ -3533,10 +3986,10 @@ async function createGoalCommand(refreshCb) {
       } catch {
       }
     }
-    vscode12.window.showInformationMessage(`Created goal "${title}"`);
+    vscode13.window.showInformationMessage(`Created goal "${title}"`);
     if (refreshCb) refreshCb();
   } catch (err) {
-    vscode12.window.showErrorMessage(`Failed to create goal: ${err.message}`);
+    vscode13.window.showErrorMessage(`Failed to create goal: ${err.message}`);
   }
 }
 async function updateGoalProgressCommand(goalId, refreshCb) {
@@ -3545,10 +3998,10 @@ async function updateGoalProgressCommand(goalId, refreshCb) {
       const res = LocalStore.listGoals();
       const items = res.items || [];
       if (items.length === 0) {
-        vscode12.window.showInformationMessage("No goals available.");
+        vscode13.window.showInformationMessage("No goals available.");
         return;
       }
-      const selected = await vscode12.window.showQuickPick(
+      const selected = await vscode13.window.showQuickPick(
         items.map((g) => ({
           label: g.title || g.id,
           description: `Progress: ${g.currentValue}/${g.targetValue} ${g.unit}`,
@@ -3560,7 +4013,7 @@ async function updateGoalProgressCommand(goalId, refreshCb) {
       goalId = selected.goalId;
     }
     const existing = LocalStore.getGoal(goalId);
-    const newVal = await vscode12.window.showInputBox({
+    const newVal = await vscode13.window.showInputBox({
       prompt: `Enter new current progress value (Target: ${existing.targetValue} ${existing.unit})`,
       value: String(existing.currentValue || 0)
     });
@@ -3581,46 +4034,46 @@ async function updateGoalProgressCommand(goalId, refreshCb) {
       } catch {
       }
     }
-    vscode12.window.showInformationMessage(`Updated progress for "${existing.title}" to ${currentValue} ${existing.unit}`);
+    vscode13.window.showInformationMessage(`Updated progress for "${existing.title}" to ${currentValue} ${existing.unit}`);
     if (refreshCb) refreshCb();
   } catch (err) {
-    vscode12.window.showErrorMessage(`Failed to update goal: ${err.message}`);
+    vscode13.window.showErrorMessage(`Failed to update goal: ${err.message}`);
   }
 }
 
 // src/commands/vault.ts
-var vscode13 = __toESM(require("vscode"), 1);
+var vscode14 = __toESM(require("vscode"), 1);
 var fs5 = __toESM(require("fs"), 1);
 var path5 = __toESM(require("path"), 1);
 var _inMemoryMasterKey = null;
 async function unlockVaultCommand() {
   try {
-    const password = await vscode13.window.showInputBox({
+    const password = await vscode14.window.showInputBox({
       prompt: "Enter Vault Master Password",
       password: true
     });
     if (!password) return;
     _inMemoryMasterKey = password;
-    vscode13.window.showInformationMessage("Vault unlocked for active editor session.");
+    vscode14.window.showInformationMessage("Vault unlocked for active editor session.");
   } catch (err) {
-    vscode13.window.showErrorMessage(`Failed to unlock vault: ${err.message}`);
+    vscode14.window.showErrorMessage(`Failed to unlock vault: ${err.message}`);
   }
 }
 async function lockVaultCommand() {
   _inMemoryMasterKey = null;
-  vscode13.window.showInformationMessage("Vault locked and session encryption key purged.");
+  vscode14.window.showInformationMessage("Vault locked and session encryption key purged.");
 }
 async function createSecretCommand(refreshCb) {
   try {
-    const name = await vscode13.window.showInputBox({
+    const name = await vscode14.window.showInputBox({
       prompt: "Enter secret name / service label",
       placeHolder: "e.g. AWS Production API Key"
     });
     if (!name) return;
-    const username = await vscode13.window.showInputBox({
+    const username = await vscode14.window.showInputBox({
       prompt: "Username / Key Identifier (optional)"
     });
-    const password = await vscode13.window.showInputBox({
+    const password = await vscode14.window.showInputBox({
       prompt: "Password / Secret Payload",
       password: true
     });
@@ -3630,26 +4083,26 @@ async function createSecretCommand(refreshCb) {
       password,
       itemType: "login"
     });
-    vscode13.window.showInformationMessage(`Created secret "${name}"`);
+    vscode14.window.showInformationMessage(`Created secret "${name}"`);
     if (refreshCb) refreshCb();
   } catch (err) {
-    vscode13.window.showErrorMessage(`Failed to create secret: ${err.message}`);
+    vscode14.window.showErrorMessage(`Failed to create secret: ${err.message}`);
   }
 }
 async function pullEnvCommand(vaultId) {
   try {
-    const workspaceFolder = vscode13.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const workspaceFolder = vscode14.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspaceFolder) {
-      vscode13.window.showErrorMessage("No active workspace folder opened in VS Code.");
+      vscode14.window.showErrorMessage("No active workspace folder opened in VS Code.");
       return;
     }
     if (!vaultId) {
       const items = LocalStore.listVault();
       if (items.length === 0) {
-        vscode13.window.showInformationMessage("No secrets or .env sets in vault.");
+        vscode14.window.showInformationMessage("No secrets or .env sets in vault.");
         return;
       }
-      const selected = await vscode13.window.showQuickPick(
+      const selected = await vscode14.window.showQuickPick(
         items.map((v) => ({ label: v.name, description: v.username || v.itemType, vaultId: v.id })),
         { placeHolder: "Select secret / .env bundle to pull into workspace" }
       );
@@ -3663,31 +4116,31 @@ async function pullEnvCommand(vaultId) {
       payloadLines = typeof secret.customFields === "string" ? secret.customFields : JSON.stringify(secret.customFields, null, 2);
     }
     if (!payloadLines) {
-      vscode13.window.showWarningMessage(`Secret "${secret.name}" contains no env variable lines.`);
+      vscode14.window.showWarningMessage(`Secret "${secret.name}" contains no env variable lines.`);
       return;
     }
     fs5.writeFileSync(targetEnvPath, payloadLines, "utf-8");
-    vscode13.window.showInformationMessage(`Successfully pulled env variables from "${secret.name}" into .env`);
-    const doc = await vscode13.workspace.openTextDocument(targetEnvPath);
-    await vscode13.window.showTextDocument(doc);
+    vscode14.window.showInformationMessage(`Successfully pulled env variables from "${secret.name}" into .env`);
+    const doc = await vscode14.workspace.openTextDocument(targetEnvPath);
+    await vscode14.window.showTextDocument(doc);
   } catch (err) {
-    vscode13.window.showErrorMessage(`Failed to pull .env: ${err.message}`);
+    vscode14.window.showErrorMessage(`Failed to pull .env: ${err.message}`);
   }
 }
 async function pushEnvCommand(refreshCb) {
   try {
-    const workspaceFolder = vscode13.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const workspaceFolder = vscode14.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspaceFolder) {
-      vscode13.window.showErrorMessage("No active workspace folder opened in VS Code.");
+      vscode14.window.showErrorMessage("No active workspace folder opened in VS Code.");
       return;
     }
     const targetEnvPath = path5.join(workspaceFolder, ".env");
     if (!fs5.existsSync(targetEnvPath)) {
-      vscode13.window.showErrorMessage("No .env file found in root workspace folder.");
+      vscode14.window.showErrorMessage("No .env file found in root workspace folder.");
       return;
     }
     const envContent = fs5.readFileSync(targetEnvPath, "utf-8");
-    const name = await vscode13.window.showInputBox({
+    const name = await vscode14.window.showInputBox({
       prompt: "Enter label for this workspace .env bundle in Kylrix Vault",
       value: `Workspace .env (${path5.basename(workspaceFolder)})`
     });
@@ -3698,15 +4151,15 @@ async function pushEnvCommand(refreshCb) {
       isEnv: true,
       itemType: "env"
     });
-    vscode13.window.showInformationMessage(`Successfully pushed .env file to vault secret "${name}"`);
+    vscode14.window.showInformationMessage(`Successfully pushed .env file to vault secret "${name}"`);
     if (refreshCb) refreshCb();
   } catch (err) {
-    vscode13.window.showErrorMessage(`Failed to push .env: ${err.message}`);
+    vscode14.window.showErrorMessage(`Failed to push .env: ${err.message}`);
   }
 }
 
 // src/commands/totp.ts
-var vscode14 = __toESM(require("vscode"), 1);
+var vscode15 = __toESM(require("vscode"), 1);
 function computeTotpCode(secret) {
   try {
     const cleanSecret = secret.replace(/\s+/g, "").toUpperCase();
@@ -3726,10 +4179,10 @@ async function copyTotpCodeCommand(totpId) {
     if (!totpId) {
       const items = LocalStore.listTotp();
       if (items.length === 0) {
-        vscode14.window.showInformationMessage("No TOTP accounts available.");
+        vscode15.window.showInformationMessage("No TOTP accounts available.");
         return;
       }
-      const selected = await vscode14.window.showQuickPick(
+      const selected = await vscode15.window.showQuickPick(
         items.map((t) => ({ label: t.name, description: t.account || t.issuer, totpId: t.id })),
         { placeHolder: "Select 2FA account to generate & copy code" }
       );
@@ -3738,26 +4191,26 @@ async function copyTotpCodeCommand(totpId) {
     }
     const item = LocalStore.getTotp(totpId);
     const code = computeTotpCode(item.secret);
-    await vscode14.env.clipboard.writeText(code);
-    vscode14.window.showInformationMessage(`Copied 2FA Code [ ${code} ] for "${item.name}" to clipboard!`);
+    await vscode15.env.clipboard.writeText(code);
+    vscode15.window.showInformationMessage(`Copied 2FA Code [ ${code} ] for "${item.name}" to clipboard!`);
   } catch (err) {
-    vscode14.window.showErrorMessage(`Failed to copy TOTP code: ${err.message}`);
+    vscode15.window.showErrorMessage(`Failed to copy TOTP code: ${err.message}`);
   }
 }
 async function addTotpCommand(refreshCb) {
   try {
-    const name = await vscode14.window.showInputBox({
+    const name = await vscode15.window.showInputBox({
       prompt: "Enter 2FA Account Name / Service",
       placeHolder: "e.g. GitHub - myaccount"
     });
     if (!name) return;
-    const secret = await vscode14.window.showInputBox({
+    const secret = await vscode15.window.showInputBox({
       prompt: "Enter Base32 TOTP Secret Seed",
       placeHolder: "JBSWY3DPEHPK3PXP",
       password: true
     });
     if (!secret) return;
-    const issuer = await vscode14.window.showInputBox({
+    const issuer = await vscode15.window.showInputBox({
       prompt: "Issuer (optional)",
       placeHolder: "e.g. GitHub, Google"
     });
@@ -3766,25 +4219,25 @@ async function addTotpCommand(refreshCb) {
       secret,
       issuer
     });
-    vscode14.window.showInformationMessage(`Added 2FA TOTP account "${name}"`);
+    vscode15.window.showInformationMessage(`Added 2FA TOTP account "${name}"`);
     if (refreshCb) refreshCb();
   } catch (err) {
-    vscode14.window.showErrorMessage(`Failed to add TOTP: ${err.message}`);
+    vscode15.window.showErrorMessage(`Failed to add TOTP: ${err.message}`);
   }
 }
 
 // src/commands/search.ts
-var vscode15 = __toESM(require("vscode"), 1);
+var vscode16 = __toESM(require("vscode"), 1);
 async function globalSearchCommand() {
   try {
-    const query = await vscode15.window.showInputBox({
+    const query = await vscode16.window.showInputBox({
       prompt: "Enter search query across notes, goals, secrets, events, forms, flows",
       placeHolder: "Search term..."
     });
     if (!query) return;
     const results = LocalStore.search(query);
     if (results.length === 0) {
-      vscode15.window.showInformationMessage(`No matching results found for "${query}"`);
+      vscode16.window.showInformationMessage(`No matching results found for "${query}"`);
       return;
     }
     const pickItems = results.map((r) => ({
@@ -3793,7 +4246,7 @@ async function globalSearchCommand() {
       kind: r.kind,
       id: r.id
     }));
-    const selected = await vscode15.window.showQuickPick(pickItems, {
+    const selected = await vscode16.window.showQuickPick(pickItems, {
       placeHolder: `Found ${results.length} results for "${query}"`
     });
     if (!selected) return;
@@ -3804,101 +4257,10 @@ async function globalSearchCommand() {
     } else if (selected.kind === "totp") {
       copyTotpCodeCommand(selected.id);
     } else {
-      vscode15.window.showInformationMessage(`Selected ${selected.kind}: "${selected.label}" (ID: ${selected.id})`);
+      vscode16.window.showInformationMessage(`Selected ${selected.kind}: "${selected.label}" (ID: ${selected.id})`);
     }
   } catch (err) {
-    vscode15.window.showErrorMessage(`Global search failed: ${err.message}`);
-  }
-}
-
-// src/commands/sync.ts
-var vscode16 = __toESM(require("vscode"), 1);
-async function syncCommand(refreshCb) {
-  try {
-    if (!hasAuth()) {
-      const login = await vscode16.window.showWarningMessage(
-        "Authentication required to sync local storage with cloud workspace.",
-        "Login Now"
-      );
-      if (login === "Login Now") {
-        vscode16.commands.executeCommand("kylrix.login");
-      }
-      return;
-    }
-    await vscode16.window.withProgress(
-      {
-        location: vscode16.ProgressLocation.Notification,
-        title: "Kylrix: Synchronizing local items to cloud workspace...",
-        cancellable: false
-      },
-      async (progress) => {
-        const client = getClient();
-        progress.report({ message: "Syncing notes & ideas..." });
-        const localIdeas = LocalStore.listIdeas().items;
-        for (const idea of localIdeas) {
-          if (idea.syncStatus === "unsynced") {
-            try {
-              const res = await client.ideas.create({ title: idea.title, content: idea.content || "" });
-              LocalStore.markIdeaSynced(idea.id, res.id);
-            } catch {
-            }
-          }
-        }
-        try {
-          const cloudIdeas = await client.ideas.list({ limit: 100 });
-          for (const item of extractItems(cloudIdeas)) {
-            LocalStore.upsertIdeaFromCloud(item);
-          }
-        } catch {
-        }
-        progress.report({ message: "Syncing goals & habits..." });
-        const localGoals = LocalStore.listGoals().items;
-        for (const goal of localGoals) {
-          if (goal.syncStatus === "unsynced") {
-            try {
-              const res = await client.goals.create({ title: goal.title, targetValue: goal.targetValue });
-              LocalStore.markGoalSynced(goal.id, res.id);
-            } catch {
-            }
-          }
-        }
-        try {
-          const cloudGoals = await client.goals.list({ limit: 100 });
-          for (const item of extractItems(cloudGoals)) {
-            LocalStore.upsertGoalFromCloud(item);
-          }
-        } catch {
-        }
-      }
-    );
-    vscode16.window.showInformationMessage("Synchronization completed successfully!");
-    if (refreshCb) refreshCb();
-  } catch (err) {
-    vscode16.window.showErrorMessage(`Sync failed: ${err.message}`);
-  }
-}
-async function connectWorkspaceCommand(refreshCb) {
-  try {
-    const workspaceFolder = vscode16.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!workspaceFolder) {
-      vscode16.window.showErrorMessage("No workspace folder opened in VS Code.");
-      return;
-    }
-    LocalStore.connectTool({
-      client: "vscode",
-      name: "VS Code Extension",
-      directory: workspaceFolder
-    });
-    LocalStore.saveExternalContext({
-      client: "vscode",
-      directory: workspaceFolder,
-      title: "VS Code Extension Connected",
-      summary: `Workspace directory ${workspaceFolder} connected to Kylrix context engine.`
-    });
-    vscode16.window.showInformationMessage(`Connected directory context: ${workspaceFolder}`);
-    if (refreshCb) refreshCb();
-  } catch (err) {
-    vscode16.window.showErrorMessage(`Connect workspace failed: ${err.message}`);
+    vscode16.window.showErrorMessage(`Global search failed: ${err.message}`);
   }
 }
 
@@ -3981,6 +4343,7 @@ function activate(context) {
   if (vscode17.workspace.workspaceFolders && vscode17.workspace.workspaceFolders.length > 0) {
     connectWorkspaceCommand(refreshAllViews);
   }
+  autoSyncOnStartup(refreshAllViews);
   console.log("[Kylrix] Kylrix Extension successfully activated.");
 }
 function updateStatusBar() {

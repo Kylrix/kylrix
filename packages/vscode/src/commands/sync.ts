@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { hasAuth } from '@/packages/cli/src/client';
+import { LocalStore } from '@/packages/cli/src/local/store';
 import { bidirectionalSync, pullCloudItemsToLocal } from '@/packages/cli/src/local/sync-resolver';
 
 async function runSyncAttempt(): Promise<void> {
@@ -51,7 +52,9 @@ export async function autoSyncOnStartup(refreshCb?: () => void) {
   try {
     await runSyncAttempt();
     refreshCb?.();
-  } catch {}
+  } catch (err: any) {
+    vscode.window.showWarningMessage(`Kylrix could not load cloud data: ${err?.message || String(err)}`);
+  }
 }
 
 export async function connectWorkspaceCommand(refreshCb?: () => void) {
