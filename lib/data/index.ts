@@ -453,24 +453,38 @@ export async function listTags(): Promise<any[]> {
   return getAllTags();
 }
 
-export async function createTotpSecret(data: any): Promise<any> {
+export async function createTotpSecret(data: any, opts?: { skipPending?: boolean }): Promise<any> {
+  const id = data?.id || data?.$id || `totp_${Date.now()}`;
+  const payload = { ...data, id, $id: id };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`totp:${id}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const { systemTables } = await import('./system-tables');
-  const id = `totp_${Date.now()}`;
   return systemTables().createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
     tableId: 'totp_secrets',
     rowId: id,
-    data: { id, ...data },
+    data: payload,
   });
 }
 
-export async function updateTotpSecret(id: string, data: any): Promise<any> {
+export async function updateTotpSecret(id: string, data: any, opts?: { skipPending?: boolean }): Promise<any> {
+  const payload = { ...data, id, $id: id };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`totp:${id}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const { systemTables } = await import('./system-tables');
   return systemTables().updateRow({
     databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
     tableId: 'totp_secrets',
     rowId: id,
-    data,
+    data: payload,
   });
 }
 
@@ -492,24 +506,38 @@ export async function listTotpSecrets(_userId?: string): Promise<any> {
   return res.rows;
 }
 
-export async function createCredential(data: any): Promise<any> {
+export async function createCredential(data: any, opts?: { skipPending?: boolean }): Promise<any> {
+  const id = data?.id || data?.$id || `cred_${Date.now()}`;
+  const payload = { ...data, id, $id: id };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`cred:${id}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const { systemTables } = await import('./system-tables');
-  const id = `cred_${Date.now()}`;
   return systemTables().createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
     rowId: id,
-    data: { id, ...data },
+    data: payload,
   });
 }
 
-export async function updateCredential(id: string, data: any): Promise<any> {
+export async function updateCredential(id: string, data: any, opts?: { skipPending?: boolean }): Promise<any> {
+  const payload = { ...data, id, $id: id };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`cred:${id}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const { systemTables } = await import('./system-tables');
   return systemTables().updateRow({
     databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
     rowId: id,
-    data,
+    data: payload,
   });
 }
 

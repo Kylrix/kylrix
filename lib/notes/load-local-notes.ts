@@ -101,15 +101,19 @@ export async function loadNotesFromLocalCopy(opts: {
     /* non-fatal */
   }
 
-  // 3) LocalEngine flat list — check f_notes_list_${userId} and f_ideas_${userId}
+  // 3) LocalEngine flat list — check f_notes_list_${userId}, f_ideas_${userId}, f_notes_list, f_notes_list_guest, and f_ideas_guest
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const [list, ideasObj] = await Promise.all([
+    const [userList, userIdeasObj, unPrefixedList, guestList, guestIdeasObj] = await Promise.all([
       LocalEngine.cacheGet<any[]>(`f_notes_list_${userId}`).catch(() => null),
       LocalEngine.cacheGet<{ rows?: any[] } | any[]>(`f_ideas_${userId}`).catch(() => null),
+      LocalEngine.cacheGet<any[]>('f_notes_list').catch(() => null),
+      LocalEngine.cacheGet<any[]>('f_notes_list_guest').catch(() => null),
+      LocalEngine.cacheGet<{ rows?: any[] } | any[]>('f_ideas_guest').catch(() => null),
     ]);
-    const ideasList = Array.isArray(ideasObj) ? ideasObj : ideasObj?.rows;
-    const candidates = (list && list.length > 0 ? list : ideasList) || [];
+    const userIdeasList = Array.isArray(userIdeasObj) ? userIdeasObj : userIdeasObj?.rows;
+    const guestIdeasList = Array.isArray(guestIdeasObj) ? guestIdeasObj : guestIdeasObj?.rows;
+    const candidates = (userList?.length ? userList : (userIdeasList?.length ? userIdeasList : (unPrefixedList?.length ? unPrefixedList : (guestList?.length ? guestList : guestIdeasList)))) || [];
     const notes = candidates.map((row) => normalizeNoteRow(row, userId)).filter((n): n is Notes => !!n);
     if (notes.length) {
       return {

@@ -373,9 +373,17 @@ export async function removeObjectFromProject(objectId: string) {
 }
 
 // --- Forms CRUD ---
-export async function createForm(data: any) {
+export async function createForm(data: any, opts?: { skipPending?: boolean }) {
+  const formId = data?.$id || data?.id || `form_${Date.now()}`;
+  const payload = { ...data, $id: formId, id: formId };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`form:${formId}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const jwt = await getJwt();
-  return createFormSecure(data, jwt);
+  return createFormSecure(payload, jwt);
 }
 
 export async function listUserForms(userId: string) {
@@ -383,12 +391,19 @@ export async function listUserForms(userId: string) {
   return listUserFormsSecure(userId, jwt);
 }
 
-export async function updateForm(formId: string, data: any) {
+export async function updateForm(formId: string, data: any, opts?: { skipPending?: boolean }) {
+  const payload = { ...data, $id: formId, id: formId };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`form:${formId}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const { tryOwnerDirectUpdateForm } = await import('@/lib/data');
-  const direct = await tryOwnerDirectUpdateForm(formId, data).catch(() => null);
+  const direct = await tryOwnerDirectUpdateForm(formId, payload).catch(() => null);
   if (direct) return direct;
   const jwt = await getJwt();
-  return updateFormSecure(formId, data, jwt);
+  return updateFormSecure(formId, payload, jwt);
 }
 
 export async function deleteForm(formId: string) {
@@ -413,17 +428,32 @@ export async function batchTrashFormSubmissions(formId: string, submissionIds: s
 }
 
 // --- Events CRUD ---
-export async function createEvent(data: any) {
+export async function createEvent(data: any, opts?: { skipPending?: boolean }) {
+  const eventId = data?.$id || data?.id || `event_${Date.now()}`;
+  const payload = { ...data, $id: eventId, id: eventId };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`event:${eventId}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const jwt = await getJwt();
-  return createEventSecure(data, jwt);
+  return createEventSecure(payload, jwt);
 }
 
-export async function updateEvent(eventId: string, data: any) {
+export async function updateEvent(eventId: string, data: any, opts?: { skipPending?: boolean }) {
+  const payload = { ...data, $id: eventId, id: eventId };
+  if (!opts?.skipPending) {
+    try {
+      const { autonomicSyncEngine } = await import('@/lib/services/sync-engine');
+      autonomicSyncEngine.markPending(`event:${eventId}`, new Date().toISOString(), payload);
+    } catch {}
+  }
   const { tryOwnerDirectUpdateEvent } = await import('@/lib/data');
-  const direct = await tryOwnerDirectUpdateEvent(eventId, data).catch(() => null);
+  const direct = await tryOwnerDirectUpdateEvent(eventId, payload).catch(() => null);
   if (direct) return direct;
   const jwt = await getJwt();
-  return updateEventSecure(eventId, data, jwt);
+  return updateEventSecure(eventId, payload, jwt);
 }
 
 export async function deleteEvent(eventId: string) {
