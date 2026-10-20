@@ -862,8 +862,89 @@ export const ProjectsService = {
       return [];
     }
   },
-  async listTaggedResources(_wsId: string): Promise<any> {
-    return { totps: [], notes: [], tasks: [], events: [] };
+  async listTaggedResources(wsId: string): Promise<any> {
+    try {
+      const { db } = await import('@/lib/db');
+      const schema = await import('@/lib/db/schema');
+      const { eq, inArray, or } = await import('drizzle-orm');
+
+      const objects = await db
+        .select()
+        .from(schema.workspaceObjects)
+        .where(eq(schema.workspaceObjects.workspaceId, wsId));
+
+      const totpIds = objects.filter((o) => o.entityKind === 'totp').map((o) => o.entityId);
+      const noteIds = objects.filter((o) => o.entityKind === 'note' || o.entityKind === 'idea').map((o) => o.entityId);
+      const taskIds = objects.filter((o) => o.entityKind === 'task' || o.entityKind === 'goal').map((o) => o.entityId);
+      const eventIds = objects.filter((o) => o.entityKind === 'event').map((o) => o.entityId);
+      const formIds = objects.filter((o) => o.entityKind === 'form').map((o) => o.entityId);
+      const credIds = objects.filter((o) => o.entityKind === 'credential' || o.entityKind === 'vault_item').map((o) => o.entityId);
+
+      const [totpRows, noteRows, goalRows, eventRows, formRows, credRows] = await Promise.all([
+        totpIds.length > 0
+          ? db.select().from(schema.totpSecrets).where(inArray(schema.totpSecrets.id, totpIds))
+          : Promise.resolve([]),
+        noteIds.length > 0
+          ? db.select().from(schema.ideas).where(or(inArray(schema.ideas.id, noteIds), eq(schema.ideas.workspaceId, wsId)))
+          : db.select().from(schema.ideas).where(eq(schema.ideas.workspaceId, wsId)),
+        taskIds.length > 0
+          ? db.select().from(schema.goals).where(or(inArray(schema.goals.id, taskIds), eq(schema.goals.workspaceId, wsId)))
+          : db.select().from(schema.goals).where(eq(schema.goals.workspaceId, wsId)),
+        eventIds.length > 0
+          ? db.select().from(schema.events).where(or(inArray(schema.events.id, eventIds), eq(schema.events.workspaceId, wsId)))
+          : db.select().from(schema.events).where(eq(schema.events.workspaceId, wsId)),
+        formIds.length > 0
+          ? db.select().from(schema.forms).where(or(inArray(schema.forms.id, formIds), eq(schema.forms.workspaceId, wsId)))
+          : db.select().from(schema.forms).where(eq(schema.forms.workspaceId, wsId)),
+        credIds.length > 0
+          ? db.select().from(schema.vaultItems).where(or(inArray(schema.vaultItems.id, credIds), eq(schema.vaultItems.workspaceId, wsId)))
+          : db.select().from(schema.vaultItems).where(eq(schema.vaultItems.workspaceId, wsId)),
+      ]);
+
+      const parsedCreds = credRows.map((r: any) => {
+        let meta: any = {};
+        try { meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {}); } catch {}
+        return {
+          ...r,
+          $id: r.id,
+          name: meta.name || r.title,
+          username: meta.username || '',
+          url: meta.url || '',
+          password: meta.password || r.encryptedData || '',
+          notes: meta.notes || '',
+          customFields: meta.customFields || '',
+          type: meta.itemType || r.type,
+          dek: meta.dek || null,
+          projectId: wsId,
+          isWorkspace: true,
+        };
+      });
+
+      const parsedTotps = totpRows.map((r: any) => {
+        let meta: any = {};
+        try { meta = typeof r.metadata === 'string' ? JSON.parse(r.metadata) : (r.metadata || {}); } catch {}
+        return {
+          ...r,
+          $id: r.id,
+          secretKey: r.encryptedSecret || meta.secretKey || '',
+          accountName: meta.accountName || r.account,
+          issuer: meta.issuer || '',
+          projectId: wsId,
+          isWorkspace: true,
+        };
+      });
+
+      return {
+        totps: parsedTotps,
+        notes: noteRows.map((r: any) => ({ ...r, $id: r.id, projectId: wsId, isWorkspace: true })),
+        tasks: goalRows.map((r: any) => ({ ...r, $id: r.id, projectId: wsId, isWorkspace: true })),
+        events: eventRows.map((r: any) => ({ ...r, $id: r.id, projectId: wsId, isWorkspace: true })),
+        forms: formRows.map((r: any) => ({ ...r, $id: r.id, projectId: wsId, isWorkspace: true })),
+        credentials: parsedCreds,
+      };
+    } catch {
+      return { totps: [], notes: [], tasks: [], events: [], forms: [], credentials: [] };
+    }
   },
   async addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string, metadata?: any): Promise<any> {
     const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops/projects');

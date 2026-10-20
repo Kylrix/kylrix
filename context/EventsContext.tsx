@@ -19,10 +19,10 @@ function safeIsoString(val: any): string {
 }
 
 function mapRemoteEvent(doc: any): Event {
-  const start = safeDate(doc.startTime);
-  const end = safeDate(doc.endTime);
-  const userId = doc.userId || doc.creatorId || '';
-  const calendarId = doc.calendarId || doc.userId || doc.creatorId || 'default';
+  const start = safeDate(doc.startTime || doc.start_time);
+  const end = safeDate(doc.endTime || doc.end_time);
+  const userId = doc.userId || doc.creatorId || doc.creator_id || '';
+  const calendarId = doc.calendarId || doc.calendar_id || doc.userId || doc.creatorId || 'default';
   return {
     id: doc.$id || doc.id,
     $id: doc.$id || doc.id,
@@ -31,19 +31,19 @@ function mapRemoteEvent(doc: any): Event {
     startTime: start,
     endTime: end,
     location: doc.location || '',
-    url: doc.meetingUrl || doc.url || '',
-    coverImage: doc.coverImageId || doc.coverImage || '',
+    url: doc.meetingUrl || doc.meeting_url || doc.url || '',
+    coverImage: doc.coverImageId || doc.cover_image_id || doc.coverImage || '',
     attendees: [],
-    isPublic: doc.visibility === 'public' || Boolean(doc.isPublic),
-    isPinned: Boolean(doc.isPinned),
+    isPublic: doc.visibility === 'public' || Boolean(doc.isPublic) || Boolean(doc.is_public),
+    isPinned: Boolean(doc.isPinned) || Boolean(doc.is_pinned),
     creatorId: userId,
     userId,
     calendarId,
-    createdAt: safeDate(doc.$createdAt || doc.createdAt),
-    updatedAt: safeDate(doc.$updatedAt || doc.updatedAt),
-    $createdAt: safeIsoString(doc.$createdAt || doc.createdAt),
-    $updatedAt: safeIsoString(doc.$updatedAt || doc.updatedAt),
-    isWorkspace: Boolean(doc.isWorkspace),
+    createdAt: safeDate(doc.$createdAt || doc.createdAt || doc.created_at),
+    updatedAt: safeDate(doc.$updatedAt || doc.updatedAt || doc.updated_at),
+    $createdAt: safeIsoString(doc.$createdAt || doc.createdAt || doc.created_at),
+    $updatedAt: safeIsoString(doc.$updatedAt || doc.updatedAt || doc.updated_at),
+    isWorkspace: Boolean(doc.isWorkspace) || Boolean(doc.is_workspace),
   } as Event;
 }
 

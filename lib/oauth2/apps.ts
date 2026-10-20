@@ -45,8 +45,11 @@ export async function listMyApps(userId: string): Promise<OauthApp[]> {
   try {
     const { db } = await import('@/lib/db');
     const schema = await import('@/lib/db/schema');
-    const { eq } = await import('drizzle-orm');
-    const rows = await db.select().from(schema.oauthClient).where(eq(schema.oauthClient.userId, userId));
+    const { eq, or, isNull } = await import('drizzle-orm');
+    const rows = await db
+      .select()
+      .from(schema.oauthClient)
+      .where(or(eq(schema.oauthClient.userId, userId), isNull(schema.oauthClient.userId)));
     return rows.map((r: any) => ({
       $id: r.clientId,
       $createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
@@ -75,14 +78,7 @@ export async function listMyApps(userId: string): Promise<OauthApp[]> {
       userId: r.userId || undefined,
     }));
   } catch {
-    const fetchPromise = appwriteSessionFetch<AppsList>('GET', '/apps', {
-      query: {
-        queries: [Query.equal('userId', userId), Query.limit(100)],
-      },
-    });
-    const timeoutPromise = new Promise<null>((r) => setTimeout(() => r(null), 1200));
-    const data = await Promise.race([fetchPromise, timeoutPromise]).catch(() => null);
-    return data?.apps || [];
+    return [];
   }
 }
 

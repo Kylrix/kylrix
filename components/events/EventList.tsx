@@ -19,10 +19,12 @@ import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
 import { useWorkspace } from '@/context/WorkspaceContext';
 
 function mapRemoteEvent(doc: any): Event {
-  const start = doc.startTime ? new Date(doc.startTime) : new Date();
-  const end = doc.endTime ? new Date(doc.endTime) : start;
-  const userId = doc.userId || doc.creatorId || '';
-  const calendarId = doc.calendarId || doc.userId || doc.creatorId || 'default';
+  const startRaw = doc.startTime || doc.start_time;
+  const start = startRaw ? new Date(startRaw) : new Date();
+  const endRaw = doc.endTime || doc.end_time;
+  const end = endRaw ? new Date(endRaw) : start;
+  const userId = doc.userId || doc.creatorId || doc.creator_id || '';
+  const calendarId = doc.calendarId || doc.calendar_id || doc.userId || doc.creatorId || 'default';
   return {
     id: doc.$id || doc.id,
     $id: doc.$id || doc.id,
@@ -31,19 +33,19 @@ function mapRemoteEvent(doc: any): Event {
     startTime: Number.isNaN(start.getTime()) ? new Date() : start,
     endTime: Number.isNaN(end.getTime()) ? start : end,
     location: doc.location,
-    url: doc.meetingUrl || doc.url || '',
-    coverImage: doc.coverImageId || doc.coverImage || '',
+    url: doc.meetingUrl || doc.meeting_url || doc.url || '',
+    coverImage: doc.coverImageId || doc.cover_image_id || doc.coverImage || '',
     attendees: [],
-    isPublic: doc.visibility === 'public' || Boolean(doc.isPublic),
-    isPinned: Boolean(doc.isPinned),
+    isPublic: doc.visibility === 'public' || Boolean(doc.isPublic) || Boolean(doc.is_public),
+    isPinned: Boolean(doc.isPinned) || Boolean(doc.is_pinned),
     creatorId: userId,
     userId,
     calendarId,
-    createdAt: new Date(doc.$createdAt || doc.createdAt || Date.now()),
-    updatedAt: new Date(doc.$updatedAt || doc.updatedAt || Date.now()),
-    $createdAt: typeof doc.$createdAt === 'string' ? doc.$createdAt : new Date(doc.createdAt || Date.now()).toISOString(),
-    $updatedAt: typeof doc.$updatedAt === 'string' ? doc.$updatedAt : new Date(doc.updatedAt || Date.now()).toISOString(),
-    isWorkspace: Boolean(doc.isWorkspace),
+    createdAt: new Date(doc.$createdAt || doc.createdAt || doc.created_at || Date.now()),
+    updatedAt: new Date(doc.$updatedAt || doc.updatedAt || doc.updated_at || Date.now()),
+    $createdAt: typeof doc.$createdAt === 'string' ? doc.$createdAt : new Date(doc.createdAt || doc.created_at || Date.now()).toISOString(),
+    $updatedAt: typeof doc.$updatedAt === 'string' ? doc.$updatedAt : new Date(doc.updatedAt || doc.updated_at || Date.now()).toISOString(),
+    isWorkspace: Boolean(doc.isWorkspace) || Boolean(doc.is_workspace),
   } as Event;
 }
 

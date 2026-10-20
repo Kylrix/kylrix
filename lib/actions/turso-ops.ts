@@ -422,10 +422,27 @@ export async function listVaultItemsTurso(userId: string) {
         name: fields.name || row.title,
         username: fields.username || '',
         url: fields.url || '',
-        password: fields.password || '',
+        password: fields.password || row.encryptedData || '',
         notes: fields.notes || '',
+        customFields: fields.customFields || '',
         type: fields.itemType || row.type,
         dek: fields.dek || row.dek || null,
+        isFavorite: fields.isFavorite ?? false,
+        isPinned: fields.isPinned ?? false,
+        isPublic: fields.isPublic ?? false,
+        isGuest: fields.isGuest ?? false,
+        isShared: fields.isShared ?? false,
+        tags: fields.tags || [],
+        folderId: fields.folderId || null,
+        totpId: fields.totpId || null,
+        projectId: row.workspaceId || fields.projectId || null,
+        isWorkspace: Boolean(row.isWorkspace || fields.isWorkspace),
+        cardNumber: fields.cardNumber || null,
+        cardholderName: fields.cardholderName || null,
+        cardExpiry: fields.cardExpiry || null,
+        cardCVV: fields.cardCVV || null,
+        cardPIN: fields.cardPIN || null,
+        cardType: fields.cardType || null,
       };
     });
     return { success: true, rows: normalizedRows };
@@ -477,16 +494,31 @@ export async function listTotpSecretsTurso(userId: string) {
       .select()
       .from(schema.totpSecrets)
       .where(eq(schema.totpSecrets.userId, userId));
-    const normalizedRows = rows.map((row: any) => ({
-      ...row,
-      $id: row.id,
-      secretKey: row.encryptedSecret,
-      accountName: row.account,
-      issuer: (() => {
-        if (!row.metadata) return '';
-        try { return JSON.parse(row.metadata)?.issuer || ''; } catch { return ''; }
-      })(),
-    }));
+    const normalizedRows = rows.map((row: any) => {
+      let meta: any = {};
+      try {
+        meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+      } catch {}
+      return {
+        ...row,
+        $id: row.id,
+        secretKey: row.encryptedSecret || meta.secretKey || '',
+        accountName: meta.accountName || row.account,
+        issuer: meta.issuer || '',
+        algorithm: meta.algorithm || 'SHA1',
+        digits: meta.digits || 6,
+        period: meta.period || 30,
+        url: meta.url || '',
+        folderId: meta.folderId || '',
+        tags: meta.tags || [],
+        dek: meta.dek || null,
+        isPinned: Boolean(meta.isPinned),
+        isFavorite: Boolean(meta.isFavorite),
+        isPublic: Boolean(meta.isPublic),
+        isGuest: Boolean(meta.isGuest),
+        isShared: Boolean(meta.isShared),
+      };
+    });
     return { success: true, rows: normalizedRows };
   } catch (err: any) {
     console.error('[turso-ops] listTotpSecretsTurso failed:', err);
