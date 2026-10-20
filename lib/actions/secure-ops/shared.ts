@@ -120,7 +120,9 @@ export async function getActor(jwt?: string) {
   try {
     const { headers } = await import('next/headers');
     const { auth } = await import('@/lib/auth/better-auth');
-    const session = await auth.api.getSession({ headers: await headers() });
+
+    const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
+
     if (session?.user) {
       return {
         $id: session.user.id,

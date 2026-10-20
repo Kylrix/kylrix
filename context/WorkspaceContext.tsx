@@ -868,31 +868,48 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const createWorkspace = useCallback(
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
       try {
-        let created: any = null;
         const inviteCode = crypto.randomUUID();
-        try {
-          created = await ProjectsService.createProject({
-            title,
-            summary: summary || '',
-            ownerId: userId,
-            kind: 'workspace',
-            parentProjectId: null,
-            inviteCode,
-          });
-        } catch (netErr) {
-          console.warn('[WorkspaceContext] Network create failed, creating offline workspace:', netErr);
-          created = {
-            $id: `ws_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-            title,
-            summary: summary || '',
-            ownerId: userId,
-            kind: 'workspace',
-            inviteCode,
-            $createdAt: new Date().toISOString(),
-            $updatedAt: new Date().toISOString(),
-          };
-        }
-        return await pushLiveWorkspace(created);
+        const wsId = `ws_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const localCreated = {
+          $id: wsId,
+          id: wsId,
+          title,
+          name: title,
+          summary: summary || '',
+          ownerId: userId,
+          creatorId: userId,
+          kind: 'workspace',
+          inviteCode,
+          $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+        };
+
+        // 1. Immediately push to React state and LocalEngine cache for 0ms instant UI response
+        const liveItem = await pushLiveWorkspace(localCreated);
+
+        // 2. Perform server action in the non-blocking background
+        void (async () => {
+          try {
+            const remote = await ProjectsService.createProject({
+              $id: wsId,
+              id: wsId,
+              title,
+              name: title,
+              summary: summary || '',
+              ownerId: userId,
+              kind: 'workspace',
+              parentProjectId: null,
+              inviteCode,
+            });
+            if (remote) {
+              await pushLiveWorkspace(remote);
+            }
+          } catch (netErr) {
+            console.warn('[WorkspaceContext] Background project sync error (local state retained):', netErr);
+          }
+        })();
+
+        return liveItem;
       } catch (err) {
         console.error('[WorkspaceContext] Create workspace failed:', err);
         return null;

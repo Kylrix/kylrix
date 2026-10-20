@@ -159,22 +159,27 @@ export async function createProjectSecure(data: any, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const validated = ProjectSchema.parse(data);
+  const payloadToValidate = {
+    ...data,
+    title: data?.title || data?.name || 'Workspace',
+  };
+  const validated = ProjectSchema.parse(payloadToValidate);
   const now = new Date().toISOString();
-  const projectId = crypto.randomUUID();
+  const projectId = data?.$id || data?.id || crypto.randomUUID();
 
   const { upsertProjectTurso } = await import('@/lib/actions/turso-ops');
   await upsertProjectTurso({
     id: projectId,
     creatorId: actor.$id,
-    name: validated.title || 'Workspace',
-    description: validated.summary || '',
+    name: validated.title,
+    title: validated.title,
+    description: validated.summary || validated.description || '',
     inviteCode: validated.inviteCode || crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
   });
 
-  return JSON.parse(JSON.stringify({ $id: projectId, id: projectId, creatorId: actor.$id, name: validated.title, createdAt: now, updatedAt: now }));
+  return JSON.parse(JSON.stringify({ $id: projectId, id: projectId, creatorId: actor.$id, name: validated.title, title: validated.title, createdAt: now, updatedAt: now }));
 }
 
 export async function updateProjectSecure(projectId: string, data: any, _permissions?: string[], jwt?: string) {

@@ -327,10 +327,39 @@ export async function normalizeKeychainRow(row: any): Promise<any> {
 
 export async function listKeychainTurso(userId: string) {
   try {
+    let allUserIds = [userId];
+    const userRows = await db
+      .select()
+      .from(schema.user)
+      .where(
+        or(
+          eq(schema.user.id, userId),
+          eq(schema.user.appwriteAccountId, userId)
+        )
+      );
+
+    if (userRows.length > 0) {
+      for (const u of userRows) {
+        if (u.id) allUserIds.push(u.id);
+        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
+        if (u.email) {
+          const emailUsers = await db
+            .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
+            .from(schema.user)
+            .where(eq(schema.user.email, u.email));
+          for (const eu of emailUsers) {
+            if (eu.id) allUserIds.push(eu.id);
+            if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
+          }
+        }
+      }
+      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
+    }
+
     const rows = await db
       .select()
       .from(schema.keychain)
-      .where(eq(schema.keychain.userId, userId));
+      .where(inArray(schema.keychain.userId, allUserIds));
     const normalizedRows = Array.isArray(rows) ? rows.map(normalizeKeychainRowSync) : [];
     return { success: true, rows: normalizedRows };
   } catch (err: any) {
