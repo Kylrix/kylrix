@@ -24,6 +24,7 @@ const _eslintConfig = [
       ".repo/**",
       ".agents/**",
       ".ignore/**",
+      "scripts/**",
     ],
   },
   ..._nextConfigs,

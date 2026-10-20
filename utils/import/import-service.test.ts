@@ -6,12 +6,16 @@ vi.mock('@/lib/data', () => ({
   AppwriteService: {
     listFolders: vi.fn().mockResolvedValue([{ $id: 'f-existing', name: 'Existing Workspace' }]),
   },
-}));
-
-vi.mock('@/lib/data', () => ({
   VaultService: {
     stageCredentialImport: vi.fn().mockResolvedValue({ $id: 'cred-1' }),
     stageTotpImport: vi.fn().mockResolvedValue({ $id: 'totp-1' }),
+  },
+}));
+
+vi.mock('@/lib/api/resources', () => ({
+  ApiResources: {
+    createVaultItem: vi.fn().mockResolvedValue({ id: 'cred-1' }),
+    createTotpSecret: vi.fn().mockResolvedValue({ id: 'totp-1' }),
   },
 }));
 

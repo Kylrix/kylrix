@@ -5,6 +5,10 @@ import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS } from './route';
 import { createSystemClient } from '@/lib/data';
 import { ApiResources } from '@/lib/api/resources';
 
+vi.mock('@/lib/data', () => ({
+  createSystemClient: vi.fn(),
+}));
+
 vi.mock('@/lib/db', () => ({
   db: {
     select: vi.fn().mockReturnThis(),
