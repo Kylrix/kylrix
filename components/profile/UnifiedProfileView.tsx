@@ -12,7 +12,6 @@ import {
   UserPlus,
   UserCheck,
   Link as LinkIcon,
-  Wallet,
   Coins,
   Share2,
   X,
@@ -191,7 +190,7 @@ export function UnifiedProfileView({
   onClose,
 }: UnifiedProfileViewProps) {
   const { user } = useAuth();
-  const { openWallet, openWalletWithIntent } = useWalletOverlay();
+  const { openWalletWithIntent } = useWalletOverlay();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
   const [tipEnabled, setTipEnabled] = useState<boolean>(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -586,19 +585,6 @@ export function UnifiedProfileView({
               <Sparkles size={15} />
             </button>
           )}
-
-          <button
-            type="button"
-            onClick={() => {
-              if (onClose) onClose();
-              openWallet();
-            }}
-            className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-            title="Wallet"
-            aria-label="Wallet"
-          >
-            <Wallet size={15} />
-          </button>
 
           <button
             type="button"
