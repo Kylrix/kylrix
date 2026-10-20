@@ -70,6 +70,12 @@ const XIcon = ({ size = 20, className }: { size?: number; className?: string }) 
   </svg>
 );
 
+const ZupIcon = ({ size = 20, className }: { size?: number; className?: string }) => (
+  <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
+    <path d="M6 4h12a1 1 0 0 1 1 1v2a1 1 0 0 1-.293.707L10.414 15H18a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-2a1 1 0 0 1 .293-.707L13.586 9H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" />
+  </svg>
+);
+
 const SETTINGS_STORAGE_KEY = 'kylrix_share_preferences_v1';
 const PREFS_KEY = 'share_methods_order';
 
@@ -156,7 +162,7 @@ async function getFrequentShareMethods(userId?: string | null): Promise<string[]
     } catch {}
   }
 
-  return ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native'];
+  return ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'zup', 'native'];
 }
 
 async function recordShareMethodUsage(methodId: string, userId?: string | null): Promise<void> {
@@ -276,7 +282,7 @@ export function ShareContextDrawer({ data: propsData, onClose: propsOnClose }: {
 
   const [isConfirming, setIsConfirming] = useState<boolean>(() => Boolean(confirmPending));
   const [shareLive, setShareLive] = useState<boolean>(true);
-  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'native']);
+  const [methodOrder, setMethodOrder] = useState<string[]>(['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'zup', 'native']);
   const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
@@ -504,6 +510,26 @@ export function ShareContextDrawer({ data: propsData, onClose: propsOnClose }: {
         setTimeout(() => close(), 300);
       },
     },
+    zup: {
+      id: 'zup',
+      label: 'zup',
+      sublabel: 'Share on zup',
+      icon: ZupIcon,
+      color: 'text-violet-400',
+      bg: 'bg-violet-500/10',
+      border: 'border-violet-500/25',
+      execute: (url, title) => {
+        const base = process.env.NEXT_PUBLIC_ZUP_BASEURI || process.env.ZUP_BASEURI || 'http://getzup.vercel.app';
+        const params = new URLSearchParams({
+          content: `Check out "${title}" on Kylrix!`,
+          r: url,
+          client: 'Kylrix',
+        });
+        window.open(`${base}/post?${params.toString()}`, '_blank', 'noopener,noreferrer');
+        void recordShareMethodUsage('zup', user?.$id);
+        setTimeout(() => close(), 300);
+      },
+    },
     telegram: {
       id: 'telegram',
       label: 'Telegram',
@@ -597,7 +623,7 @@ export function ShareContextDrawer({ data: propsData, onClose: propsOnClose }: {
   }), [copied, copiedText, resourceType, resolvedUrl, user?.$id, close, handleCopyText, handleDownload, handleCopyLink]);
 
   const orderedActions = useMemo(() => {
-    const defaultKeys = ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'qr', 'email', 'native'];
+    const defaultKeys = ['copy', 'copyText', 'download', 'whatsapp', 'telegram', 'x', 'zup', 'qr', 'email', 'native'];
     const seen = new Set<string>();
     const result: ShareActionItem[] = [];
 
