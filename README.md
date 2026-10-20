@@ -52,6 +52,7 @@ Get up and running across your favorite interfaces, ordered from least friction 
 |---|---|---|---|
 | **🔌 MCP Server** | Native tool server for Cursor, Claude Code, Windsurf & AI IDEs | **Cloud:** `npx -y @smithery/cli install kylrix/kylrix`<br>**Local:** `kylrix mcp` | **1 click** (Smithery) / **Instant** (Local) |
 | **⚡ CLI & Local Agent Bridge** | Sovereign terminal tool & local agent execution engine | `npm i -g @kylrix/cli` *(100% offline embedded SQLite)* | **Minimal** (Node 18+) |
+| **💻 VS Code Extension** | Sovereign AI vault, notes, 2FA authenticator & AI context sidebar | [`packages/vscode`](packages/vscode) · `kylrix-vscode` | **Instant** (VS Code) |
 | **🔐 Sovereign Vault** | Argon2id + AES-256-GCM zero-knowledge agent secrets & keys | [**Explore Vault Architecture**](docs/vault.md) · `kylrix vault unlock` | **Instant** |
 | **🌐 Web App** | Local-first workspace with offline storage & browser agents | [**Launch kylrix.space**](https://www.kylrix.space) | **Zero friction** (Instant browser) |
 | **🐳 Docker Self-Host** | Sovereign container on port `:5003` | `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` | **Instant** (Docker) |
@@ -201,8 +202,11 @@ Contract: `ota.yaml` · schema: `appwrite.config.json`
 
 ## Integrations
 
-| | Link |
+| Integration | Details / Link |
 |---|---|
+| **VS Code Extension** (`kylrix-vscode`) | [`packages/vscode`](packages/vscode) · Zero-leak vault, sovereign notes, 2FA authenticator & AI context sidebar |
+| **Telegram Bot** | [Connect Telegram](https://www.kylrix.space/connect/telegram) · Search ideas, goals & dispatch commands in Telegram |
+| **Discord Bot** | [Connect Discord](https://www.kylrix.space/connect/discord) · Manage ideas, goals & agent workflows via slash commands |
 | **WebMCP** (W3C in-browser) | [docs/webmcp.md](docs/webmcp.md) · `navigator.modelContext` |
 | **MCP** | [Humans & agents](#humans--agents) above · [docs/mcp.md](docs/mcp.md) |
 | **REST API** | [docs/api.md](docs/api.md) · `https://www.kylrix.space/api/v1` |
