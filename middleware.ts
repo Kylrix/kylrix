@@ -262,7 +262,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/vault${subPath}`, request.url));
   }
 
-  if (pathname === '/connect' || pathname.startsWith('/connect/')) {
+  if (pathname === '/connect' || pathname === '/connect/') {
     return NextResponse.redirect(new URL('/app', request.url), 308);
   }
 
