@@ -161,10 +161,15 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
       );
     }
     if (userId && userId !== 'guest' && list.length > 0) {
-      void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
-        for (const t of list) {
-          if (!t.id) continue;
-          void upsertGoalTurso({
+      // Snapshot baseline for hydrated local goals
+      for (const t of list) {
+        if (t.id) LocalEngine.snapshotBaseline(t.id, t);
+      }
+      // Filter goals that have actual unsynced changes
+      const dirtyList = list.filter((t) => t.id && (autonomicSyncEngine.isPending(t.id) || LocalEngine.hasObjectDiff(t.id, t)));
+      if (dirtyList.length > 0) {
+        void import('@/lib/actions/turso-ops').then(({ upsertGoalsBatchTurso }) => {
+          const batchPayloads = dirtyList.map((t) => ({
             id: t.id,
             userId,
             title: t.title || 'Untitled Goal',
@@ -179,9 +184,12 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
             tags: Array.isArray(t.labels) ? JSON.stringify(t.labels) : null,
             createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : (t.createdAt || new Date().toISOString()),
             updatedAt: t.updatedAt instanceof Date ? t.updatedAt.toISOString() : (t.updatedAt || new Date().toISOString()),
-          }).catch(() => {});
-        }
-      }).catch(() => {});
+          }));
+          upsertGoalsBatchTurso(batchPayloads).catch((err) => {
+            console.warn('[TaskContext] Turso upsertGoalsBatchTurso failed:', err);
+          });
+        }).catch(() => {});
+      }
     }
   } catch (err) {
     console.warn('[TaskContext] Failed to persist goals local copy:', err);
@@ -1013,10 +1021,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
     // Opportunistic Turso migration: persist fetched goals to Turso so Turso becomes permanent primary
     if (tursoGoals.length === 0 && Array.isArray(tRows) && tRows.length > 0 && uid && uid !== 'guest') {
-      void import('@/lib/actions/turso-ops').then(({ upsertGoalTurso }) => {
-        for (const row of tRows) {
+      void import('@/lib/actions/turso-ops').then(({ upsertGoalsBatchTurso }) => {
+        const batchPayloads = tRows.map((row: any) => {
           const m = mapAppwriteTaskToTask(row);
-          void upsertGoalTurso({
+          if (m.id) LocalEngine.snapshotBaseline(m.id, m);
+          return {
             id: m.id,
             userId: uid,
             title: m.title || 'Untitled Goal',
@@ -1031,7 +1040,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
             tags: Array.isArray(m.labels) ? JSON.stringify(m.labels) : null,
             createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
             updatedAt: m.updatedAt ? m.updatedAt.toISOString() : new Date().toISOString(),
-          }).catch(() => {});
+          };
+        }).filter((p: any) => Boolean(p.id));
+
+        if (batchPayloads.length > 0) {
+          upsertGoalsBatchTurso(batchPayloads).catch((err) => {
+            console.warn('[TaskContext] Turso batch migration failed:', err);
+          });
         }
       }).catch(() => {});
     }

@@ -857,6 +857,63 @@ export async function upsertThreadMessageTurso(data: typeof schema.threadMessage
   }
 }
 
+export async function upsertNotesBatchTurso(items: (typeof schema.notes.$inferInsert)[]) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  try {
+    const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+
+    await db.transaction(async (tx) => {
+      for (const data of items) {
+        if (!data || !data.id) continue;
+        const existing = await tx
+          .select({ id: schema.notes.id })
+          .from(schema.notes)
+          .where(eq(schema.notes.id, data.id))
+          .limit(1);
+
+        let isCreate = false;
+        let shapedPayload: any = null;
+
+        if (existing.length > 0) {
+          const updateData: any = {
+            updatedAt: data.updatedAt || new Date().toISOString(),
+          };
+          for (const [key, val] of Object.entries(data)) {
+            if (val !== undefined && key !== 'id') {
+              updateData[key] = val;
+            }
+          }
+          await tx
+            .update(schema.notes)
+            .set(updateData)
+            .where(eq(schema.notes.id, data.id));
+          shapedPayload = { $id: data.id, ...updateData };
+        } else {
+          isCreate = true;
+          await tx.insert(schema.notes).values(data);
+          shapedPayload = { $id: data.id, ...data };
+        }
+
+        void broadcastRealtimeEvent({
+          databaseId: 'turso',
+          tableId: 'ideas',
+          rowId: data.id,
+          action: isCreate ? 'create' : 'update',
+          payload: shapedPayload,
+        }).catch(() => {});
+      }
+    });
+
+    return { success: true, count: items.length };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertNotesBatchTurso failed:', err);
+    return { success: false, error: err.message };
+  }
+}
+
 export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
   try {
     const existing = await db
@@ -959,6 +1016,69 @@ export async function getNoteTurso(noteId: string) {
   } catch (err: any) {
     console.error('[turso-ops] getNoteTurso failed:', err);
     return { success: false, row: null, error: err.message };
+  }
+}
+
+export async function upsertGoalsBatchTurso(
+  items: (Partial<typeof schema.goals.$inferInsert> & { id: string; userId: string; title: string })[]
+) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { success: true, count: 0 };
+  }
+
+  try {
+    const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+
+    await db.transaction(async (tx) => {
+      for (const data of items) {
+        if (!data || !data.id) continue;
+        const existing = await tx
+          .select({ id: schema.goals.id })
+          .from(schema.goals)
+          .where(eq(schema.goals.id, data.id))
+          .limit(1);
+
+        let isCreate = false;
+        let shapedPayload: any = null;
+
+        if (existing.length > 0) {
+          const updateData: any = {
+            updatedAt: data.updatedAt || new Date().toISOString(),
+          };
+          for (const [key, val] of Object.entries(data)) {
+            if (val !== undefined && key !== 'id') {
+              updateData[key] = val;
+            }
+          }
+          await tx
+            .update(schema.goals)
+            .set(updateData)
+            .where(eq(schema.goals.id, data.id));
+          shapedPayload = { $id: data.id, ...updateData };
+        } else {
+          isCreate = true;
+          shapedPayload = {
+            ...data,
+            $id: data.id,
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+          };
+          await tx.insert(schema.goals).values(shapedPayload as any);
+        }
+
+        void broadcastRealtimeEvent({
+          tableId: 'tasks',
+          rowId: data.id,
+          action: isCreate ? 'create' : 'update',
+          payload: shapedPayload,
+        }).catch(() => {});
+      }
+    });
+
+    return { success: true, count: items.length };
+  } catch (err: any) {
+    console.error('[turso-ops] upsertGoalsBatchTurso failed:', err);
+    return { success: false, error: err.message };
   }
 }
 
