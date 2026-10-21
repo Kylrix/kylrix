@@ -235,6 +235,8 @@ export function TwoFactorPanel({
     try {
       ensureVaultUnlocked();
       await verifyTotpAuthenticator(totpOtp.trim());
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      await authClient.getSession({ query: { disableCookieCache: true } }).catch(() => null);
       const factors = await refreshFactors();
       if (isMfaFullyEnabled(factors)) {
         await enableAccountMfa();
@@ -256,6 +258,8 @@ export function TwoFactorPanel({
     setError(null);
     try {
       await disableAllMfaFactors();
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      await authClient.getSession({ query: { disableCookieCache: true } }).catch(() => null);
       setRecoveryCodes([]);
       setStoredRecoveryCodes(null);
       await refreshFactors();
@@ -274,6 +278,8 @@ export function TwoFactorPanel({
     setError(null);
     try {
       await removeEmailFactor();
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      await authClient.getSession({ query: { disableCookieCache: true } }).catch(() => null);
       await refreshFactors();
       notifyChanged();
       toast.success('Email codes removed.');
@@ -289,6 +295,8 @@ export function TwoFactorPanel({
     setError(null);
     try {
       await removeTotpFactor();
+      const { authClient } = await import('@/lib/auth/better-auth-client');
+      await authClient.getSession({ query: { disableCookieCache: true } }).catch(() => null);
       await refreshFactors();
       notifyChanged();
       toast.success('Authenticator removed.');

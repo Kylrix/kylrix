@@ -729,78 +729,220 @@ export function SecurityTab({
 
       <ZapSecuritySettings />
 
-      <Section
-        title="2FA"
-        action={
-          <div className="flex items-center gap-2">
-            <span
-              className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+      {/* Redesigned 2FA Section connected to Better Auth */}
+      <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-white/10">
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-black uppercase tracking-wider text-white font-satoshi">
+                Two-Factor Authentication (2FA)
+              </h3>
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
+                  accountMfaEnabled || mfaFactors?.mfaEnabled
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                }`}
+              >
+                {accountMfaEnabled || mfaFactors?.mfaEnabled ? (
+                  <>
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                    Protected
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="w-3 h-3 text-amber-400" />
+                    Disabled
+                  </>
+                )}
+              </span>
+            </div>
+            <p className="text-[11px] text-white/50 font-satoshi mt-0.5">
+              Secure your account using Better Auth multi-factor verification (TOTP, Email OTP, Passkey, Recovery Codes).
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onManageMfa}
+            className={`shrink-0 py-2 px-4 rounded-xl text-xs font-extrabold cursor-pointer transition-all flex items-center justify-center gap-1.5 ${
+              accountMfaEnabled || mfaFactors?.mfaEnabled
+                ? 'bg-[#161412] hover:bg-white/10 text-white border-2 border-white/20'
+                : 'bg-[#6366F1] hover:bg-[#5254E8] text-white border-2 border-[#6366F1] shadow-lg shadow-[#6366F1]/20'
+            }`}
+          >
+            {accountMfaEnabled || mfaFactors?.mfaEnabled ? 'Manage 2FA Settings' : 'Set Up 2FA Now'}
+          </button>
+        </div>
+
+        {/* Status banner */}
+        <div
+          className={`p-3.5 rounded-[16px] border flex items-center justify-between gap-3 ${
+            accountMfaEnabled || mfaFactors?.mfaEnabled
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+              : 'bg-[#0A0908] border-white/10 text-white/60'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-xl shrink-0 ${
                 accountMfaEnabled || mfaFactors?.mfaEnabled
-                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                  : 'bg-white/5 border-white/10 text-white/40'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-white/5 text-white/40'
               }`}
             >
-              {accountMfaEnabled || mfaFactors?.mfaEnabled ? '2FA ON' : '2FA OFF'}
-            </span>
-            <button
-              type="button"
-              onClick={onManageMfa}
-              className="py-1.5 px-3 rounded-lg bg-[#6366F1] text-white text-[11px] font-extrabold cursor-pointer border-none"
-            >
-              Manage
-            </button>
+              {accountMfaEnabled || mfaFactors?.mfaEnabled ? (
+                <ShieldCheck className="w-4 h-4" />
+              ) : (
+                <ShieldAlert className="w-4 h-4" />
+              )}
+            </div>
+            <div className="text-xs">
+              <p className="font-bold text-white">
+                {accountMfaEnabled || mfaFactors?.mfaEnabled
+                  ? 'Two-Factor Authentication is Active'
+                  : 'Your account is currently using single-factor password verification'}
+              </p>
+              <p className="text-[11px] text-white/50 mt-0.5 font-satoshi">
+                {accountMfaEnabled || mfaFactors?.mfaEnabled
+                  ? 'Sensitive operations, new device logins, and vault recovery require 2FA verification.'
+                  : 'Enable 2FA to prevent unauthorized access even if your password is compromised.'}
+              </p>
+            </div>
           </div>
-        }
-      >
-        <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
-          <Row
-            icon={<Fingerprint className="w-4 h-4" />}
-            title="Passkey 2FA"
-            meta="Hardware biometrics / Security keys for 2FA"
-            trailing={
+        </div>
+
+        {/* 2FA Factors Grid */}
+        <div className="grid grid-cols-1 gap-2.5">
+          {/* TOTP Authenticator App */}
+          <div
+            onClick={onManageMfa}
+            className="flex items-center justify-between gap-3 rounded-[16px] bg-[#0A0908] border-2 border-white/15 px-3.5 py-3 hover:border-white/30 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-[#161412] border-2 border-white/20 text-[#6366F1] shrink-0 group-hover:scale-105 transition-transform">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold text-white">Authenticator App (TOTP)</p>
+                  <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-white/5 text-white/50 border border-white/10 font-semibold">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-[11px] text-white/40 font-satoshi truncate">
+                  Google Authenticator, 1Password, Aegis, Bitwarden, or Authy
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wide ${
-                  mfaFactors?.passkey ? 'text-emerald-400' : 'text-white/35'
+                className={`text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded border ${
+                  mfaFactors?.totp
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-white/5 text-white/35 border-white/10'
                 }`}
               >
-                {mfaFactors?.passkey ? 'On' : 'Off'}
+                {mfaFactors?.totp ? 'Enabled' : 'Off'}
               </span>
-            }
-          />
-        </button>
-        <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
-          <Row
-            icon={<Smartphone className="w-4 h-4" />}
-            title="TOTP 2FA"
-            meta="Google Authenticator, 1Password, Aegis"
-            trailing={
+            </div>
+          </div>
+
+          {/* Email OTP */}
+          <div
+            onClick={onManageMfa}
+            className="flex items-center justify-between gap-3 rounded-[16px] bg-[#0A0908] border-2 border-white/15 px-3.5 py-3 hover:border-white/30 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-[#161412] border-2 border-white/20 text-[#6366F1] shrink-0 group-hover:scale-105 transition-transform">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white">Email Security Code</p>
+                <p className="text-[11px] text-white/40 font-satoshi truncate">
+                  One-time 6-digit verification code dispatched to your registered email
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wide ${
-                  mfaFactors?.totp ? 'text-emerald-400' : 'text-white/35'
+                className={`text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded border ${
+                  mfaFactors?.email
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-white/5 text-white/35 border-white/10'
                 }`}
               >
-                {mfaFactors?.totp ? 'On' : 'Off'}
+                {mfaFactors?.email ? 'Enabled' : 'Off'}
               </span>
-            }
-          />
-        </button>
-        <button type="button" onClick={onManageMfa} className="w-full text-left cursor-pointer border-none bg-transparent p-0">
-          <Row
-            icon={<Mail className="w-4 h-4" />}
-            title="Email 2FA"
-            meta="One-time 2FA codes sent to your email"
-            trailing={
+            </div>
+          </div>
+
+          {/* Passkeys & Biometrics */}
+          <div
+            onClick={passkeyEntries.length > 0 ? onManageMfa : onAddPasskey}
+            className="flex items-center justify-between gap-3 rounded-[16px] bg-[#0A0908] border-2 border-white/15 px-3.5 py-3 hover:border-white/30 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-[#161412] border-2 border-white/20 text-[#6366F1] shrink-0 group-hover:scale-105 transition-transform">
+                <Fingerprint className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white">Passkeys & Hardware Keys</p>
+                <p className="text-[11px] text-white/40 font-satoshi truncate">
+                  Touch ID, Face ID, Windows Hello, or physical YubiKeys for biometric 2FA
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {passkeyEntries.length > 0 ? (
+                <span className="text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  {passkeyEntries.length} {passkeyEntries.length === 1 ? 'Key' : 'Keys'}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddPasskey();
+                  }}
+                  className="py-1 px-2.5 rounded-lg bg-[#6366F1]/10 hover:bg-[#6366F1]/20 text-[#818CF8] text-[10px] font-extrabold border border-[#6366F1]/30 transition-all"
+                >
+                  + Register
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Emergency Backup Codes */}
+          <div
+            onClick={onManageMfa}
+            className="flex items-center justify-between gap-3 rounded-[16px] bg-[#0A0908] border-2 border-white/15 px-3.5 py-3 hover:border-white/30 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="p-2 rounded-xl bg-[#161412] border-2 border-white/20 text-[#6366F1] shrink-0 group-hover:scale-105 transition-transform">
+                <KeyRound className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white">Emergency Recovery Codes</p>
+                <p className="text-[11px] text-white/40 font-satoshi truncate">
+                  Single-use codes generated during setup & saved in client-sealed vault
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
               <span
-                className={`text-[10px] font-extrabold uppercase tracking-wide ${
-                  mfaFactors?.email ? 'text-emerald-400' : 'text-white/35'
+                className={`text-[10px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded border ${
+                  accountMfaEnabled || mfaFactors?.mfaEnabled
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                    : 'bg-white/5 text-white/35 border-white/10'
                 }`}
               >
-                {mfaFactors?.email ? 'On' : 'Off'}
+                {accountMfaEnabled || mfaFactors?.mfaEnabled ? 'Saved' : 'Not Set'}
               </span>
-            }
-          />
-        </button>
-      </Section>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Danger Zone — Reset Vault (isolated at bottom) */}
       {vaultSetup && onResetVault && (
