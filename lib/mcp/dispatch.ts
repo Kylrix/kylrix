@@ -6,6 +6,20 @@ import { featureIdForMcpTool } from '@/lib/tools/features';
 
 type McpToolHandler = (actor: ApiActor, args: Record<string, any>) => Promise<any>;
 
+/**
+ * Standardized Argument Normalizers for MCP Tool Call Dispatching
+ */
+const getLimit = (args: Record<string, any>, fallback = 25): number =>
+  typeof args.limit === 'number' && args.limit > 0 ? args.limit : fallback;
+
+const getWorkspaceId = (args: Record<string, any>): string | null =>
+  args.workspaceId ? String(args.workspaceId) : null;
+
+const getParentKindAndId = (args: Record<string, any>) => ({
+  parentKind: args.parent_kind || args.parentKind || undefined,
+  parentId: args.parent_id || args.parentId || undefined,
+});
+
 export const mcpToolHandlers: Record<string, McpToolHandler> = {
   get_my_profile: (actor) => ApiResources.me(actor),
   get_token_info: (actor) => ApiResources.tokenMe(actor),
@@ -18,7 +32,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
     ),
 
   list_workspaces: async (actor, args) =>
-    mcpListResult(await ApiResources.listWorkspaces(actor, args.limit || 25)),
+    mcpListResult(await ApiResources.listWorkspaces(actor, getLimit(args, 25))),
   get_workspace: (actor, args) => ApiResources.getWorkspace(actor, String(args.id)),
   create_workspace: (actor, args) => ApiResources.createWorkspace(actor, args),
   update_workspace: (actor, args) => ApiResources.updateWorkspace(actor, String(args.id), args),
@@ -30,7 +44,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
 
   list_workspace_projects: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listWorkspaceProjects(actor, String(args.workspaceId), args.limit || 25),
+      await ApiResources.listWorkspaceProjects(actor, String(args.workspaceId), getLimit(args, 25)),
     ),
   get_workspace_project: (actor, args) =>
     ApiResources.getWorkspaceProject(actor, String(args.workspaceId), String(args.projectId)),
@@ -48,7 +62,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
 
   list_notes: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listNotes(actor, args.limit || 25, { workspaceId: args.workspaceId || null }),
+      await ApiResources.listNotes(actor, getLimit(args, 25), { workspaceId: getWorkspaceId(args) }),
     ),
   get_note: (actor, args) => ApiResources.getNote(actor, String(args.id)),
   create_note: (actor, args) => ApiResources.createNote(actor, args),
@@ -57,8 +71,8 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
 
   list_goals: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listGoals(actor, args.limit || 25, {
-        workspaceId: args.workspaceId || null,
+      await ApiResources.listGoals(actor, getLimit(args, 25), {
+        workspaceId: getWorkspaceId(args),
         status: args.status || null,
       }),
     ),
@@ -69,7 +83,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
 
   list_events: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listEvents(actor, args.limit || 25, { workspaceId: args.workspaceId || null }),
+      await ApiResources.listEvents(actor, getLimit(args, 25), { workspaceId: getWorkspaceId(args) }),
     ),
   get_event: (actor, args) => ApiResources.getEvent(actor, String(args.id)),
   create_event: (actor, args) => ApiResources.createEvent(actor, args),
@@ -78,17 +92,17 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
 
   list_forms: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listForms(actor, args.limit || 25, { workspaceId: args.workspaceId || null }),
+      await ApiResources.listForms(actor, getLimit(args, 25), { workspaceId: getWorkspaceId(args) }),
     ),
   get_form: (actor, args) => ApiResources.getForm(actor, String(args.id)),
   create_form: (actor, args) => ApiResources.createForm(actor, args),
   delete_form: (actor, args) => ApiResources.deleteForm(actor, String(args.id)),
 
-  list_chats: async (actor, args) => mcpListResult(await ApiResources.listChats(actor, args.limit || 25)),
+  list_chats: async (actor, args) => mcpListResult(await ApiResources.listChats(actor, getLimit(args, 25))),
   get_chat: (actor, args) => ApiResources.getChat(actor, String(args.id)),
   list_chat_messages: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listChatMessages(actor, String(args.conversationId), args.limit || 50),
+      await ApiResources.listChatMessages(actor, String(args.conversationId), getLimit(args, 50)),
     ),
   send_chat_message: async (actor, args) => {
     let convId = args.conversationId;
@@ -102,39 +116,35 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
     return ApiResources.sendChatMessage(actor, convId, { content: args.content });
   },
 
-  list_flows: async (actor, args) => mcpListResult(await ApiResources.listFlows(actor, args.limit || 25)),
+  list_flows: async (actor, args) => mcpListResult(await ApiResources.listFlows(actor, getLimit(args, 25))),
   get_flow: (actor, args) => ApiResources.getFlow(actor, String(args.id)),
   create_flow: (actor, args) => ApiResources.createFlow(actor, args),
   delete_flow: (actor, args) => ApiResources.deleteFlow(actor, String(args.id)),
 
-  list_tags: async (actor, args) => mcpListResult(await ApiResources.listTags(actor, args.limit || 50)),
+  list_tags: async (actor, args) => mcpListResult(await ApiResources.listTags(actor, getLimit(args, 50))),
   create_tag: (actor, args) => ApiResources.createTag(actor, args),
   delete_tag: (actor, args) => ApiResources.deleteTag(actor, String(args.id)),
 
   list_thread_messages: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listThreadMessages(actor, String(args.threadId), args.limit || 50),
+      await ApiResources.listThreadMessages(actor, String(args.threadId), getLimit(args, 50)),
     ),
   create_thread_message: (actor, args) =>
     ApiResources.createThreadMessage(actor, String(args.threadId), { content: args.content }),
   list_threads: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listThreads(actor, args.limit || 25, {
-        parentKind: args.parent_kind || args.parentKind,
-        parentId: args.parent_id || args.parentId,
-      }),
+      await ApiResources.listThreads(actor, getLimit(args, 25), getParentKindAndId(args)),
     ),
   ensure_thread: (actor, args) =>
     ApiResources.ensureThread(actor, {
-      parent_kind: args.parent_kind || args.parentKind,
-      parent_id: args.parent_id || args.parentId,
+      ...getParentKindAndId(args),
       channel: args.channel,
       title: args.title,
     }),
 
   list_agent_sessions: async (actor, args) =>
     mcpListResult(
-      await ApiResources.listAgentSessions(actor, args.limit || 25, {
+      await ApiResources.listAgentSessions(actor, getLimit(args, 25), {
         workspaceId: args.workspaceId,
         harness: args.harness,
       }),
@@ -143,7 +153,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
   create_agent_session: (actor, args) => ApiResources.createHarnessSession(actor, args),
 
   list_trash: async (actor, args) =>
-    mcpListResult(await ApiResources.listTrash(actor, args.limit || 50, { kind: args.kind })),
+    mcpListResult(await ApiResources.listTrash(actor, getLimit(args, 50), { kind: args.kind })),
   restore_trash: (actor, args) =>
     ApiResources.restoreTrash(actor, { id: args.id, kind: args.kind }),
   purge_trash: (actor, args) =>
@@ -151,7 +161,7 @@ export const mcpToolHandlers: Record<string, McpToolHandler> = {
 
   // Vault
   list_vault_items: async (actor, args) =>
-    mcpListResult(await ApiResources.listVaultItems(actor, args.limit || 25, { workspaceId: args.workspaceId, mek: args.mek })),
+    mcpListResult(await ApiResources.listVaultItems(actor, getLimit(args, 25), { workspaceId: args.workspaceId, mek: args.mek })),
   get_vault_item: (actor, args) =>
     ApiResources.getVaultItem(actor, String(args.id), {
       shareKey: args.shareKey,
