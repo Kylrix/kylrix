@@ -7,6 +7,9 @@ import { PairingService } from '@/lib/services/pairing';
 import { PatService } from '@/lib/services/pats';
 import { systemTables } from '@/lib/data/system-tables';
 import { APPWRITE_CONFIG } from '@/lib/data';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq, and, or } from 'drizzle-orm';
 
 interface DiscordInteractionContext {
   isExistingEphemeral: boolean;
@@ -455,10 +458,6 @@ export async function resolveActorForDiscordUser(
 
   // 2. Query Turso persistent storage
   try {
-    const { db } = await import('@/lib/db');
-    const schema = await import('@/lib/db/schema');
-    const { eq, and } = await import('drizzle-orm');
-
     const consentRows = await db
       .select({ userId: schema.oauthConsent.userId })
       .from(schema.oauthConsent)
@@ -480,10 +479,10 @@ export async function resolveActorForDiscordUser(
     }
   } catch {}
 
-  // 3. Fallback query to Appwrite legacy storage (oauth_consent_requests)
+  // 3. Fallback query to Appwrite legacy storage (oauth_consent_requests) with 500ms timeout
   try {
     const tables = systemTables();
-    const res = await tables.listRows({
+    const fetchAppwrite = tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
       tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
       queries: [
@@ -493,6 +492,9 @@ export async function resolveActorForDiscordUser(
         'limit(1)',
       ],
     }).catch(() => ({ rows: [] as any[] }));
+
+    const timeout = new Promise<{ rows: any[] }>((resolve) => setTimeout(() => resolve({ rows: [] }), 500));
+    const res = await Promise.race([fetchAppwrite, timeout]);
 
     if (res.rows.length > 0 && res.rows[0].userId) {
       const userId = res.rows[0].userId;
@@ -522,10 +524,6 @@ export async function linkDiscordUserAccount(
 
   // 1. Persist to Turso oauthConsent
   try {
-    const { db } = await import('@/lib/db');
-    const schema = await import('@/lib/db/schema');
-    const { eq, and } = await import('drizzle-orm');
-
     await db
       .delete(schema.oauthConsent)
       .where(
@@ -609,10 +607,6 @@ export async function unlinkDiscordUserAccount(callerId: string): Promise<void> 
 
   // 1. Delete from Turso oauthConsent
   try {
-    const { db } = await import('@/lib/db');
-    const schema = await import('@/lib/db/schema');
-    const { eq, and, or } = await import('drizzle-orm');
-
     await db
       .delete(schema.oauthConsent)
       .where(
