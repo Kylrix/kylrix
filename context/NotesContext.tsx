@@ -169,14 +169,25 @@ function normalizeVisibility(note: Notes, existingNote?: Notes): Notes {
   } as Notes;
 }
 
-export function pushNotesBatchTurso(notes: Notes[], userId: string) {
+export function pushNotesBatchTurso(notes: Notes[], userId: string, opts?: { force?: boolean }) {
   if (!userId || userId === 'guest' || !Array.isArray(notes) || notes.length === 0) return;
-  void import('@/lib/actions/turso-ops').then(({ upsertNoteTurso }) => {
-    for (const n of notes) {
+
+  // Filter notes that are pending mutation or modified relative to baseline unless force is true
+  const dirtyNotes = opts?.force
+    ? notes
+    : notes.filter((n) => {
+        const id = n.$id || (n as any).id;
+        if (!id) return false;
+        return autonomicSyncEngine.isPending(id) || LocalEngine.hasObjectDiff(id, n);
+      });
+
+  if (dirtyNotes.length === 0) return;
+
+  void import('@/lib/actions/turso-ops').then(({ upsertNotesBatchTurso }) => {
+    const batchPayloads = dirtyNotes.map((n) => {
       const nId = n.$id || (n as any).id;
-      if (!nId) continue;
       const nowIso = new Date().toISOString();
-      void upsertNoteTurso({
+      return {
         id: nId,
         userId,
         title: n.title || '',
@@ -193,8 +204,12 @@ export function pushNotesBatchTurso(notes: Notes[], userId: string) {
         tags: Array.isArray(n.tags) ? JSON.stringify(n.tags) : ((n.tags as any) || null),
         createdAt: n.createdAt || n.$createdAt || nowIso,
         updatedAt: n.updatedAt || n.$updatedAt || nowIso,
-      }).catch(() => {});
-    }
+      };
+    });
+
+    upsertNotesBatchTurso(batchPayloads).catch((err) => {
+      console.warn('[NotesContext] Turso upsertNotesBatchTurso failed:', err);
+    });
   }).catch(() => {});
 }
 
@@ -343,7 +358,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         setCursor(local.cursor ?? null);
         setHasMore(local.hasMore ?? true);
         void warmNotesLocalCopy(userId, local.notes);
-        pushNotesBatchTurso(local.notes, userId);
+        // Set baseline for clean hydrated local notes
+        for (const n of local.notes) {
+          if (n.$id) LocalEngine.snapshotBaseline(n.$id, n);
+        }
         console.log('[NotesContext] Instant cold start via local copy cascade.');
       }
       hydratedUserIdRef.current = userId;
@@ -469,7 +487,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
         // Also cache individual notes for NoteEditorPage
         withthreads.forEach(note => {
-          if (note?.$id) setCachedData(`note_${note.$id}`, note);
+          if (note?.$id) {
+            setCachedData(`note_${note.$id}`, note);
+            LocalEngine.snapshotBaseline(note.$id, note);
+          }
         });
         if (user?.$id) {
           void warmNotesLocalCopy(user.$id, withthreads);
@@ -497,7 +518,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
             setTotalNotes((data as any).total || 0);
             setHasMore(!!(data as any).hasMore);
             setCursor((data as any).nextCursor || null);
-            if (user?.$id) pushNotesBatchTurso(revalidatedAll, user.$id);
+            if (user?.$id) {
+              revalidatedAll.forEach(n => { if (n?.$id) LocalEngine.snapshotBaseline(n.$id, n); });
+              pushNotesBatchTurso(revalidatedAll, user.$id);
+            }
           }
         });
 
@@ -546,6 +570,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
             if (user?.$id) void warmNotesLocalCopy(user.$id, fetchedRows);
         }
         if (user?.$id && fetchedRows.length > 0) {
+          fetchedRows.forEach(n => { if (n?.$id) LocalEngine.snapshotBaseline(n.$id, n); });
           pushNotesBatchTurso(fetchedRows, user.$id);
         }
       }
