@@ -74,7 +74,7 @@ function PairContent() {
   const handleDecide = async (action: 'approve' | 'deny') => {
     if (!currentUser) {
       toast.error('Please sign in to authorize this client.');
-      router.push(`/auth/login?redirect=${encodeURIComponent(window.location.href)}`);
+      router.push('/app');
       return;
     }
 

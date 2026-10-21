@@ -7,11 +7,9 @@ import {
     ArrowLeft, 
     Fingerprint,
     Trash2,
-    RefreshCw,
     ChevronRight,
     Bot,
     Lightbulb,
-    Loader2 as SpinnerIcon,
     ShieldCheck as SecurityIcon,
     ShieldCheck,
     MonitorSmartphone as SessionsIcon,
@@ -241,7 +239,6 @@ function SettingsPageInner() {
     // Telegram state
     const [tgDrawerOpen, setTgDrawerOpen] = useState(false);
     const [telegramConnected, setTelegramConnected] = useState(false);
-    const [minting, setMinting] = useState(false);
   
     // Passkey state
     const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
@@ -363,34 +360,6 @@ function SettingsPageInner() {
     }, [user]);
 
     const FEATURE_FORM_ID = process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID || '6aae3dab003a7247b90a';
-
-    const handleManualMint = async () => {
-        setMinting(true);
-        try {
-            const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
-            const today = new Date();
-            today.setUTCHours(0, 0, 0, 0);
-            const dateKey = today.toISOString();
-
-            if (!user?.$id) throw new Error("User session not found");
-
-            const response = await mintDailyLoginSecure({
-                userId: user.$id,
-                dateKey: dateKey,
-            });
-
-          if (response?.accepted) {
-            toast.success('Tokens minted successfully!');
-          } else {
-            const reason = (response as any)?.reason;
-            toast.error(reason === 'IDEMPOTENCY_CONFLICT' ? "Check back tomorrow! You've already collected today's reward." : (reason || 'Minting failed'));
-          }
-        } catch (e: any) {
-          toast.error(e.message || 'Minting failed');
-        } finally {
-          setMinting(false);
-        }
-    };
 
     const [referralStats, setReferralStats] = useState<{
         totalReferred: number;
@@ -778,22 +747,6 @@ function SettingsPageInner() {
                                 </div>
                             </div>
 
-                            {/* Daily Token Mint */}
-                            <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-3">
-                                <h4 className="text-white font-black text-base font-mono">Daily Token Mint</h4>
-                                <p className="text-white/60 text-xs font-semibold leading-relaxed">
-                                    Manually trigger your daily token minting reward.
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={handleManualMint}
-                                    disabled={minting}
-                                    className="h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all select-none disabled:opacity-40 w-fit cursor-pointer border-2 border-[#6366F1]"
-                                >
-                                    {minting ? <SpinnerIcon className="animate-spin text-white" size={16} /> : <RefreshCw size={16} />}
-                                    <span>{minting ? 'Minting...' : 'Mint Daily Tokens'}</span>
-                                </button>
-                            </div>
 
                             {/* Feature Requests Section */}
                             <div>
