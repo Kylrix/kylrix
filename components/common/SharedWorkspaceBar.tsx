@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { getEcosystemUrl } from '@/constants/ecosystem';
 import Link from 'next/link';
 
 interface SharedWorkspaceBarProps {
@@ -45,7 +44,7 @@ export function SharedWorkspaceBar({ objectType }: SharedWorkspaceBarProps) {
               </Link>
             ) : (
               <Link
-                href={`${getEcosystemUrl('accounts')}/login?source=${typeof window !== 'undefined' ? encodeURIComponent(window.location.origin + window.location.pathname) : ''}`}
+                href="/app"
                 className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-[#6366F1] px-4 py-2 text-xs font-black text-white hover:bg-[#5254E8] transition-all font-satoshi"
               >
                 Create your own {objectType === 'session' || objectType === 'message' ? 'chat' : objectType}

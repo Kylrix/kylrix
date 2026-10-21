@@ -563,25 +563,30 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   }, [user?.id, user?.$id]);
 
   useEffect(() => {
-    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '');
-    if (!activeUserId) return;
+    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '') || 'guest';
     let isCancelled = false;
     const cacheKey = `vault_totp_${activeUserId}`;
+    const guestFallbackKey = 'vault_totp_guest';
 
     (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const rows = await LocalEngine.query<any[]>(
-          cacheKey,
-          async () => {
-            const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-            const res = await listTotpSecretsTurso(activeUserId);
-            return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
-          },
-          {
-            ttl: 1000 * 60 * 5,
-          }
-        );
+        let rows: any[] = [];
+        if (activeUserId !== 'guest') {
+          rows = await LocalEngine.query<any[]>(
+            cacheKey,
+            async () => {
+              const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
+              const res = await listTotpSecretsTurso(activeUserId);
+              return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
+            },
+            {
+              ttl: 1000 * 60 * 5,
+            }
+          );
+        } else {
+          rows = (await LocalEngine.cacheGet<any[]>(guestFallbackKey)) || (await LocalEngine.cacheGet<any[]>('f_totp_list_guest')) || [];
+        }
 
         if (!isCancelled) {
           setTotpCodes(rows as any);

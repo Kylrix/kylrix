@@ -287,7 +287,7 @@ export default function LandingPage() {
           <a href="#why" className="hover:text-indigo-300">Why Kylrix</a>
           <a href="#connect" className="hover:text-indigo-300">Connect</a>
           <a href="https://github.com/Kylrix/kylrix" target="_blank" rel="noreferrer" className="hover:text-indigo-300">GitHub</a>
-          <Link href="/login" className="hover:text-indigo-300">Sign in</Link>
+          <Link href="/app" className="hover:text-indigo-300">Sign in</Link>
         </div>
       </footer>
     </main>

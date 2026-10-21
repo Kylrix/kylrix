@@ -169,18 +169,18 @@ function DashboardPageContent() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const loadAllCredentials = useCallback(async (background = false, cursorToUse: string | null = null, force = false) => {
-    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '');
-    if (!activeUserId) { setLoading(false); return; }
+    const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '') || 'guest';
     if (!background && !cursorToUse) setLoading(true);
     if (cursorToUse) setLoadingMore(true);
 
     const cacheKey = `vault_credentials_${activeUserId}`;
+    const guestFallbackKey = 'vault_credentials_guest';
 
     // Instant local copy read on mount (dedupe — stale cache may contain twin rows)
     if (!cursorToUse && !force) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cachedRows = await LocalEngine.cacheGet<any[]>(cacheKey);
+        const cachedRows = (await LocalEngine.cacheGet<any[]>(cacheKey)) || (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(guestFallbackKey) : null);
         if (cachedRows && Array.isArray(cachedRows) && cachedRows.length > 0) {
           const unique = dedupeCredentialsById(cachedRows as Credentials[]);
           setAllCredentials(unique);
@@ -196,21 +196,26 @@ function DashboardPageContent() {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
 
       if (!cursorToUse) {
-        const rows = await LocalEngine.query<Credentials[]>(
-          cacheKey,
-          async () => {
-            const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
-            const res = await listVaultItemsTurso(activeUserId);
-            return dedupeCredentialsById((res.rows || []).map((row: any) => ({
-              ...row,
-              $id: row.$id || row.id,
-            })) as Credentials[]);
-          },
-          {
-            ttl: 1000 * 60 * 5,
-            force,
-          }
-        );
+        let rows: Credentials[] = [];
+        if (activeUserId !== 'guest') {
+          rows = await LocalEngine.query<Credentials[]>(
+            cacheKey,
+            async () => {
+              const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
+              const res = await listVaultItemsTurso(activeUserId);
+              return dedupeCredentialsById((res.rows || []).map((row: any) => ({
+                ...row,
+                $id: row.$id || row.id,
+              })) as Credentials[]);
+            },
+            {
+              ttl: 1000 * 60 * 5,
+              force,
+            }
+          );
+        } else {
+          rows = (await LocalEngine.cacheGet<any[]>(guestFallbackKey)) || [];
+        }
 
         const unique = dedupeCredentialsById(Array.isArray(rows) ? rows : []);
         if (unique.length !== (Array.isArray(rows) ? rows.length : 0)) {
@@ -422,7 +427,7 @@ function DashboardPageContent() {
 
   const { isAuthReady } = useAppwriteVault();
 
-  if (!isAuthReady || !user) {
+  if (!isAuthReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#161412]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
