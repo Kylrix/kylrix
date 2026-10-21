@@ -59,14 +59,22 @@ export async function listCurrentMfaFactors(): Promise<MfaFactorsLike> {
     const bUser = betterSession?.data?.user as any;
 
     const mfaEnabled = Boolean(bUser?.twoFactorEnabled);
-    const totp = Boolean(bUser?.twoFactorEnabled);
-    const email = Boolean(bUser?.twoFactorEnabled);
+    const totp = mfaEnabled;
+    const email = mfaEnabled;
+
+    let passkey = false;
+    try {
+      const passkeyRes = await authClient.passkey.listUserPasskeys().catch(() => null);
+      if (passkeyRes?.data && Array.isArray(passkeyRes.data) && passkeyRes.data.length > 0) {
+        passkey = true;
+      }
+    } catch {}
 
     return {
       email,
       totp,
       phone: false,
-      passkey: false,
+      passkey,
       mfaEnabled,
     };
   } catch {
