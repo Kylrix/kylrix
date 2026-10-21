@@ -441,6 +441,23 @@ export const ApiResources = {
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
+
+    try {
+      const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listNotesTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        let rows = tursoRes.rows;
+        if (wsId) {
+          rows = rows.filter((r: any) => r.projectId === wsId || r.workspaceId === wsId);
+        } else {
+          rows = rows.filter((r: any) => !r.projectId && !r.workspaceId && !r.isWorkspace);
+        }
+        if (rows.length > 0) {
+          return rows.slice(0, Math.min(100, Math.max(1, limit))).map(shapeNote);
+        }
+      }
+    } catch {}
+
     const tables = systemTables();
     const { isExcludedNote, ideaListExclusionQueries } = await import('@/lib/data');
 
@@ -483,6 +500,16 @@ export const ApiResources = {
 
   async getNote(actor: ApiActor, id: string) {
     requireScope(actor, 'notes:read');
+    try {
+      const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await getNoteTurso(id);
+      if (tursoRes.success && tursoRes.row) {
+        const row = tursoRes.row as any;
+        if (row.userId === actor.userId || row.isPublished || row.isPublic) {
+          return shapeNote(row);
+        }
+      }
+    } catch {}
     const tables = systemTables();
     const row = await assertOwnedNote(tables, actor, id);
     return shapeNote(row);
@@ -675,9 +702,29 @@ export const ApiResources = {
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
-    const tables = systemTables();
     const cap = Math.min(100, Math.max(1, limit));
     const statusFilter = opts?.status ? String(opts.status) : null;
+
+    try {
+      const { listGoalsTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listGoalsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        let rows = tursoRes.rows;
+        if (wsId) {
+          rows = rows.filter((g: any) => g.projectId === wsId || g.workspaceId === wsId);
+        } else {
+          rows = rows.filter((g: any) => !g.projectId && !g.workspaceId && !g.isWorkspace);
+        }
+        if (statusFilter) {
+          rows = rows.filter((g: any) => g.status === statusFilter);
+        }
+        if (rows.length > 0) {
+          return rows.slice(0, cap).map(shapeGoal);
+        }
+      }
+    } catch {}
+
+    const tables = systemTables();
 
     const applyFilters = (rows: ReturnType<typeof shapeGoal>[]) => {
       const filtered = statusFilter ? rows.filter((g) => g.status === statusFilter) : rows;
@@ -727,6 +774,16 @@ export const ApiResources = {
 
   async getGoal(actor: ApiActor, id: string) {
     requireScope(actor, 'goals:read');
+    try {
+      const { getGoalTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await getGoalTurso(id);
+      if (tursoRes.success && tursoRes.row) {
+        const row = tursoRes.row;
+        if (row.userId === actor.userId) {
+          return shapeGoal(row);
+        }
+      }
+    } catch {}
     const tables = systemTables();
     const row = await assertOwnedGoal(tables, actor, id);
     return shapeGoal(row);
@@ -1293,6 +1350,17 @@ export const ApiResources = {
       const ws = await this.getWorkspace(actor, jailedWs);
       return [ws];
     }
+
+    try {
+      const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listWorkspacesTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        return tursoRes.rows.slice(0, Math.min(100, Math.max(1, limit))).map((r: any) =>
+          shapeWorkspace(r, { isShared: false, role: r.creatorId === actor.userId || r.ownerId === actor.userId ? 'owner' : 'member' })
+        );
+      }
+    } catch {}
+
     const tables = systemTables();
     
     // 1. Owned workspaces
@@ -1346,6 +1414,17 @@ export const ApiResources = {
         `Actor is strictly jailed to workspace '${jailedWs}'. Access to workspace '${id}' is forbidden.`
       );
     }
+    try {
+      const { getWorkspaceTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await getWorkspaceTurso(id);
+      if (tursoRes.success && tursoRes.workspace) {
+        const row = tursoRes.workspace;
+        return shapeWorkspace(row, {
+          isShared: row.creatorId !== actor.userId && row.ownerId !== actor.userId,
+          role: row.creatorId === actor.userId || row.ownerId === actor.userId ? 'owner' : 'viewer',
+        });
+      }
+    } catch {}
     const tables = systemTables();
     const row = (await tables
       .getRow({ databaseId: FLOW_DB, tableId: 'projects', rowId: id })

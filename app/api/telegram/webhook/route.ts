@@ -3,6 +3,9 @@ import { APPWRITE_CONFIG } from '@/lib/data';
 import { systemTables } from '@/lib/data/system-tables';
 import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
+import { db } from '@/lib/db';
+import * as schema from '@/lib/db/schema';
+import { eq as eqOp, and as andOp } from 'drizzle-orm';
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -148,17 +151,13 @@ export function setTelegramActiveWorkspace(chatId: string | number, workspace: {
 
 export async function resolveTelegramUser(chatId: string | number): Promise<string | null> {
   try {
-    const { db } = await import('@/lib/db');
-    const schema = await import('@/lib/db/schema');
-    const { eq, and } = await import('drizzle-orm');
-
     const tursoRows = await db
       .select({ id: schema.telegramConnections.id })
       .from(schema.telegramConnections)
       .where(
-        and(
-          eq(schema.telegramConnections.tgChatId, String(chatId)),
-          eq(schema.telegramConnections.isVerified, true)
+        andOp(
+          eqOp(schema.telegramConnections.tgChatId, String(chatId)),
+          eqOp(schema.telegramConnections.isVerified, true)
         )
       )
       .limit(1);
@@ -176,31 +175,16 @@ export async function resolveTelegramUser(chatId: string | number): Promise<stri
 async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
   try {
     const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
-    const { listNotesTurso } = await import('@/lib/actions/turso-ops');
-    let notes: any[] = [];
-    try {
-      const tursoRes = await listNotesTurso(actor.userId);
-      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
-        notes = tursoRes.rows;
-      }
-    } catch {}
+    const res = await ApiResources.listNotes(actor, 50, { workspaceId: activeWs?.id }).catch(() => []);
+    const notes = extractItems(res);
 
-    if (notes.length === 0) {
-      const res = await ApiResources.listNotes(actor, 50).catch(() => []);
-      notes = extractItems(res);
-    }
-
-    const filtered = activeWs
-      ? notes.filter((n: any) => n.projectId === activeWs.id || n.workspaceId === activeWs.id)
-      : notes;
-    
     let text = `<b>💡 Kylrix Ideas</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
 
-    if (filtered.length === 0) {
+    if (notes.length === 0) {
       text += '<i>No ideas found in this workspace. Send any message to quick-capture, or use /idea [title]!</i>\n';
     } else {
-      text += `Your ideas (${filtered.length} total):\n\n`;
-      filtered.slice(0, 20).forEach((n, idx) => {
+      text += `Your ideas (${notes.length} total):\n\n`;
+      notes.slice(0, 20).forEach((n, idx) => {
         const preview = n.content ? n.content.replace(/\n/g, ' ').slice(0, 50) : 'Empty body';
         text += `${idx + 1}. <b>${escapeHtml(n.title || 'Untitled Idea')}</b>\n`;
         text += `   <i>"${escapeHtml(preview)}"</i>\n`;
@@ -209,7 +193,7 @@ async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
     }
 
     const inline_keyboard: any[][] = [];
-    filtered.slice(0, 3).forEach((n, idx) => {
+    notes.slice(0, 3).forEach((n, idx) => {
       inline_keyboard.push([
         { text: `📖 Read #${idx + 1}`, callback_data: `read_note:${n.id}` },
         { text: `🗑️ Delete #${idx + 1}`, callback_data: `del_note:${n.id}` },
@@ -236,32 +220,17 @@ async function renderNotesMenu(actor: ApiActor, chatId?: string | number) {
 async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
   try {
     const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
-    const { listGoalsTurso } = await import('@/lib/actions/turso-ops');
-    let goals: any[] = [];
-    try {
-      const tursoRes = await listGoalsTurso(actor.userId);
-      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
-        goals = tursoRes.rows;
-      }
-    } catch {}
-
-    if (goals.length === 0) {
-      const res = await ApiResources.listGoals(actor, 50).catch(() => []);
-      goals = extractItems(res);
-    }
-
-    const filtered = activeWs
-      ? goals.filter((g: any) => g.projectId === activeWs.id || g.workspaceId === activeWs.id)
-      : goals;
+    const res = await ApiResources.listGoals(actor, 50, { workspaceId: activeWs?.id }).catch(() => []);
+    const goals = extractItems(res);
 
     let text = `<b>🎯 Kylrix Goals & Deliverables</b> ${activeWs ? `(📁 ${escapeHtml(activeWs.name)})` : ''}\n\n`;
 
-    if (filtered.length === 0) {
+    if (goals.length === 0) {
       text += '<i>No active goals found. Create one with /goal [title]!</i>\n';
     } else {
-      text += `Your goals (${filtered.length} total):\n\n`;
-      filtered.slice(0, 20).forEach((g, idx) => {
-        const isDone = g.status === 'completed';
+      text += `Your goals (${goals.length} total):\n\n`;
+      goals.slice(0, 20).forEach((g, idx) => {
+        const isDone = g.status === 'completed' || g.status === 'done';
         const icon = isDone ? '✅' : '⏳';
         text += `${idx + 1}. ${icon} <b>${escapeHtml(g.title)}</b>\n`;
         text += `   <code>${g.id}</code>\n\n`;
@@ -269,8 +238,8 @@ async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
     }
 
     const inline_keyboard: any[][] = [];
-    filtered.slice(0, 4).forEach((g, idx) => {
-      const isDone = g.status === 'completed';
+    goals.slice(0, 4).forEach((g, idx) => {
+      const isDone = g.status === 'completed' || g.status === 'done';
       const actionBtn = isDone
         ? { text: `✅ Done #${idx + 1}`, callback_data: 'goals_list' }
         : { text: `✔️ Complete #${idx + 1}`, callback_data: `done_goal:${g.id}` };
@@ -301,19 +270,8 @@ async function renderGoalsMenu(actor: ApiActor, chatId?: string | number) {
 async function renderWorkspacesMenu(actor: ApiActor, chatId?: string | number) {
   try {
     const activeWs = chatId ? getTelegramActiveWorkspace(chatId) : null;
-    const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
-    let workspaces: any[] = [];
-    try {
-      const tursoRes = await listWorkspacesTurso(actor.userId);
-      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
-        workspaces = tursoRes.rows;
-      }
-    } catch {}
-
-    if (workspaces.length === 0) {
-      const res = await ApiResources.listWorkspaces(actor, 10).catch(() => []);
-      workspaces = extractItems(res);
-    }
+    const res = await ApiResources.listWorkspaces(actor, 20).catch(() => []);
+    const workspaces = extractItems(res);
 
     let text = '<b>📂 Sovereign Workspaces</b>\n\n';
 
@@ -325,7 +283,7 @@ async function renderWorkspacesMenu(actor: ApiActor, chatId?: string | number) {
       text += 'Tap below to switch active workspace for your Telegram session:\n\n';
       workspaces.forEach((w, idx) => {
         const isCurrent = activeWs?.id === w.id;
-        text += `${idx + 1}. ${isCurrent ? '🟢' : '📁'} <b>${escapeHtml(w.name)}</b>\n`;
+        text += `${idx + 1}. ${isCurrent ? '🟢' : '📁'} <b>${escapeHtml(w.title || w.name)}</b>\n`;
         text += `   <code>${w.id}</code>\n\n`;
       });
     }
@@ -337,7 +295,7 @@ async function renderWorkspacesMenu(actor: ApiActor, chatId?: string | number) {
       const isCurrent = activeWs?.id === w.id;
       inline_keyboard.push([
         {
-          text: `${isCurrent ? '🟢 ' : '📁 '} ${escapeHtml(w.name).slice(0, 25)}`,
+          text: `${isCurrent ? '🟢 ' : '📁 '} ${escapeHtml(w.title || w.name).slice(0, 25)}`,
           callback_data: `switch_ws:${w.id}`,
         },
       ]);
