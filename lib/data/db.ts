@@ -1,8 +1,8 @@
 import { Registry } from '@/lib/core/di/registry';
-import type { DatabasePort } from '@/lib/core/ports/database.port';
+import type { DatabaseRepository } from '@/lib/db/repository';
 
 /** Hexagonal database port (backend-agnostic). */
-export function getDatabase(): DatabasePort {
+export function getDatabase(): DatabaseRepository {
   return Registry.getDatabase();
 }
 

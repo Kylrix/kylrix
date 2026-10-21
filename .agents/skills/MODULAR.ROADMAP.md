@@ -31,11 +31,11 @@
 
 ## Phase 2: Domain Isolation & Decoupling
 
-*Status: Pending*
+*Status: In Progress*
 
-* [ ] **2.1 Storage & Persistence Layer**
-* Consolidate database drivers, query builders, and migration logic into a single, isolated persistence module.
-* Expose a clean, agnostic repository interface to the rest of the application.
+* [x] **2.1 Storage & Persistence Layer**
+* Consolidate database drivers, query builders, and migration logic into a single, isolated persistence module (`lib/db/`).
+* Expose a clean, agnostic repository interface (`DatabaseRepository`, `q`, `TursoDatabaseAdapter`) to the rest of the application with backwards-compatible re-exports.
 
 
 * [ ] **2.2 Cryptography & Security Layer**
@@ -100,3 +100,4 @@
 | Task 1.1 | Completed | Phase 1 | Symbol & dependency graph mapped; domain boundaries isolated (Storage: `lib/db`/`lib/data`, Auth/Crypto: `lib/vault`/`context/vault-context`, API/Transport: `app/api`/`lib/realtime`, MCP: `lib/mcp`/`mcp`). |
 | Task 1.2 | Completed | Phase 1 | Dead code and bloat analysis completed using `knip`. Cataloged unused exports, duplicate legacy exports (`isValidAppwriteRowId`, `useAppwriteVault`), and unreferenced types for Phase 2/3 cleanup. |
 | Task 1.3 | Completed | Baseline | Test suites (`vitest` 70/70 suites, 527 tests) and ESLint (`pnpm run lint`) verified passing cleanly. |
+| Task 2.1 | Completed | Phase 2 | Consolidated persistence layer into `lib/db/` (`queries.ts`, `repository.ts`, `index.ts`). Exposed clean `DatabaseRepository` port interface, `q` expression builders, and `TursoDatabaseAdapter` while maintaining backward-compatible re-exports in `lib/data/queries`, `lib/data/db`, `lib/core/ports/database.port`, and `lib/core/adapters/turso/database.adapter`. Verified with lint and vitest (70/70 test suites passing). |
