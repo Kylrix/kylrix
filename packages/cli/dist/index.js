@@ -6401,10 +6401,49 @@ Showing ${start}\u2013${end} of ${total} environment secret sets. Use --page <N>
   }
 }
 
+// src/commands/exec.ts
+import { spawn as spawn2 } from "child_process";
+import pc17 from "picocolors";
+init_formatter();
+async function execCommand(idOrUrl, commandArgs, opts) {
+  try {
+    if (!commandArgs || commandArgs.length === 0) {
+      printError("Missing command to execute. Usage: `kylrix exec <id-or-url> -- <command...>`");
+      process.exit(1);
+    }
+    const resolved = await resolveEnvSource(idOrUrl, opts);
+    const varCount = Object.keys(resolved.variables).length;
+    console.log(pc17.dim(`\u26A1 [kylrix exec] Injected ${varCount} zero-leak variable(s) from "${resolved.name || idOrUrl}" into process RAM`));
+    const childEnv = { ...process.env, ...resolved.variables };
+    const [bin, ...args] = commandArgs;
+    const child = spawn2(bin, args, {
+      stdio: "inherit",
+      env: childEnv,
+      shell: true
+    });
+    child.on("exit", (code, signal) => {
+      for (const key of Object.keys(resolved.variables)) {
+        childEnv[key] = "";
+        resolved.variables[key] = "";
+        delete childEnv[key];
+        delete resolved.variables[key];
+      }
+      if (signal) {
+        process.kill(process.pid, signal);
+      } else {
+        process.exit(code ?? 0);
+      }
+    });
+  } catch (err) {
+    printError(`Failed to execute process wrapper with secret "${idOrUrl}"`, err);
+    process.exit(1);
+  }
+}
+
 // src/commands/totp.ts
 init_client2();
 init_formatter();
-import pc17 from "picocolors";
+import pc18 from "picocolors";
 
 // src/crypto/totp.ts
 import * as crypto from "crypto";
@@ -6458,13 +6497,13 @@ async function listTotpCommand(opts) {
       return;
     }
     const rows = (items || []).map((t) => {
-      let codeDisplay = pc17.dim("locked");
+      let codeDisplay = pc18.dim("locked");
       if (t.secret) {
         try {
           const { code, remainingSeconds } = generateTotp(t.secret);
-          codeDisplay = `${pc17.bold(pc17.green(code))} (${remainingSeconds}s)`;
+          codeDisplay = `${pc18.bold(pc18.green(code))} (${remainingSeconds}s)`;
         } catch {
-          codeDisplay = pc17.red("invalid secret");
+          codeDisplay = pc18.red("invalid secret");
         }
       }
       return {
@@ -6473,12 +6512,12 @@ async function listTotpCommand(opts) {
         issuer: t.issuer || "",
         account: t.account || "",
         code: codeDisplay,
-        mode: isAuthed ? t.workspaceId || "cloud" : pc17.dim("local")
+        mode: isAuthed ? t.workspaceId || "cloud" : pc18.dim("local")
       };
     });
     printTable(rows, ["id", "name", "issuer", "account", "code", "mode"]);
     if (isAuthed && !session) {
-      console.log(pc17.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
+      console.log(pc18.dim("\nTip: Run `kylrix vault unlock` to show live 2FA verification codes."));
     }
   } catch (err) {
     printError("Failed to list TOTP entries", err);
@@ -6499,7 +6538,7 @@ async function getTotpCodeCommand(id, opts) {
       return;
     }
     console.log(`
-  ${pc17.bold(item.name || item.issuer || "2FA Code")}: ${pc17.bold(pc17.green(code))} (${remainingSeconds}s remaining)
+  ${pc18.bold(item.name || item.issuer || "2FA Code")}: ${pc18.bold(pc18.green(code))} (${remainingSeconds}s remaining)
 `);
   } catch (err) {
     printError(`Failed to generate TOTP code for "${id}"`, err);
@@ -6524,7 +6563,7 @@ async function createTotpCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created TOTP seed "${pc17.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created TOTP seed "${pc18.bold(item.name || item.id)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create TOTP entry", err);
     process.exit(1);
@@ -6552,7 +6591,7 @@ async function deleteTotpCommand(id, opts) {
 // src/commands/agents.ts
 init_client2();
 init_formatter();
-import pc18 from "picocolors";
+import pc19 from "picocolors";
 async function listAgentSessionsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -6588,21 +6627,21 @@ async function getAgentSessionCommand(id, opts) {
       printJson(item);
       return;
     }
-    console.log("\n" + pc18.bold(item.title || "(Untitled Agent Session)"));
-    console.log(pc18.dim("\u2500".repeat(40)));
+    console.log("\n" + pc19.bold(item.title || "(Untitled Agent Session)"));
+    console.log(pc19.dim("\u2500".repeat(40)));
     console.log(`ID:        ${item.id}`);
     console.log(`Harness:   ${item.harness || "gemini"}`);
     console.log(`Status:    ${item.status || "idle"}`);
     console.log(`Workspace: ${item.workspaceId || "personal"}`);
     console.log(`Updated:   ${item.updatedAt || item.createdAt || "N/A"}`);
     if (item.prompt) {
-      console.log(pc18.dim("\u2500".repeat(40)));
-      console.log(pc18.bold("Prompt:"));
+      console.log(pc19.dim("\u2500".repeat(40)));
+      console.log(pc19.bold("Prompt:"));
       console.log(item.prompt);
     }
     if (item.transcript) {
-      console.log(pc18.dim("\u2500".repeat(40)));
-      console.log(pc18.bold("Transcript:"));
+      console.log(pc19.dim("\u2500".repeat(40)));
+      console.log(pc19.bold("Transcript:"));
       console.log(typeof item.transcript === "string" ? item.transcript : JSON.stringify(item.transcript, null, 2));
     }
     console.log();
@@ -6624,7 +6663,7 @@ async function startAgentSessionCommand(title, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Started agent session "${pc18.bold(item.title || item.id)}" (ID: ${item.id})`);
+    printSuccess(`Started agent session "${pc19.bold(item.title || item.id)}" (ID: ${item.id})`);
   } catch (err) {
     printError("Failed to start agent session", err);
     process.exit(1);
@@ -6649,7 +6688,7 @@ async function deleteAgentSessionCommand(id, opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc19 from "picocolors";
+import pc20 from "picocolors";
 async function searchCommand(query, opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -6687,18 +6726,18 @@ async function searchCommand(query, opts) {
     }
     if (!allResults || allResults.length === 0) {
       console.log(`
-No items matching "${pc19.bold(query)}" found.`);
+No items matching "${pc20.bold(query)}" found.`);
       return;
     }
     console.log(`
-Search results for "${pc19.bold(query)}":
+Search results for "${pc20.bold(query)}":
 `);
     const rows = sliced.map((r2) => {
-      let syncBadge = pc19.yellow("\u25CB unsynced");
+      let syncBadge = pc20.yellow("\u25CB unsynced");
       if (r2.syncStatus === "synced" || !r2.isLocal && isAuthed) {
-        syncBadge = pc19.green("\u25CF synced");
+        syncBadge = pc20.green("\u25CF synced");
       } else if (!isAuthed) {
-        syncBadge = pc19.dim("\u{1F4BB} local");
+        syncBadge = pc20.dim("\u{1F4BB} local");
       }
       return {
         kind: r2.kind.toUpperCase(),
@@ -6710,7 +6749,7 @@ Search results for "${pc19.bold(query)}":
     });
     printTable(rows, ["kind", "id", "title", "snippet", "sync"]);
     if (allResults.length > rows.length) {
-      console.log(pc19.dim(`
+      console.log(pc20.dim(`
 Showing ${rows.length} of ${allResults.length} results. Use --limit <number> or --all to view more.`));
     }
   } catch (err) {
@@ -6723,7 +6762,7 @@ Showing ${rows.length} of ${allResults.length} results. Use --limit <number> or 
 init_client2();
 init_config();
 init_formatter();
-import pc20 from "picocolors";
+import pc21 from "picocolors";
 async function shareCommand(kind, id, opts) {
   try {
     const client = requireAuthClient(opts);
@@ -6744,10 +6783,10 @@ async function shareCommand(kind, id, opts) {
       });
       return;
     }
-    console.log("\n" + pc20.bold("Resource Share Link:"));
+    console.log("\n" + pc21.bold("Resource Share Link:"));
     console.log(`  Kind: ${kind}`);
     console.log(`  ID:   ${id}`);
-    console.log(`  URL:  ${pc20.underline(pc20.cyan(shareUrl))}`);
+    console.log(`  URL:  ${pc21.underline(pc21.cyan(shareUrl))}`);
     console.log(`  Collaborator Cap: ${profile.quotas?.maxCollaboratorsPerResource || 8} users`);
     console.log();
   } catch (err) {
@@ -6759,7 +6798,7 @@ async function shareCommand(kind, id, opts) {
 // src/commands/billing.ts
 init_client2();
 init_formatter();
-import pc21 from "picocolors";
+import pc22 from "picocolors";
 async function billingStatusCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -6768,9 +6807,9 @@ async function billingStatusCommand(opts) {
       printJson(status);
       return;
     }
-    console.log("\n" + pc21.bold("Subscription & Billing:"));
-    console.log(`  Tier:             ${pc21.bold(pc21.cyan(status.tier || "FREE"))}`);
-    console.log(`  Pro Active:       ${status.isPro ? pc21.green("Yes") : "No"}`);
+    console.log("\n" + pc22.bold("Subscription & Billing:"));
+    console.log(`  Tier:             ${pc22.bold(pc22.cyan(status.tier || "FREE"))}`);
+    console.log(`  Pro Active:       ${status.isPro ? pc22.green("Yes") : "No"}`);
     if (status.expiresAt) {
       console.log(`  Expires At:       ${status.expiresAt}`);
     }
@@ -6815,13 +6854,13 @@ async function checkoutBillingCommand(planId, opts) {
       return;
     }
     if (res.depositAddress) {
-      console.log("\n" + pc21.bold(pc21.green("Direct On-Chain Crypto Deposit Address Generated:")));
-      console.log(`  Address: ${pc21.bold(res.depositAddress)}`);
+      console.log("\n" + pc22.bold(pc22.green("Direct On-Chain Crypto Deposit Address Generated:")));
+      console.log(`  Address: ${pc22.bold(res.depositAddress)}`);
       console.log(`  Amount:  ${res.cryptoAmount || ""} ${res.ticker || ""}`);
       console.log(`  QR Code: ${res.qrCodeUrl || "N/A"}`);
     } else if (res.checkoutUrl) {
-      console.log("\n" + pc21.bold("Hosted Checkout Session:"));
-      console.log(`  Open: ${pc21.underline(pc21.cyan(res.checkoutUrl))}`);
+      console.log("\n" + pc22.bold("Hosted Checkout Session:"));
+      console.log(`  Open: ${pc22.underline(pc22.cyan(res.checkoutUrl))}`);
     }
     console.log();
   } catch (err) {
@@ -6837,7 +6876,7 @@ async function claimCouponCommand(couponId, opts) {
       printJson(res);
       return;
     }
-    printSuccess(`Redeemed coupon "${pc21.bold(couponId)}" successfully!`);
+    printSuccess(`Redeemed coupon "${pc22.bold(couponId)}" successfully!`);
   } catch (err) {
     printError(`Failed to redeem coupon "${couponId}"`, err);
     process.exit(1);
@@ -6847,7 +6886,7 @@ async function claimCouponCommand(couponId, opts) {
 // src/commands/admin.ts
 init_client2();
 init_formatter();
-import pc22 from "picocolors";
+import pc23 from "picocolors";
 async function adminStatusCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -6865,13 +6904,13 @@ async function adminStatusCommand(opts) {
       });
       return;
     }
-    console.log("\n" + pc22.bold("Kylrix Instance & Admin Verification:"));
-    console.log(`  Admin Status:     ${isAdmin ? pc22.green(pc22.bold("AUTHORIZED ADMIN")) : pc22.yellow("Standard User")}`);
+    console.log("\n" + pc23.bold("Kylrix Instance & Admin Verification:"));
+    console.log(`  Admin Status:     ${isAdmin ? pc23.green(pc23.bold("AUTHORIZED ADMIN")) : pc23.yellow("Standard User")}`);
     console.log(`  Actor User ID:    ${profile.id}`);
     console.log(`  Identity Email:   ${profile.email || "N/A"}`);
     console.log(`  Account Tier:     ${profile.tier}`);
     console.log(`  Token Scopes:     ${profile.scopes?.join(", ") || "*"}`);
-    console.log(`  Edge Shield:      ${pc22.green("Active (Bot & Burst Protected)")}`);
+    console.log(`  Edge Shield:      ${pc23.green("Active (Bot & Burst Protected)")}`);
     console.log();
   } catch (err) {
     printError("Failed to verify admin status", err);
@@ -6883,7 +6922,7 @@ async function adminStatusCommand(opts) {
 init_client2();
 init_formatter();
 init_store();
-import pc23 from "picocolors";
+import pc24 from "picocolors";
 async function listTagsCommand(opts) {
   try {
     const isAuthed = hasAuth(opts);
@@ -6896,7 +6935,7 @@ async function listTagsCommand(opts) {
       id: t.id,
       name: t.name,
       color: t.color || "",
-      mode: isAuthed ? "cloud" : pc23.dim("local")
+      mode: isAuthed ? "cloud" : pc24.dim("local")
     }));
     printTable(rows, ["id", "name", "color", "mode"]);
   } catch (err) {
@@ -6916,7 +6955,7 @@ async function createTagCommand(name, opts) {
       printJson(item);
       return;
     }
-    printSuccess(`Created tag "${pc23.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
+    printSuccess(`Created tag "${pc24.bold(item.name)}" (ID: ${item.id}) [${isAuthed ? "Cloud" : "Local"}]`);
   } catch (err) {
     printError("Failed to create tag", err);
     process.exit(1);
@@ -6996,16 +7035,16 @@ async function purgeTrashCommand(kind, id, opts) {
 }
 
 // src/commands/update.ts
-import pc25 from "picocolors";
+import pc26 from "picocolors";
 
 // src/updater/index.ts
 import * as fs9 from "fs";
 import * as path8 from "path";
 import * as os4 from "os";
-import { spawn as spawn2 } from "child_process";
-import pc24 from "picocolors";
+import { spawn as spawn3 } from "child_process";
+import pc25 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.19";
+var CURRENT_VERSION = "1.0.20";
 var CACHE_DIR = path8.join(os4.homedir(), ".kylrix");
 var CACHE_FILE = path8.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -7080,7 +7119,7 @@ async function executeUpgrade(targetVersion = "latest", opts = {}) {
   };
   const args = installArgs[pm] || installArgs.npm;
   return new Promise((resolve3, reject) => {
-    const child = spawn2(pm, args, { stdio: opts.silent ? "ignore" : "inherit" });
+    const child = spawn3(pm, args, { stdio: opts.silent ? "ignore" : "inherit" });
     child.on("close", (code) => {
       if (code === 0) {
         writeCachedUpdate(targetVersion === "latest" ? CURRENT_VERSION : targetVersion);
@@ -7107,10 +7146,10 @@ async function checkAndAutoUpdateOnRun() {
     if (!latest || compareSemver(latest, CURRENT_VERSION) <= 0) {
       return false;
     }
-    console.error(pc24.cyan(`\u26A1 Auto-updating ${PACKAGE_NAME} (${pc24.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc24.green(pc24.bold(`v${latest}`))})...`));
+    console.error(pc25.cyan(`\u26A1 Auto-updating ${PACKAGE_NAME} (${pc25.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc25.green(pc25.bold(`v${latest}`))})...`));
     await executeUpgrade(latest, { silent: true });
     writeCachedUpdate(latest);
-    console.error(pc24.green(`\u2714 Upgraded to v${latest}! Relaunching...`));
+    console.error(pc25.green(`\u2714 Upgraded to v${latest}! Relaunching...`));
     const { spawnSync } = await import("child_process");
     const child = spawnSync(process.argv[0], process.argv.slice(1), {
       stdio: "inherit",
@@ -7127,14 +7166,14 @@ async function checkAndAutoUpdateOnRun() {
 }
 function printUpdateBanner(latest) {
   const boxWidth = 58;
-  const title = `Update available! ${pc24.dim(CURRENT_VERSION)} \u2192 ${pc24.green(pc24.bold(latest))}`;
+  const title = `Update available! ${pc25.dim(CURRENT_VERSION)} \u2192 ${pc25.green(pc25.bold(latest))}`;
   const pm = detectPackageManager();
   const cmd = pm === "pnpm" ? `pnpm add -g ${PACKAGE_NAME}` : `npm i -g ${PACKAGE_NAME}`;
-  const hint = `Run ${pc24.cyan("kylrix update")} or ${pc24.cyan(cmd)}`;
-  console.error("\n" + pc24.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
-  console.error(pc24.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc24.yellow("\u2502"));
-  console.error(pc24.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc24.yellow("\u2502"));
-  console.error(pc24.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
+  const hint = `Run ${pc25.cyan("kylrix update")} or ${pc25.cyan(cmd)}`;
+  console.error("\n" + pc25.yellow("\u250C" + "\u2500".repeat(boxWidth) + "\u2510"));
+  console.error(pc25.yellow("\u2502") + "  " + title.padEnd(boxWidth + 12) + pc25.yellow("\u2502"));
+  console.error(pc25.yellow("\u2502") + "  " + hint.padEnd(boxWidth + 10) + pc25.yellow("\u2502"));
+  console.error(pc25.yellow("\u2514" + "\u2500".repeat(boxWidth) + "\u2518") + "\n");
 }
 function scheduleBackgroundUpdateCheck() {
   const argv = process.argv;
@@ -7178,28 +7217,28 @@ async function updateCommand(opts) {
     });
     return;
   }
-  we(pc25.bgCyan(pc25.black(" Kylrix CLI Updater ")));
+  we(pc26.bgCyan(pc26.black(" Kylrix CLI Updater ")));
   v2.step("Checking for updates on npm registry...");
   const latest = await fetchLatestVersion(5e3);
   if (!latest) {
     v2.warn("Could not reach npm registry or version not published yet.");
-    fe(pc25.dim("Please check your network connection and try again."));
+    fe(pc26.dim("Please check your network connection and try again."));
     return;
   }
   const hasUpdate = compareSemver(latest, CURRENT_VERSION) > 0;
   if (!hasUpdate && !opts.force) {
-    v2.success(pc25.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
+    v2.success(pc26.green(`You are already running the latest version (v${CURRENT_VERSION})!`));
     writeCachedUpdate(CURRENT_VERSION);
-    fe(pc25.dim("No update required."));
+    fe(pc26.dim("No update required."));
     return;
   }
   v2.info(
-    hasUpdate ? `New version available: ${pc25.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc25.green(pc25.bold(`v${latest}`))}` : `Re-installing v${CURRENT_VERSION}...`
+    hasUpdate ? `New version available: ${pc26.dim(`v${CURRENT_VERSION}`)} \u2192 ${pc26.green(pc26.bold(`v${latest}`))}` : `Re-installing v${CURRENT_VERSION}...`
   );
   try {
     await executeUpgrade(latest);
     writeCachedUpdate(latest);
-    fe(pc25.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
+    fe(pc26.green(`\u2714 ${PACKAGE_NAME} is now up to date (v${latest})!`));
   } catch (err) {
     printError("Update failed", err);
     process.exit(1);
@@ -7207,7 +7246,7 @@ async function updateCommand(opts) {
 }
 
 // src/commands/sync.ts
-import pc26 from "picocolors";
+import pc27 from "picocolors";
 init_client2();
 init_formatter();
 init_config();
@@ -7217,7 +7256,7 @@ async function syncCommand(opts) {
     if (opts.json) {
       printJson({ synced: false, error: "Authentication required to sync local items to cloud" });
     } else {
-      console.log(pc26.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
+      console.log(pc27.yellow("\u26A0 Not logged in. Run `kylrix login` first to sync your local data to cloud."));
     }
     return;
   }
@@ -7230,19 +7269,19 @@ async function syncCommand(opts) {
         error: "Free accounts operate 100% offline and do not sync to cloud. Cloud sync requires Kylrix Pro."
       });
     } else {
-      console.log(pc26.yellow("\u26A0 Free accounts operate 100% locally and do not sync to cloud."));
-      console.log(pc26.dim("Upgrade to Kylrix Pro or earn Contributor Pro via merged PRs for encrypted cloud sync."));
+      console.log(pc27.yellow("\u26A0 Free accounts operate 100% locally and do not sync to cloud."));
+      console.log(pc27.dim("Upgrade to Kylrix Pro or earn Contributor Pro via merged PRs for encrypted cloud sync."));
     }
     return;
   }
   const verdict = evaluateOfflineAutoSync(env.apiUrl, env.userId);
   if (verdict.canAutoSync && verdict.sourceContainer && verdict.itemCount > 0) {
     if (!opts.json) {
-      console.log(pc26.dim(`Migrating ${verdict.itemCount} items from offline container "${verdict.sourceContainer}" to active account...`));
+      console.log(pc27.dim(`Migrating ${verdict.itemCount} items from offline container "${verdict.sourceContainer}" to active account...`));
     }
     migrateOfflineData(verdict.sourceContainer, env.userId, "default");
   } else if (!verdict.canAutoSync && verdict.reason && !opts.json) {
-    console.log(pc26.yellow(`\u26A0 Warning: ${verdict.reason}`));
+    console.log(pc27.yellow(`\u26A0 Warning: ${verdict.reason}`));
   }
   const spinner = L2();
   if (!opts.json) {
@@ -7251,7 +7290,7 @@ async function syncCommand(opts) {
   try {
     const syncRes = await bidirectionalSync(opts);
     if (!opts.json) {
-      spinner.stop(pc26.green("Sync complete!"));
+      spinner.stop(pc27.green("Sync complete!"));
     }
     const config2 = loadConfig();
     if (config2.pendingWarning) {
@@ -7271,15 +7310,15 @@ async function syncCommand(opts) {
     console.log();
     printSuccess("Synchronized with Kylrix Cloud:");
     console.log(
-      pc26.cyan(
+      pc27.cyan(
         `  \u2191 Pushed to cloud: ${pushedTotal} items (${pushed.pushedIdeas} ideas, ${pushed.pushedGoals} goals, ${pushed.pushedEvents || 0} events, ${pushed.pushedForms || 0} forms, ${pushed.pushedFlows || 0} flows)`
       )
     );
-    console.log(pc26.green(`  \u2193 Pulled to local: ${pulled.total} items (${pulled.pulledIdeas} ideas, ${pulled.pulledGoals} goals, ${pulled.pulledEvents} events, ${pulled.pulledForms} forms, ${pulled.pulledFlows} flows)`));
-    console.log(pc26.dim("  \u26A1 Local SQLite database is up to date.\n"));
+    console.log(pc27.green(`  \u2193 Pulled to local: ${pulled.total} items (${pulled.pulledIdeas} ideas, ${pulled.pulledGoals} goals, ${pulled.pulledEvents} events, ${pulled.pulledForms} forms, ${pulled.pulledFlows} flows)`));
+    console.log(pc27.dim("  \u26A1 Local SQLite database is up to date.\n"));
   } catch (err) {
     if (!opts.json) {
-      spinner.stop(pc26.red("Sync interrupted"));
+      spinner.stop(pc27.red("Sync interrupted"));
     }
     printError("Sync failed", err);
     process.exit(1);
@@ -28656,8 +28695,8 @@ program.hook("preAction", (_thisCommand, actionCommand) => {
     const { loadConfig: loadConfig2 } = (init_config(), __toCommonJS(config_exports));
     const config2 = loadConfig2();
     if (config2.pendingWarning) {
-      const pc27 = __require("picocolors");
-      console.warn(pc27.yellow(`
+      const pc28 = __require("picocolors");
+      console.warn(pc28.yellow(`
 \u26A0 Warning: ${config2.pendingWarning}
 `));
     }
@@ -28724,6 +28763,11 @@ envCmd.command("run <idOrUrl> [command...]").description("Inject environment var
 });
 envCmd.command("push <name>").description("Push a local .env file into an encrypted vault secret").option("-f, --file <filepath>", "Source .env file path", ".env").option("--public", "Mark secret as publicly accessible via share link").action((name, cmdOpts) => pushEnvCommand(name, { ...program.opts(), ...cmdOpts, isPublic: cmdOpts.public }));
 envCmd.command("list").description("List all project environment variable bundles in the active workspace").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").option("--page <number>", "Page number (default: 1)", "1").action((cmdOpts) => listEnvsCommand({ ...program.opts(), ...cmdOpts }));
+program.command("exec <idOrUrl> [command...]").description("Zero-leak POSIX process wrapper: inject secrets into transient child env and purge RAM on exit").option("--share-key <key>", "Decryption share key for public vault link").allowUnknownOption().action((idOrUrl, commandArgs, cmdOpts) => {
+  const rawArgs = process.argv.slice(process.argv.indexOf("exec") + 2);
+  const argsToRun = rawArgs.includes("--") ? rawArgs.slice(rawArgs.indexOf("--") + 1) : commandArgs && commandArgs.length > 0 ? commandArgs : rawArgs.filter((a2) => !a2.startsWith("-") && a2 !== idOrUrl);
+  return execCommand(idOrUrl, argsToRun, { ...program.opts(), ...cmdOpts });
+});
 var totp = program.command("totp").alias("2fa").description("Sovereign 2FA TOTP Authenticator");
 totp.command("list").description("List 2FA TOTP accounts and live verification codes").action((cmdOpts) => listTotpCommand({ ...program.opts(), ...cmdOpts }));
 totp.command("code <id>").description("Generate the current 6-digit 2FA code for an account").option("--pure", "Output raw 6-digit number only (for pipes/scripts)").action((id, cmdOpts) => getTotpCodeCommand(id, { ...program.opts(), ...cmdOpts }));

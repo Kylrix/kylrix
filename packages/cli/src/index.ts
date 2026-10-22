@@ -74,6 +74,7 @@ import {
   pushEnvCommand,
   listEnvsCommand,
 } from './commands/envs';
+import { execCommand } from './commands/exec';
 import {
   listTotpCommand,
   getTotpCodeCommand,
@@ -487,6 +488,22 @@ envCmd
   .option('-a, --all', 'List all records without limit')
   .option('--page <number>', 'Page number (default: 1)', '1')
   .action((cmdOpts) => listEnvsCommand({ ...program.opts(), ...cmdOpts }));
+
+// ── POSIX Process Wrapper (kylrix exec) ──
+program
+  .command('exec <idOrUrl> [command...]')
+  .description('Zero-leak POSIX process wrapper: inject secrets into transient child env and purge RAM on exit')
+  .option('--share-key <key>', 'Decryption share key for public vault link')
+  .allowUnknownOption()
+  .action((idOrUrl, commandArgs, cmdOpts) => {
+    const rawArgs = process.argv.slice(process.argv.indexOf('exec') + 2);
+    const argsToRun = rawArgs.includes('--')
+      ? rawArgs.slice(rawArgs.indexOf('--') + 1)
+      : commandArgs && commandArgs.length > 0
+      ? commandArgs
+      : rawArgs.filter((a) => !a.startsWith('-') && a !== idOrUrl);
+    return execCommand(idOrUrl, argsToRun, { ...program.opts(), ...cmdOpts });
+  });
 
 // ── 6. TOTP 2FA Authenticator ──
 const totp = program.command('totp').alias('2fa').description('Sovereign 2FA TOTP Authenticator');
