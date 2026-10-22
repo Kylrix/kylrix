@@ -687,29 +687,35 @@ export async function deleteWorkspaceTurso(workspaceId: string) {
 export async function listWorkspacesTurso(userId: string) {
   try {
     let allUserIds = [userId];
-    const userRows = await db
-      .select()
-      .from(schema.user)
-      .where(
-        or(
-          eq(schema.user.id, userId),
-          eq(schema.user.appwriteAccountId, userId)
-        )
-      );
+    let userRows: any[] = [];
+    try {
+      userRows = await db
+        .select()
+        .from(schema.user)
+        .where(
+          or(
+            eq(schema.user.id, userId),
+            eq(schema.user.appwriteAccountId, userId),
+            eq(schema.user.email, userId.includes('@') ? userId.toLowerCase() : '')
+          )
+        );
+    } catch {}
 
     if (userRows.length > 0) {
       for (const u of userRows) {
         if (u.id) allUserIds.push(u.id);
         if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
         if (u.email) {
-          const emailUsers = await db
-            .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
-            .from(schema.user)
-            .where(eq(schema.user.email, u.email));
-          for (const eu of emailUsers) {
-            if (eu.id) allUserIds.push(eu.id);
-            if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
-          }
+          try {
+            const emailUsers = await db
+              .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
+              .from(schema.user)
+              .where(eq(schema.user.email, u.email.toLowerCase()));
+            for (const eu of emailUsers) {
+              if (eu.id) allUserIds.push(eu.id);
+              if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
+            }
+          } catch {}
         }
       }
       allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));

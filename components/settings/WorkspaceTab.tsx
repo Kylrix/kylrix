@@ -72,7 +72,7 @@ export function WorkspaceTab({ onGoToDevelopers }: { onGoToDevelopers?: () => vo
 
     setLoadingGlobalInvites(true);
     try {
-      const remoteProjects = await ProjectsService.fetchRemoteProjects(true);
+      const remoteProjects = await ProjectsService.fetchRemoteProjects();
       const invites = remoteProjects.filter((p: any) => p.isPending || p.collabStatus === 'pending');
       const requests = remoteProjects.filter((p: any) => p.isRequested || p.collabStatus === 'requested');
 

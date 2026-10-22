@@ -802,7 +802,7 @@ export function getKylrixPulse(): any {
 
 export const ProjectsService = {
   async listUserProjects(): Promise<{ rows: any[]; total: number }> {
-    const rows = await this.fetchRemoteProjects(true);
+    const rows = await this.fetchRemoteProjects();
     return { rows, total: rows.length };
   },
   async getProject(id?: string): Promise<any> {
@@ -812,7 +812,7 @@ export const ProjectsService = {
     return res.workspace ? { ...res.workspace, $id: res.workspace.id } : null;
   },
   async listProjects(..._args: any[]): Promise<any> {
-    const rows = await this.fetchRemoteProjects(true);
+    const rows = await this.fetchRemoteProjects();
     return { rows, total: rows.length };
   },
   async createProject(data: any): Promise<any> {
@@ -950,14 +950,17 @@ export const ProjectsService = {
     const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops/projects');
     return addObjectToProjectSecure(projectId, entityKind, entityId, role, metadata);
   },
-  async fetchRemoteProjects(..._args: any[]): Promise<any[]> {
+  async fetchRemoteProjects(userIdParam?: string | boolean, ..._args: any[]): Promise<any[]> {
     try {
-      const { authClient } = await import('@/lib/auth/better-auth-client');
-      const session = await authClient.getSession();
-      const userId = session?.data?.user?.id;
-      if (!userId) return [];
+      let targetUserId = typeof userIdParam === 'string' ? userIdParam : undefined;
+      if (!targetUserId || targetUserId === 'guest') {
+        const { authClient } = await import('@/lib/auth/better-auth-client');
+        const session = await authClient.getSession();
+        targetUserId = session?.data?.user?.id || getCurrentUserSnapshot()?.$id;
+      }
+      if (!targetUserId || targetUserId === 'guest') return [];
       const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
-      const res = await listWorkspacesTurso(userId);
+      const res = await listWorkspacesTurso(targetUserId);
       return res.rows || [];
     } catch (err) {
       console.warn('[ProjectsService] Turso workspace list failed:', err);
