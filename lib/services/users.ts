@@ -103,7 +103,13 @@ export const UsersService = {
   },
 
   async updateProfile(userId: string, data: any) {
-    const profile = await this.getProfileById(userId);
+    let profile = await this.getProfileById(userId);
+    if (!profile) {
+      // Auto-create profile row if it doesn't exist yet
+      const fallbackUsername = fallbackUsernameFromUser(userId);
+      profile = await this.createProfile(userId, fallbackUsername, data);
+      if (profile) return profile;
+    }
     if (profile) {
       const now = new Date().toISOString();
       await db

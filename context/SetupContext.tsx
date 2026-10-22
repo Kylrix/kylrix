@@ -202,7 +202,6 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               invalidateUsersProfileRowCache(user.$id);
               const updated = await UsersService.getProfileById(user.$id);
               setProfile(updated);
-              toast.success('Secure identity successfully published');
             }
           } catch (err) {
             console.warn('[SetupProvider] Failed E2E identity publication:', err);

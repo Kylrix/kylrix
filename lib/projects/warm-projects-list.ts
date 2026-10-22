@@ -23,16 +23,19 @@ export function normalizeProjectsList(raw: unknown): Projects[] {
   return [];
 }
 
-/** Switcher WorkspaceItem[] was wrongly written into f_projects_list — treat as miss. */
+/** Validate project/workspace objects from Turso SQLite or Appwrite cache. */
 function isProjectRowCache(rows: unknown[]): boolean {
-  if (!rows.length) return false;
+  if (!Array.isArray(rows) || !rows.length) return false;
   const sample = rows.find((r) => r && typeof r === 'object') as Record<string, unknown> | undefined;
   if (!sample) return false;
-  // Canonical Appwrite / Projects rows use $id
-  if (sample.$id) return true;
-  // WorkspaceItem pollution: id + isPersonal, no $id
-  if (typeof sample.isPersonal === 'boolean' && sample.id && !sample.$id) return false;
-  return true;
+  // Appwrite or Turso project rows
+  if (sample.$id || sample.id) {
+    if (typeof sample.isPersonal === 'boolean' && !sample.title && !sample.name && !sample.creatorId && !sample.ownerId) {
+      return false;
+    }
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -55,8 +58,8 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
     const raw = await LocalEngine.query(
       cacheKey,
       async () => {
-        // Direct remote — avoid nested LocalEngine.query inside listProjects
-        const rows = await ProjectsService.fetchRemoteProjects(true).catch(() => []);
+        // Direct remote — pass userId
+        const rows = await ProjectsService.fetchRemoteProjects(deps.userId).catch(() => []);
         return rows as any;
       },
       {
@@ -70,7 +73,7 @@ export async function warmProjectsList(deps: NexusDeps): Promise<Projects[]> {
     if ((!rows.length || !isProjectRowCache(rows)) && !force) {
       const healedRaw = await LocalEngine.query(
         cacheKey,
-        async () => (await ProjectsService.fetchRemoteProjects(true).catch(() => [])) as any,
+        async () => (await ProjectsService.fetchRemoteProjects(deps.userId).catch(() => [])) as any,
         {
           ttl: PROJECTS_LIST_TTL,
           force: true,

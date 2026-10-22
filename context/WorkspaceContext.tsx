@@ -96,13 +96,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
       normalizeProjectsList(rows)
-        .filter((p: any) => {
-          // Switcher-shaped LocalEngine rows (id, not $id) — never treat as nested projects
-          if (p && typeof p.isPersonal === 'boolean' && p.id && !p.$id && !p.kind && !p.parentProjectId) {
-            return p.isPersonal !== true;
-          }
-          return isWorkspaceRecord(p);
-        })
+        .filter((p: any) => isWorkspaceRecord(p))
         .map((p: any) => {
           const id = String(p.$id || p.id || '').trim();
           const ownerId = p.ownerId || p.userId || p.creatorId || '';
