@@ -155,7 +155,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
   const items = useMemo(() => {
     return itemsAll.filter((it) => {
       if (activeTab === 'All') return true;
-      if (activeTab === 'Notes') return it.type === 'Note';
+      if (activeTab === 'Ideas' || activeTab === 'Notes') return it.type === 'Note';
       if (activeTab === 'Goals') return it.type === 'Goal';
       if (activeTab === 'Forms') return it.type === 'Form';
       if (activeTab === 'Inbox' || activeTab === 'Hangouts') return it.type === 'Inbox' || it.type === 'Hangout';
@@ -336,7 +336,7 @@ export function TrashObjectDetail({ onClose }: TrashObjectDetailProps) {
 
       {/* Filter Tabs */}
       <div className="p-3 border-b border-white/4 flex items-center gap-1.5 overflow-x-auto scrollbar-none bg-[#161412]">
-        {['All', 'Notes', 'Goals', 'Forms', 'Inbox', 'Vault', 'Workspaces'].map((tab) => (
+        {['All', 'Ideas', 'Goals', 'Forms', 'Inbox', 'Vault', 'Workspaces'].map((tab) => (
           <button
             key={tab}
             type="button"

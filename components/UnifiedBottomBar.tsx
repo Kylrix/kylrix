@@ -73,7 +73,7 @@ export function UnifiedBottomBar() {
   }, [config, defaultMainClick]);
 
   const leftNavItems = [
-    { key: 'note', route: '/app', icon: NotesIcon, label: 'Notes' },
+    { key: 'note', route: '/app', icon: NotesIcon, label: 'Ideas' },
     { key: 'goal', route: '/goals', icon: GoalsIcon, label: 'Goals' },
   ];
 
