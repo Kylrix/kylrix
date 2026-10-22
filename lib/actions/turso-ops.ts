@@ -378,24 +378,67 @@ export async function deleteKeychainTurso(id: string) {
   }
 }
 
-export async function upsertVaultItemTurso(data: typeof schema.vaultItems.$inferInsert) {
+export async function upsertVaultItemTurso(data: any) {
   try {
+    const rawData = data || {};
+    const titleVal = rawData.title || rawData.name || 'Untitled Secret';
+    const typeVal = rawData.type || rawData.itemType || 'login';
+    const encryptedDataVal = rawData.encryptedData || rawData.password || '';
+    const ivVal = rawData.iv || null;
+    const isTrashedVal = Boolean(rawData.isTrashed ?? rawData.isDeleted ?? rawData.isTrash ?? false);
+    const isWorkspaceVal = Boolean(rawData.isWorkspace ?? false);
+    const workspaceIdVal = rawData.workspaceId || rawData.projectId || null;
+
+    let metaObj: Record<string, any> = {};
+    if (typeof rawData.metadata === 'string') {
+      try { metaObj = JSON.parse(rawData.metadata); } catch { metaObj = {}; }
+    } else if (rawData.metadata && typeof rawData.metadata === 'object') {
+      metaObj = { ...rawData.metadata };
+    }
+
+    const extraFields = [
+      'name', 'username', 'password', 'url', 'notes', 'customFields',
+      'itemType', 'tags', 'folderId', 'totpId', 'cardNumber', 'cardholderName',
+      'cardExpiry', 'cardCVV', 'cardPIN', 'cardType', 'isFavorite', 'isPinned',
+      'isEnv', 'dek', 'faviconUrl', 'attachments'
+    ];
+    for (const field of extraFields) {
+      if (rawData[field] !== undefined && !(field in metaObj)) {
+        metaObj[field] = rawData[field];
+      }
+    }
+
+    const payload: typeof schema.vaultItems.$inferInsert = {
+      id: rawData.id || rawData.$id,
+      userId: rawData.userId,
+      title: titleVal,
+      type: typeVal,
+      encryptedData: encryptedDataVal,
+      iv: ivVal,
+      metadata: JSON.stringify(metaObj),
+      isTrashed: isTrashedVal,
+      isWorkspace: isWorkspaceVal,
+      workspaceId: workspaceIdVal,
+      createdAt: rawData.createdAt || new Date().toISOString(),
+      updatedAt: rawData.updatedAt || new Date().toISOString(),
+    };
+
     const existing = await db
       .select({ id: schema.vaultItems.id })
       .from(schema.vaultItems)
-      .where(eq(schema.vaultItems.id, data.id))
+      .where(eq(schema.vaultItems.id, payload.id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.vaultItems)
         .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
+          ...payload,
+          updatedAt: payload.updatedAt || new Date().toISOString(),
         })
-        .where(eq(schema.vaultItems.id, data.id));
+        .where(eq(schema.vaultItems.id, payload.id));
     } else {
-      await db.insert(schema.vaultItems).values(data);
+      await db.insert(schema.vaultItems).values(payload);
     }
     return { success: true };
   } catch (err: any) {
@@ -465,21 +508,51 @@ export async function deleteVaultItemTurso(id: string) {
   }
 }
 
-export async function upsertTotpSecretTurso(data: typeof schema.totpSecrets.$inferInsert) {
+export async function upsertTotpSecretTurso(data: any) {
   try {
+    const rawData = data || {};
+    const accountVal = rawData.account || rawData.accountName || 'Account';
+    const encryptedSecretVal = rawData.encryptedSecret || rawData.secretKey || rawData.secret || '';
+
+    let metaObj: Record<string, any> = {};
+    if (typeof rawData.metadata === 'string') {
+      try { metaObj = JSON.parse(rawData.metadata); } catch { metaObj = {}; }
+    } else if (rawData.metadata && typeof rawData.metadata === 'object') {
+      metaObj = { ...rawData.metadata };
+    }
+
+    const extraFields = [
+      'accountName', 'issuer', 'algorithm', 'digits', 'period', 'url',
+      'folderId', 'tags', 'dek', 'isPinned', 'isFavorite', 'isPublic', 'isGuest', 'isShared'
+    ];
+    for (const field of extraFields) {
+      if (rawData[field] !== undefined && !(field in metaObj)) {
+        metaObj[field] = rawData[field];
+      }
+    }
+
+    const payload: typeof schema.totpSecrets.$inferInsert = {
+      id: rawData.id || rawData.$id,
+      userId: rawData.userId,
+      account: accountVal,
+      encryptedSecret: encryptedSecretVal,
+      metadata: JSON.stringify(metaObj),
+      createdAt: rawData.createdAt || new Date().toISOString(),
+    };
+
     const existing = await db
       .select({ id: schema.totpSecrets.id })
       .from(schema.totpSecrets)
-      .where(eq(schema.totpSecrets.id, data.id))
+      .where(eq(schema.totpSecrets.id, payload.id))
       .limit(1);
 
     if (existing.length > 0) {
       await db
         .update(schema.totpSecrets)
-        .set(data)
-        .where(eq(schema.totpSecrets.id, data.id));
+        .set(payload)
+        .where(eq(schema.totpSecrets.id, payload.id));
     } else {
-      await db.insert(schema.totpSecrets).values(data);
+      await db.insert(schema.totpSecrets).values(payload);
     }
     return { success: true };
   } catch (err: any) {

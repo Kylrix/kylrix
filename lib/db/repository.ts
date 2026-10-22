@@ -62,6 +62,78 @@ export interface DatabaseRepository {
   ): Promise<void>;
 }
 
+function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
+  if (!data || typeof data !== 'object') return {};
+
+  const titleVal = data.title || data.name || 'Untitled Secret';
+  const typeVal = data.type || data.itemType || 'login';
+  const encryptedDataVal = data.encryptedData || data.password || '';
+  const ivVal = data.iv || null;
+  const isTrashedVal = Boolean(data.isTrashed ?? data.isDeleted ?? data.isTrash ?? false);
+  const isWorkspaceVal = Boolean(data.isWorkspace ?? false);
+  const workspaceIdVal = data.workspaceId || data.projectId || null;
+
+  let metaObj: Record<string, any> = {};
+  if (typeof data.metadata === 'string') {
+    try { metaObj = JSON.parse(data.metadata); } catch { metaObj = {}; }
+  } else if (data.metadata && typeof data.metadata === 'object') {
+    metaObj = { ...data.metadata };
+  }
+
+  const extraFields = [
+    'name', 'username', 'password', 'url', 'notes', 'customFields',
+    'itemType', 'tags', 'folderId', 'totpId', 'cardNumber', 'cardholderName',
+    'cardExpiry', 'cardCVV', 'cardPIN', 'cardType', 'isFavorite', 'isPinned',
+    'isEnv', 'dek', 'faviconUrl', 'attachments'
+  ];
+  for (const field of extraFields) {
+    if (data[field] !== undefined && !(field in metaObj)) {
+      metaObj[field] = data[field];
+    }
+  }
+
+  return {
+    title: titleVal,
+    type: typeVal,
+    encryptedData: encryptedDataVal,
+    iv: ivVal,
+    metadata: JSON.stringify(metaObj),
+    isTrashed: isTrashedVal,
+    isWorkspace: isWorkspaceVal,
+    workspaceId: workspaceIdVal,
+  };
+}
+
+function normalizeTotpSecretData(data: Record<string, any>): Record<string, any> {
+  if (!data || typeof data !== 'object') return {};
+
+  const accountVal = data.account || data.accountName || 'Account';
+  const encryptedSecretVal = data.encryptedSecret || data.secretKey || data.secret || '';
+
+  let metaObj: Record<string, any> = {};
+  if (typeof data.metadata === 'string') {
+    try { metaObj = JSON.parse(data.metadata); } catch { metaObj = {}; }
+  } else if (data.metadata && typeof data.metadata === 'object') {
+    metaObj = { ...data.metadata };
+  }
+
+  const extraFields = [
+    'accountName', 'issuer', 'algorithm', 'digits', 'period', 'url',
+    'folderId', 'tags', 'dek', 'isPinned', 'isFavorite', 'isPublic', 'isGuest', 'isShared'
+  ];
+  for (const field of extraFields) {
+    if (data[field] !== undefined && !(field in metaObj)) {
+      metaObj[field] = data[field];
+    }
+  }
+
+  return {
+    account: accountVal,
+    encryptedSecret: encryptedSecretVal,
+    metadata: JSON.stringify(metaObj),
+  };
+}
+
 const TABLE_MAP: Record<string, any> = {
   // Appwrite collection IDs
   '67ff05f3002502ef239e': schema.ideas,
@@ -312,14 +384,68 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
           ? new Date(raw.updatedAt).toISOString()
           : String(raw.updatedAt || createdAt));
 
-    return {
+    let expanded: Record<string, any> = {};
+    if (raw.metadata) {
+      let nested = raw.metadata;
+      for (let i = 0; i < 3 && typeof nested === 'string'; i += 1) {
+        try { nested = JSON.parse(nested); } catch { break; }
+      }
+      if (nested && typeof nested === 'object') {
+        expanded = nested;
+      }
+    }
+
+    const table = this.resolveTable(tableId || '');
+    const isVault = table === schema.vaultItems;
+    const isTotp = table === schema.totpSecrets;
+
+    const baseShaped: Record<string, any> = {
       ...raw,
       $id: raw.id || raw.$id,
       $createdAt: createdAt,
       $updatedAt: updatedAt,
       $databaseId: 'turso',
       $tableId: tableId || 'relational',
-    } as unknown as T;
+    };
+
+    if (isVault) {
+      baseShaped.name = expanded.name || raw.title || raw.name || '';
+      baseShaped.username = expanded.username || raw.username || '';
+      baseShaped.url = expanded.url || raw.url || '';
+      baseShaped.password = expanded.password || raw.encryptedData || raw.password || '';
+      baseShaped.notes = expanded.notes || raw.notes || '';
+      baseShaped.customFields = expanded.customFields || raw.customFields || '';
+      baseShaped.type = raw.type || expanded.itemType || 'login';
+      baseShaped.itemType = expanded.itemType || raw.type || 'login';
+      baseShaped.dek = expanded.dek || raw.dek || null;
+      baseShaped.isFavorite = expanded.isFavorite ?? false;
+      baseShaped.isPinned = expanded.isPinned ?? false;
+      baseShaped.isEnv = expanded.isEnv ?? false;
+      baseShaped.tags = expanded.tags || raw.tags || [];
+      baseShaped.folderId = expanded.folderId || raw.folderId || null;
+      baseShaped.totpId = expanded.totpId || raw.totpId || null;
+      baseShaped.cardNumber = expanded.cardNumber || null;
+      baseShaped.cardholderName = expanded.cardholderName || null;
+      baseShaped.cardExpiry = expanded.cardExpiry || null;
+      baseShaped.cardCVV = expanded.cardCVV || null;
+      baseShaped.cardPIN = expanded.cardPIN || null;
+      baseShaped.cardType = expanded.cardType || null;
+    } else if (isTotp) {
+      baseShaped.secretKey = raw.encryptedSecret || expanded.secretKey || '';
+      baseShaped.accountName = expanded.accountName || raw.account || '';
+      baseShaped.issuer = expanded.issuer || '';
+      baseShaped.algorithm = expanded.algorithm || 'SHA1';
+      baseShaped.digits = expanded.digits || 6;
+      baseShaped.period = expanded.period || 30;
+      baseShaped.url = expanded.url || '';
+      baseShaped.folderId = expanded.folderId || '';
+      baseShaped.tags = expanded.tags || [];
+      baseShaped.dek = expanded.dek || null;
+      baseShaped.isPinned = Boolean(expanded.isPinned);
+      baseShaped.isFavorite = Boolean(expanded.isFavorite);
+    }
+
+    return baseShaped as unknown as T;
   }
 
   async getRow<T>(
@@ -502,6 +628,12 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
       }
     }
 
+    if (table === schema.vaultItems) {
+      Object.assign(insertData, normalizeVaultItemData(data as any));
+    } else if (table === schema.totpSecrets) {
+      Object.assign(insertData, normalizeTotpSecretData(data as any));
+    }
+
     try {
       await db.insert(table).values(insertData);
       const shaped = this.shapeRow<T>(insertData, tableId);
@@ -551,6 +683,12 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
           updateData[camel] = v;
         }
       }
+    }
+
+    if (table === schema.vaultItems) {
+      Object.assign(updateData, normalizeVaultItemData(data as any));
+    } else if (table === schema.totpSecrets) {
+      Object.assign(updateData, normalizeTotpSecretData(data as any));
     }
 
     try {
