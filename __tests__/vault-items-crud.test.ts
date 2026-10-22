@@ -60,6 +60,27 @@ describe('Vault Items & Credentials Normalization and CRUD', () => {
     mockTotpRows.length = 0;
   });
 
+  it('creates secret using createCredential with raw encrypted_data field', async () => {
+    const adapter = new TursoDatabaseAdapter();
+    const created = await adapter.createRow<any>('turso', 'credentials', 'cred_raw_1', {
+      userId: 'user_123',
+      name: 'Zup GitHub and Google oauth',
+      itemType: 'login',
+      encrypted_data: 'W; a}: XP@QRE<Dyb)',
+      username: 'Test',
+    });
+
+    expect(created).toBeDefined();
+    expect(mockVaultRows.length).toBe(1);
+
+    const inserted = mockVaultRows[0];
+    expect(inserted.title).toBe('Zup GitHub and Google oauth');
+    expect(inserted.type).toBe('login');
+    expect(inserted.encryptedData).toBe('W; a}: XP@QRE<Dyb)');
+    expect(inserted.encrypted_data).toBeUndefined();
+    expect(inserted.password).toBeUndefined();
+  });
+
   it('creates secret using createCredential with legacy fields (name, itemType, password)', async () => {
     const credentialData = {
       userId: 'user_123',

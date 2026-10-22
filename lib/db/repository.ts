@@ -630,8 +630,23 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
 
     if (table === schema.vaultItems) {
       Object.assign(insertData, normalizeVaultItemData(data as any));
+      delete insertData.encrypted_data;
+      delete insertData.encryptedSecret;
+      delete insertData.secret;
+      delete insertData.password;
+      delete insertData.account;
+      delete insertData.itemType;
+      delete insertData.accountName;
+      delete insertData.secretKey;
     } else if (table === schema.totpSecrets) {
       Object.assign(insertData, normalizeTotpSecretData(data as any));
+      delete insertData.encrypted_data;
+      delete insertData.encryptedData;
+      delete insertData.secret;
+      delete insertData.password;
+      delete insertData.itemType;
+      delete insertData.accountName;
+      delete insertData.secretKey;
     }
 
     try {
@@ -687,8 +702,23 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
 
     if (table === schema.vaultItems) {
       Object.assign(updateData, normalizeVaultItemData(data as any));
+      delete updateData.encrypted_data;
+      delete updateData.encryptedSecret;
+      delete updateData.secret;
+      delete updateData.password;
+      delete updateData.account;
+      delete updateData.itemType;
+      delete updateData.accountName;
+      delete updateData.secretKey;
     } else if (table === schema.totpSecrets) {
       Object.assign(updateData, normalizeTotpSecretData(data as any));
+      delete updateData.encrypted_data;
+      delete updateData.encryptedData;
+      delete updateData.secret;
+      delete updateData.password;
+      delete updateData.itemType;
+      delete updateData.accountName;
+      delete updateData.secretKey;
     }
 
     try {
