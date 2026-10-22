@@ -67,7 +67,7 @@ function normalizeVaultItemData(data: Record<string, any>): Record<string, any> 
 
   const titleVal = data.title || data.name || 'Untitled Secret';
   const typeVal = data.type || data.itemType || 'login';
-  const encryptedDataVal = data.encryptedData || data.password || '';
+  const encryptedDataVal = data.encrypted_data || data.encryptedData || data.password || data.secret || '';
   const ivVal = data.iv || null;
   const isTrashedVal = Boolean(data.isTrashed ?? data.isDeleted ?? data.isTrash ?? false);
   const isWorkspaceVal = Boolean(data.isWorkspace ?? false);

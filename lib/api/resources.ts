@@ -2830,7 +2830,7 @@ export const ApiResources = {
       throw err;
     }
 
-    let rawSecret = body.secret != null ? String(body.secret) : (body.password != null ? String(body.password) : '');
+    let rawSecret = body.encrypted_data != null ? String(body.encrypted_data) : (body.encryptedData != null ? String(body.encryptedData) : (body.secret != null ? String(body.secret) : (body.password != null ? String(body.password) : '')));
     let wasGenerated = false;
 
     if (!rawSecret && (body.itemType === 'login' || !body.itemType || body.type === 'login')) {
