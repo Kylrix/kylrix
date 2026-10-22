@@ -248,7 +248,7 @@ export function TaggedResourcesTabs({
   projectId?: string
 }) {
   const TAGGED_TABS = [
-    { label: 'Notes', icon: <FileText size={16} />, count: resources.notes?.length || 0 },
+    { label: 'Ideas', icon: <FileText size={16} />, count: resources.notes?.length || 0 },
     { label: 'Tasks', icon: <CheckSquare size={16} />, count: resources.tasks?.length || 0 },
     { label: 'Vault', icon: <Lock size={16} />, count: (resources.credentials?.length || 0) + (resources.totps?.length || 0) },
     { label: 'Flow', icon: <FileSpreadsheet size={16} />, count: (resources.forms?.length || 0) + (resources.moments?.length || 0) + (resources.events?.length || 0) },
@@ -297,7 +297,7 @@ export function TaggedResourcesTabs({
       </div>
 
       <div className="flex flex-col gap-4">
-        {currentTabLabel === 'Notes' && resources.notes?.map((note: any) => (
+        {(currentTabLabel === 'Ideas' || currentTabLabel === 'Notes') && resources.notes?.map((note: any) => (
           <ResourceItem 
             key={note.$id}
             id={note.$id}
