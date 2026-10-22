@@ -16,7 +16,10 @@ import {
   Share2,
   X,
   Sparkles,
-  Crown
+  Crown,
+  GitCommit,
+  GitPullRequest,
+  Github
 } from 'lucide-react';
 import { getUserSubscriptionTier } from '@/lib/utils';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
@@ -45,10 +48,41 @@ export interface UnifiedProfileViewProps {
   source?: string;
   initialProfile?: any;
   onClose?: () => void;
+  isPage?: boolean;
 }
 
-export function ProfilePublishedTabs({ targetUid, username }: { targetUid?: string; username?: string | null }) {
-  const [activeTab, setActiveTab] = useState<'articles' | 'forms' | 'events' | 'flows'>('articles');
+export interface ContributorActivityData {
+  isContributor: boolean;
+  prCount: number;
+  commitCount?: number;
+  githubUsername?: string | null;
+  lastCheckedAt?: string;
+  recentCommits?: Array<{
+    sha: string;
+    message: string;
+    url: string;
+    date: string;
+    repo?: string;
+  }>;
+  recentPrs?: Array<{
+    id: number;
+    title: string;
+    url: string;
+    date: string;
+    state: string;
+  }>;
+}
+
+export function ProfilePublishedTabs({
+  targetUid,
+  username,
+  contributorData
+}: {
+  targetUid?: string;
+  username?: string | null;
+  contributorData?: ContributorActivityData | null;
+}) {
+  const [activeTab, setActiveTab] = useState<'articles' | 'forms' | 'events' | 'flows' | 'github'>('articles');
   const [publishedItems, setPublishedItems] = useState<{
     articles: any[];
     forms: any[];
@@ -68,7 +102,6 @@ export function ProfilePublishedTabs({ targetUid, username }: { targetUid?: stri
       if (!targetUid && !username) return;
       setLoading(true);
       try {
-        // Foundational published content fetcher
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const [localNotes, localForms, localEvents, localFlows] = await Promise.all([
           LocalEngine.cacheGet<any[]>('notes_published').catch(() => []),
@@ -106,21 +139,33 @@ export function ProfilePublishedTabs({ targetUid, username }: { targetUid?: stri
     };
   }, [targetUid, username]);
 
-  const tabs: Array<{ id: 'articles' | 'forms' | 'events' | 'flows'; label: string }> = [
+  const tabs: Array<{ id: 'articles' | 'forms' | 'events' | 'flows' | 'github'; label: string; icon?: React.ReactNode }> = [
     { id: 'articles', label: 'Articles' },
     { id: 'forms', label: 'Forms' },
     { id: 'events', label: 'Events' },
     { id: 'flows', label: 'Flows' },
+    {
+      id: 'github',
+      label: 'GitHub Activity',
+      icon: <Github size={13} className="text-white/70" />
+    },
   ];
 
-  const currentList = publishedItems[activeTab] || [];
+  const currentList = activeTab !== 'github' ? (publishedItems[activeTab] || []) : [];
+  const recentCommits = contributorData?.recentCommits || [];
+  const recentPrs = contributorData?.recentPrs || [];
 
   return (
     <div className="rounded-3xl bg-[#000000] border border-white/20 p-5 sm:p-6 space-y-4 shadow-sm">
       {/* Tab bar */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-3 overflow-x-auto scrollbar-none">
         {tabs.map((tab) => {
-          const count = publishedItems[tab.id]?.length || 0;
+          let count = 0;
+          if (tab.id === 'github') {
+            count = (recentCommits.length || 0) + (recentPrs.length || 0);
+          } else {
+            count = publishedItems[tab.id]?.length || 0;
+          }
           const isActive = activeTab === tab.id;
           return (
             <button
@@ -133,6 +178,7 @@ export function ProfilePublishedTabs({ targetUid, username }: { targetUid?: stri
                   : 'bg-[#161412] text-white/60 hover:text-white hover:bg-white/10'
               }`}
             >
+              {tab.icon}
               <span>{tab.label}</span>
               {count > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${isActive ? 'bg-white/20 text-white' : 'bg-white/10 text-white/60'}`}>
@@ -144,9 +190,96 @@ export function ProfilePublishedTabs({ targetUid, username }: { targetUid?: stri
         })}
       </div>
 
-      {/* Content list or empty state */}
+      {/* Content list or GitHub Commits tab */}
       <div className="min-h-[120px] flex flex-col justify-center">
-        {loading ? (
+        {activeTab === 'github' ? (
+          <div className="space-y-3">
+            {contributorData?.githubUsername && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-[#161412] border border-white/10 text-xs font-mono text-white/70">
+                <span className="flex items-center gap-1.5">
+                  <Github size={14} className="text-[#6366F1]" />
+                  <span>GitHub: <strong className="text-white">@{contributorData.githubUsername}</strong></span>
+                </span>
+                {contributorData.isContributor && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Recognized Contributor
+                  </span>
+                )}
+              </div>
+            )}
+
+            {recentPrs.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-mono uppercase tracking-wider text-white/50 px-1">Merged Pull Requests</h4>
+                {recentPrs.map((pr) => (
+                  <a
+                    key={pr.id}
+                    href={pr.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/10 hover:border-emerald-500/40 transition-all flex items-start justify-between gap-3 group cursor-pointer"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <GitPullRequest size={14} className="text-emerald-400 shrink-0" />
+                        <h4 className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors truncate">
+                          {pr.title}
+                        </h4>
+                      </div>
+                      <p className="text-[10px] font-mono text-white/40">
+                        {new Date(pr.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                      {pr.state}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            )}
+
+            {recentCommits.length > 0 ? (
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-mono uppercase tracking-wider text-white/50 px-1">Recent Commits</h4>
+                {recentCommits.map((c) => (
+                  <a
+                    key={c.sha + c.date}
+                    href={c.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-3.5 rounded-2xl bg-[#161412] border border-white/10 hover:border-white/25 transition-all flex items-start justify-between gap-3 group cursor-pointer"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <GitCommit size={14} className="text-[#818CF8] shrink-0" />
+                        <h4 className="text-xs font-bold text-white group-hover:text-[#A5B4FC] transition-colors truncate">
+                          {c.message}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-white/40">
+                        <span>{c.repo || 'Kylrix/kylrix'}</span>
+                        <span>•</span>
+                        <span>{new Date(c.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/5 text-white/70 border border-white/10 shrink-0">
+                      {c.sha}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            ) : (
+              recentPrs.length === 0 && (
+                <div className="text-center py-8 text-xs text-white/40 font-satoshi space-y-1">
+                  <p className="font-bold text-white/60">No recent GitHub activity found</p>
+                  <p className="text-[11px] text-white/30">
+                    Connect GitHub account in settings or contribute to Kylrix repositories to show activity.
+                  </p>
+                </div>
+              )
+            )}
+          </div>
+        ) : loading ? (
           <div className="text-center py-8 text-xs font-mono text-white/40 animate-pulse">
             Loading published content…
           </div>
@@ -188,6 +321,7 @@ export function UnifiedProfileView({
   bio,
   initialProfile,
   onClose,
+  isPage,
 }: UnifiedProfileViewProps) {
   const { user } = useAuth();
   const { openWalletWithIntent } = useWalletOverlay();
@@ -241,33 +375,43 @@ export function UnifiedProfileView({
   const [badges, setBadges] = useState<any[]>([]);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isContributor, setIsContributor] = useState(false);
+  const [contributorData, setContributorData] = useState<ContributorActivityData | null>(null);
 
-  // Instant 0ms LocalEngine hydration & lookup profile info
+  // Instant 0ms LocalEngine hydration & lookup profile info + contributor status
   useEffect(() => {
     let cancelled = false;
     const lookup = async () => {
       let handleForContributor: string | null = username || initialProfile?.username || null;
       try {
-        const key = targetUid ? `profile_${targetUid}` : (username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
-        if (key) {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cached = await LocalEngine.cacheGet<any>(key).catch(() => null);
-          if (cached && !cancelled) {
+        const profileCacheKey = targetUid ? `profile_${targetUid}` : (username ? `profile_${username.replace(/^@/, '').toLowerCase()}` : null);
+        const contribCacheKey = handleForContributor ? `contrib_status_${handleForContributor.replace(/^@/, '').toLowerCase()}` : null;
+
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+
+        if (profileCacheKey) {
+          const cachedProfile = await LocalEngine.cacheGet<any>(profileCacheKey).catch(() => null);
+          if (cachedProfile && !cancelled) {
             let prefsObj: any = {};
             try {
-              prefsObj = typeof cached.preferences === 'string' ? JSON.parse(cached.preferences) : cached.preferences || {};
+              prefsObj = typeof cachedProfile.preferences === 'string' ? JSON.parse(cachedProfile.preferences) : cachedProfile.preferences || {};
               if (typeof prefsObj.tipEnabled === 'boolean') setTipEnabled(prefsObj.tipEnabled);
             } catch {}
             setResolvedProfile(prev => ({
-              name: prev.name || cached.displayName || cached.name,
-              username: typeof cached.username === 'string' && isCleanUsername(cached.username) ? cached.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
-              avatar: prev.avatar || cached.avatar || cached.avatarUrl,
-              bio: prev.bio || cached.bio,
-              links: prev.links?.length ? prev.links : (Array.isArray(prefsObj.links) ? prefsObj.links : (Array.isArray(cached.links) ? cached.links : [])),
-              tags: prev.tags?.length ? prev.tags : (Array.isArray(prefsObj.tags) ? prefsObj.tags : (Array.isArray(cached.tags) ? cached.tags : [])),
-              createdAt: prev.createdAt || cached.$createdAt || cached.createdAt,
+              name: prev.name || cachedProfile.displayName || cachedProfile.name,
+              username: typeof cachedProfile.username === 'string' && isCleanUsername(cachedProfile.username) ? cachedProfile.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
+              avatar: prev.avatar || cachedProfile.avatar || cachedProfile.avatarUrl,
+              bio: prev.bio || cachedProfile.bio,
+              links: prev.links?.length ? prev.links : (Array.isArray(prefsObj.links) ? prefsObj.links : (Array.isArray(cachedProfile.links) ? cachedProfile.links : [])),
+              tags: prev.tags?.length ? prev.tags : (Array.isArray(prefsObj.tags) ? prefsObj.tags : (Array.isArray(cachedProfile.tags) ? cachedProfile.tags : [])),
+              createdAt: prev.createdAt || cachedProfile.$createdAt || cachedProfile.createdAt,
             }));
+          }
+        }
+
+        if (contribCacheKey) {
+          const cachedContrib = await LocalEngine.cacheGet<ContributorActivityData>(contribCacheKey).catch(() => null);
+          if (cachedContrib && !cancelled) {
+            setContributorData(cachedContrib);
           }
         }
 
@@ -289,15 +433,20 @@ export function UnifiedProfileView({
             }
           } catch {}
 
-          setResolvedProfile(prev => ({
-            name: prof.displayName || (prof as any).name || prev.name,
-            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
-            avatar: prof.avatar || prof.avatarUrl || prev.avatar,
-            bio: prof.bio ?? prev.bio,
-            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (prev.links || [])),
-            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (prev.tags || [])),
-            createdAt: (prof as any).$createdAt || prev.createdAt,
-          }));
+          const newProfile = {
+            name: prof.displayName || (prof as any).name || resolvedProfile.name,
+            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : resolvedProfile.username,
+            avatar: prof.avatar || prof.avatarUrl || resolvedProfile.avatar,
+            bio: prof.bio ?? resolvedProfile.bio,
+            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (resolvedProfile.links || [])),
+            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (resolvedProfile.tags || [])),
+            createdAt: (prof as any).$createdAt || resolvedProfile.createdAt,
+          };
+
+          setResolvedProfile(prev => ({ ...prev, ...newProfile }));
+          if (profileCacheKey) {
+            void LocalEngine.cacheSet(profileCacheKey, prof);
+          }
         } else if (username) {
           const { UsersService } = await import('@/lib/services/users');
           const prof = await UsersService.getProfile(username).catch(() => null);
@@ -316,25 +465,32 @@ export function UnifiedProfileView({
             }
           } catch {}
 
-          setResolvedProfile(prev => ({
-            name: prof.displayName || prof.name || prev.name,
-            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : prev.username,
-            avatar: prof.avatar || prof.avatarUrl || prev.avatar,
-            bio: prof.bio ?? prev.bio,
-            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (prev.links || [])),
-            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (prev.tags || [])),
-            createdAt: (prof as any).$createdAt || prev.createdAt,
-          }));
+          const newProfile = {
+            name: prof.displayName || prof.name || resolvedProfile.name,
+            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : resolvedProfile.username,
+            avatar: prof.avatar || prof.avatarUrl || resolvedProfile.avatar,
+            bio: prof.bio ?? resolvedProfile.bio,
+            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (resolvedProfile.links || [])),
+            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (resolvedProfile.tags || [])),
+            createdAt: (prof as any).$createdAt || resolvedProfile.createdAt,
+          };
+
+          setResolvedProfile(prev => ({ ...prev, ...newProfile }));
+          if (profileCacheKey) {
+            void LocalEngine.cacheSet(profileCacheKey, prof);
+          }
         }
       } catch {}
 
-      // Dynamically resolve rolling contributor status
+      // Fetch fresh contributor status & commit activity for viewed user
       if (handleForContributor && !cancelled) {
         try {
           const { getContributorStatusByUsernameAction } = await import('@/lib/actions/contributor-ops');
           const res = await getContributorStatusByUsernameAction(handleForContributor);
-          if (res?.isContributor && !cancelled) {
-            setIsContributor(true);
+          if (res && !cancelled) {
+            setContributorData(res);
+            const { LocalEngine } = await import('@/lib/services/LocalEngine');
+            void LocalEngine.cacheSet(`contrib_status_${handleForContributor.toLowerCase()}`, res);
           }
         } catch {}
       }
@@ -465,8 +621,22 @@ export function UnifiedProfileView({
     }
   };
 
+  const handleOpenDirectMessage = () => {
+    if (!user) {
+      openUnifiedDrawer('login');
+      return;
+    }
+    openUnifiedDrawer('new-chat', { recipientId: targetUid, recipientName: activeDisplayName });
+  };
+
+  const containerClasses = isPage
+    ? 'w-full min-h-screen flex flex-col bg-[#161412] text-white overflow-y-auto select-none font-satoshi'
+    : (onClose
+        ? 'h-full flex flex-col w-full max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi'
+        : 'fixed inset-0 z-50 flex flex-col w-full max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi');
+
   return (
-    <div className={`${onClose ? 'h-full flex flex-col' : 'fixed inset-0 z-50 flex flex-col'} w-full max-h-[100dvh] bg-[#161412] text-white overflow-hidden select-none animate-in fade-in duration-150 font-satoshi`}>
+    <div className={containerClasses}>
       {/* Top Header Bar */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/20 bg-[#161412] shrink-0 z-30">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -506,6 +676,18 @@ export function UnifiedProfileView({
             </>
           ) : (
             <>
+              {/* Message / DM Button for External Visitors */}
+              <button
+                type="button"
+                onClick={handleOpenDirectMessage}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254D8] active:scale-95 transition-all shadow-[0_4px_12px_rgba(99,102,241,0.3)] cursor-pointer"
+                title={`Message ${activeDisplayName}`}
+                aria-label={`Message ${activeDisplayName}`}
+              >
+                <MessageSquare size={14} />
+                <span>Message</span>
+              </button>
+
               {tipEnabled !== false && (
                 <button
                   type="button"
@@ -542,18 +724,6 @@ export function UnifiedProfileView({
               >
                 {isFollowing ? <UserCheck size={14} /> : <UserPlus size={14} />}
                 <span className="hidden sm:inline">{isFollowing ? 'Following' : 'Follow'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  openUnifiedDrawer('new-chat', { recipientId: targetUid, recipientName: activeDisplayName });
-                }}
-                className="p-2 rounded-xl bg-[#000000] border border-white/20 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                title="Direct Message"
-                aria-label="Direct Message"
-              >
-                <MessageSquare size={15} />
               </button>
             </>
           )}
@@ -618,7 +788,10 @@ export function UnifiedProfileView({
       <main className="flex-1 overflow-y-auto min-h-0 select-text bg-[#161412]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 space-y-5">
           {/* Identity Card */}
-          <div className="rounded-3xl bg-[#000000] border border-white/20 p-5 sm:p-6 space-y-4 shadow-sm">
+          <div className="rounded-3xl bg-[#000000] border border-white/20 p-5 sm:p-6 space-y-4 shadow-sm relative overflow-hidden">
+            {/* Subtle Gradient Accent */}
+            <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-emerald-500 via-[#6366F1] to-amber-500 opacity-80" />
+
             <div className="flex items-center gap-4 min-w-0">
               {/* Avatar */}
               <div className="relative shrink-0">
@@ -644,9 +817,9 @@ export function UnifiedProfileView({
                   <h1 className="text-lg sm:text-xl font-black font-clash text-white tracking-tight truncate m-0">
                     {activeDisplayName}
                   </h1>
-                  {isContributor || (isOwnProfile && currentUserTier === 'CONTRIBUTOR') ? (
+                  {contributorData?.isContributor || (isOwnProfile && currentUserTier === 'CONTRIBUTOR') ? (
                     <span
-                      title="Kylrix Contributor · Active merged contribution in the last 30 days"
+                      title="Kylrix Contributor · Active merged contribution or recent commits"
                       className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider uppercase font-mono border bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-sm"
                     >
                       <Crown size={11} className="text-emerald-400" />
@@ -790,8 +963,12 @@ export function UnifiedProfileView({
             )}
           </div>
 
-          {/* Published Content Tabs Section */}
-          <ProfilePublishedTabs targetUid={targetUid} username={rawUsername || activeHandle} />
+          {/* Published Content & GitHub Commits Section */}
+          <ProfilePublishedTabs
+            targetUid={targetUid}
+            username={rawUsername || activeHandle}
+            contributorData={contributorData}
+          />
         </div>
       </main>
 

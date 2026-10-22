@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as schema from '@/lib/db/schema';
 import { createCredential, updateCredential } from '@/lib/data';
 import { TursoDatabaseAdapter } from '@/lib/db/repository';
 import { upsertVaultItemTurso, upsertTotpSecretTurso } from '@/lib/actions/turso-ops';
