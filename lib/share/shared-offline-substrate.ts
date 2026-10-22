@@ -237,8 +237,10 @@ export const SharedOfflineSubstrate = {
         if (!remoteData || (remoteData as any).isTrash === true || (remoteData as any).isDeleted === true) {
           lastErr = new Error('not found');
           if (attempt < maxAttempts - 1) continue;
-          await this.evictShared(kind, id);
-          onAccessRevoked('not-found');
+          if (!hadLocalHit) {
+            await this.evictShared(kind, id);
+            onAccessRevoked('not-found');
+          }
           return;
         }
 
@@ -280,8 +282,10 @@ export const SharedOfflineSubstrate = {
       msg.includes('private');
 
     if (isRevoked) {
-      await this.evictShared(kind, id);
-      onAccessRevoked(msg.includes('404') || msg.includes('not found') ? 'not-found' : 'no-access');
+      if (!hadLocalHit || msg.includes('403') || msg.includes('unauthorized') || msg.includes('private')) {
+        await this.evictShared(kind, id);
+        onAccessRevoked(msg.includes('404') || msg.includes('not found') ? 'not-found' : 'no-access');
+      }
     } else if (!hadLocalHit) {
       onAccessRevoked('no-access');
     }

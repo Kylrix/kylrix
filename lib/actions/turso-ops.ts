@@ -383,7 +383,7 @@ export async function upsertVaultItemTurso(data: any) {
     const rawData = data || {};
     const titleVal = rawData.title || rawData.name || 'Untitled Secret';
     const typeVal = rawData.type || rawData.itemType || 'login';
-    const encryptedDataVal = rawData.encryptedData || rawData.password || '';
+    const encryptedDataVal = rawData.encrypted_data || rawData.encryptedData || rawData.password || rawData.secret || '';
     const ivVal = rawData.iv || null;
     const isTrashedVal = Boolean(rawData.isTrashed ?? rawData.isDeleted ?? rawData.isTrash ?? false);
     const isWorkspaceVal = Boolean(rawData.isWorkspace ?? false);

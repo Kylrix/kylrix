@@ -555,7 +555,7 @@ export function ShareContextDrawer({ data: propsData, onClose: propsOnClose }: {
       bg: 'bg-white/[0.06]',
       border: 'border-white/15',
       execute: (url, title) => {
-        const text = encodeURIComponent(`Check out "${title}" on @Kylrix:\n\n${url}`);
+        const text = encodeURIComponent(`Check out "${title}" on @kylrixsuite:\n\n${url}`);
         window.open(`https://x.com/intent/tweet?text=${text}`, '_blank', 'noopener,noreferrer');
         void recordShareMethodUsage('x', user?.$id);
         setTimeout(() => close(), 300);
