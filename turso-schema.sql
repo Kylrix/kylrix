@@ -1,178 +1,9 @@
-CREATE INDEX idx_account_user_id ON account(user_id);
-
-CREATE INDEX idx_agentic_sessions_target_created ON agentic_sessions (target_id, created_at DESC);
-
-CREATE INDEX idx_agents_owner ON agents(owner_id);
-
-CREATE INDEX idx_agents_parent ON agents(parent_id);
-
-CREATE INDEX idx_apikey_category ON apikey(category);
-
-CREATE INDEX idx_apikey_display_sessions ON apikey(display_in_sessions);
-
-CREATE INDEX idx_apikey_key ON apikey(key);
-
-CREATE INDEX idx_apikey_user_id ON apikey(user_id);
-
-CREATE UNIQUE INDEX idx_collaborators_resource_user ON collaborators(resource_id, user_id);
-
-CREATE INDEX idx_collaborators_user ON collaborators(user_id);
-
-CREATE INDEX idx_conversation_members_conv ON conversation_members(conversation_id);
-
-CREATE INDEX idx_conversation_members_user ON conversation_members(user_id);
-
-CREATE INDEX idx_conversations_context ON conversations(context_type, context_id);
-
-CREATE INDEX idx_conversations_creator ON conversations(creator_id);
-
-CREATE INDEX idx_conversations_type ON conversations(type);
-
-CREATE UNIQUE INDEX idx_epochs_resource_epoch ON epochs(resource_id, epoch_number);
-
-CREATE INDEX idx_events_creator_id ON events(creator_id);
-
-CREATE INDEX idx_events_start_time ON events(start_time);
-
-CREATE INDEX idx_events_workspace_id ON events(workspace_id);
-
-CREATE INDEX idx_follows_following ON follows(following_id);
-
-CREATE UNIQUE INDEX idx_follows_pair ON follows(follower_id, following_id);
-
-CREATE INDEX idx_form_responses_created_at ON form_responses(created_at);
-
-CREATE INDEX idx_form_responses_form_id ON form_responses(form_id);
-
-CREATE INDEX idx_form_responses_respondent ON form_responses(respondent_id);
-
-CREATE INDEX idx_forms_public ON forms(is_public);
-
-CREATE INDEX idx_forms_user_id ON forms(user_id);
-
-CREATE INDEX idx_forms_workspace_id ON forms(workspace_id);
-
-CREATE INDEX idx_goals_created_at ON goals(created_at);
-
-CREATE INDEX idx_goals_due_date ON goals(due_date);
-
-CREATE INDEX idx_goals_priority ON goals(priority);
-
-CREATE INDEX idx_goals_status ON goals(status);
-
-CREATE INDEX idx_goals_user_id ON goals(user_id);
-
-CREATE INDEX idx_goals_workspace_id ON goals(workspace_id);
-
-CREATE INDEX idx_ideas_created_at ON ideas(created_at);
-
-CREATE INDEX idx_ideas_pinned ON ideas(is_pinned);
-
-CREATE INDEX idx_ideas_trashed ON ideas(is_trashed);
-
-CREATE INDEX idx_ideas_updated_at ON ideas (updated_at);
-
-CREATE INDEX idx_ideas_user_id ON ideas(user_id);
-
-CREATE INDEX idx_ideas_user_trash ON ideas (user_id, is_trashed);
-
-CREATE INDEX idx_ideas_user_updated ON ideas (user_id, updated_at, created_at);
-
-CREATE INDEX idx_ideas_workspace_id ON ideas(workspace_id);
-
-CREATE INDEX idx_join_requests_requester ON join_requests(requester_id, status);
-
-CREATE INDEX idx_join_requests_resource ON join_requests(resource_type, resource_id, status);
-
-CREATE UNIQUE INDEX idx_join_requests_unique ON join_requests(resource_type, resource_id, requester_id);
-
-CREATE INDEX idx_keychain_account ON keychain(account);
-
-CREATE INDEX idx_keychain_user_id ON keychain(user_id);
-
-CREATE INDEX idx_messages_conv ON messages(conversation_id);
-
-CREATE INDEX idx_messages_created ON messages(created_at);
-
-CREATE INDEX idx_messages_sender ON messages(sender_id);
-
-CREATE INDEX idx_notifications_originator ON notifications(originator_id);
-
-CREATE INDEX idx_objects_child ON objects(child_id, child_kind);
-
-CREATE INDEX idx_objects_parent ON objects(parent_id, parent_kind);
-
-CREATE INDEX idx_objects_user_parent ON objects(user_id, parent_id);
-
-CREATE INDEX idx_pat_rate_state_user ON pat_rate_state(user_id);
-
-CREATE INDEX idx_session_token ON session(token);
-
-CREATE INDEX idx_session_token_type ON session(token_type);
-
-CREATE INDEX idx_session_user_id ON session(user_id);
-
-CREATE INDEX idx_source_control_project ON source_control(project_id);
-
-CREATE INDEX idx_totp_user_id ON totp_secrets(user_id);
-
-CREATE INDEX idx_unorganic_emails_recipient ON unorganic_emails(recipient_id, status, sent_at);
-
-CREATE INDEX idx_unorganic_emails_status ON unorganic_emails(status, priority);
-
-CREATE INDEX idx_vault_items_trashed ON vault_items(is_trashed);
-
-CREATE INDEX idx_vault_items_user_id ON vault_items(user_id);
-
-CREATE INDEX idx_vault_items_workspace_id ON vault_items(workspace_id);
-
-CREATE INDEX idx_wo_entity ON workspace_objects(entity_kind, entity_id);
-
-CREATE INDEX idx_wo_user_id ON workspace_objects(user_id);
-
-CREATE INDEX idx_wo_workspace_id ON workspace_objects(workspace_id);
-
-CREATE UNIQUE INDEX idx_workspace_members_pair ON workspace_members(workspace_id, user_id);
-
-CREATE INDEX idx_workspace_members_user ON workspace_members(user_id);
-
-CREATE INDEX idx_workspaces_agentic ON workspaces(is_agentic);
-
-CREATE INDEX idx_workspaces_creator ON workspaces(creator_id);
-
-CREATE INDEX idx_workspaces_invite_code ON workspaces(invite_code);
-
-CREATE INDEX oauthAccessToken_authorizationCodeId_idx ON oauth_access_token(authorization_code_id);
-
-CREATE INDEX oauthAccessToken_clientId_idx ON oauth_access_token(client_id);
-
-CREATE INDEX oauthAccessToken_refreshId_idx ON oauth_access_token(refresh_id);
-
-CREATE INDEX oauthAccessToken_sessionId_idx ON oauth_access_token(session_id);
-
-CREATE INDEX oauthAccessToken_userId_idx ON oauth_access_token(user_id);
-
-CREATE INDEX oauthClientResource_clientId_idx ON oauth_client_resource(client_id);
-
-CREATE UNIQUE INDEX oauthClientResource_clientId_resourceId_uidx ON oauth_client_resource(client_id, resource_id);
-
-CREATE INDEX oauthClientResource_resourceId_idx ON oauth_client_resource(resource_id);
-
-CREATE INDEX oauthClient_userId_idx ON oauth_client(user_id);
-
-CREATE INDEX oauthConsent_clientId_idx ON oauth_consent(client_id);
-
-CREATE INDEX oauthConsent_userId_idx ON oauth_consent(user_id);
-
-CREATE INDEX oauthRefreshToken_authorizationCodeId_idx ON oauth_refresh_token(authorization_code_id);
-
-CREATE INDEX oauthRefreshToken_clientId_idx ON oauth_refresh_token(client_id);
-
-CREATE INDEX oauthRefreshToken_sessionId_idx ON oauth_refresh_token(session_id);
-
-CREATE INDEX oauthRefreshToken_userId_idx ON oauth_refresh_token(user_id);
-
-CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);
+-- Turso Database Schema Dump
+-- Generated on: 2026-10-22T10:39:40.075Z
+
+-- ==========================================
+-- TABLES (73)
+-- ==========================================
 
 CREATE TABLE `account` (
 	`id` text PRIMARY KEY NOT NULL,
@@ -1171,3 +1002,183 @@ CREATE TABLE workspaces (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   , title TEXT, owner_id TEXT, summary TEXT, status TEXT, visibility TEXT, parent_project_id TEXT, kind TEXT, dek TEXT);
+
+-- ==========================================
+-- INDEXES (88)
+-- ==========================================
+
+CREATE INDEX idx_account_user_id ON account(user_id);
+
+CREATE INDEX idx_agentic_sessions_target_created ON agentic_sessions (target_id, created_at DESC);
+
+CREATE INDEX idx_agents_owner ON agents(owner_id);
+
+CREATE INDEX idx_agents_parent ON agents(parent_id);
+
+CREATE INDEX idx_apikey_category ON apikey(category);
+
+CREATE INDEX idx_apikey_display_sessions ON apikey(display_in_sessions);
+
+CREATE INDEX idx_apikey_key ON apikey(key);
+
+CREATE INDEX idx_apikey_user_id ON apikey(user_id);
+
+CREATE UNIQUE INDEX idx_collaborators_resource_user ON collaborators(resource_id, user_id);
+
+CREATE INDEX idx_collaborators_user ON collaborators(user_id);
+
+CREATE INDEX idx_conversation_members_conv ON conversation_members(conversation_id);
+
+CREATE INDEX idx_conversation_members_user ON conversation_members(user_id);
+
+CREATE INDEX idx_conversations_context ON conversations(context_type, context_id);
+
+CREATE INDEX idx_conversations_creator ON conversations(creator_id);
+
+CREATE INDEX idx_conversations_type ON conversations(type);
+
+CREATE UNIQUE INDEX idx_epochs_resource_epoch ON epochs(resource_id, epoch_number);
+
+CREATE INDEX idx_events_creator_id ON events(creator_id);
+
+CREATE INDEX idx_events_start_time ON events(start_time);
+
+CREATE INDEX idx_events_workspace_id ON events(workspace_id);
+
+CREATE INDEX idx_follows_following ON follows(following_id);
+
+CREATE UNIQUE INDEX idx_follows_pair ON follows(follower_id, following_id);
+
+CREATE INDEX idx_form_responses_created_at ON form_responses(created_at);
+
+CREATE INDEX idx_form_responses_form_id ON form_responses(form_id);
+
+CREATE INDEX idx_form_responses_respondent ON form_responses(respondent_id);
+
+CREATE INDEX idx_forms_public ON forms(is_public);
+
+CREATE INDEX idx_forms_user_id ON forms(user_id);
+
+CREATE INDEX idx_forms_workspace_id ON forms(workspace_id);
+
+CREATE INDEX idx_goals_created_at ON goals(created_at);
+
+CREATE INDEX idx_goals_due_date ON goals(due_date);
+
+CREATE INDEX idx_goals_priority ON goals(priority);
+
+CREATE INDEX idx_goals_status ON goals(status);
+
+CREATE INDEX idx_goals_user_id ON goals(user_id);
+
+CREATE INDEX idx_goals_workspace_id ON goals(workspace_id);
+
+CREATE INDEX idx_ideas_created_at ON ideas(created_at);
+
+CREATE INDEX idx_ideas_pinned ON ideas(is_pinned);
+
+CREATE INDEX idx_ideas_trashed ON ideas(is_trashed);
+
+CREATE INDEX idx_ideas_updated_at ON ideas (updated_at);
+
+CREATE INDEX idx_ideas_user_id ON ideas(user_id);
+
+CREATE INDEX idx_ideas_user_trash ON ideas (user_id, is_trashed);
+
+CREATE INDEX idx_ideas_user_updated ON ideas (user_id, updated_at, created_at);
+
+CREATE INDEX idx_ideas_workspace_id ON ideas(workspace_id);
+
+CREATE INDEX idx_join_requests_requester ON join_requests(requester_id, status);
+
+CREATE INDEX idx_join_requests_resource ON join_requests(resource_type, resource_id, status);
+
+CREATE UNIQUE INDEX idx_join_requests_unique ON join_requests(resource_type, resource_id, requester_id);
+
+CREATE INDEX idx_keychain_account ON keychain(account);
+
+CREATE INDEX idx_keychain_user_id ON keychain(user_id);
+
+CREATE INDEX idx_messages_conv ON messages(conversation_id);
+
+CREATE INDEX idx_messages_created ON messages(created_at);
+
+CREATE INDEX idx_messages_sender ON messages(sender_id);
+
+CREATE INDEX idx_notifications_originator ON notifications(originator_id);
+
+CREATE INDEX idx_objects_child ON objects(child_id, child_kind);
+
+CREATE INDEX idx_objects_parent ON objects(parent_id, parent_kind);
+
+CREATE INDEX idx_objects_user_parent ON objects(user_id, parent_id);
+
+CREATE INDEX idx_pat_rate_state_user ON pat_rate_state(user_id);
+
+CREATE INDEX idx_session_token ON session(token);
+
+CREATE INDEX idx_session_token_type ON session(token_type);
+
+CREATE INDEX idx_session_user_id ON session(user_id);
+
+CREATE INDEX idx_source_control_project ON source_control(project_id);
+
+CREATE INDEX idx_totp_user_id ON totp_secrets(user_id);
+
+CREATE INDEX idx_unorganic_emails_recipient ON unorganic_emails(recipient_id, status, sent_at);
+
+CREATE INDEX idx_unorganic_emails_status ON unorganic_emails(status, priority);
+
+CREATE INDEX idx_vault_items_trashed ON vault_items(is_trashed);
+
+CREATE INDEX idx_vault_items_user_id ON vault_items(user_id);
+
+CREATE INDEX idx_vault_items_workspace_id ON vault_items(workspace_id);
+
+CREATE INDEX idx_wo_entity ON workspace_objects(entity_kind, entity_id);
+
+CREATE INDEX idx_wo_user_id ON workspace_objects(user_id);
+
+CREATE INDEX idx_wo_workspace_id ON workspace_objects(workspace_id);
+
+CREATE UNIQUE INDEX idx_workspace_members_pair ON workspace_members(workspace_id, user_id);
+
+CREATE INDEX idx_workspace_members_user ON workspace_members(user_id);
+
+CREATE INDEX idx_workspaces_agentic ON workspaces(is_agentic);
+
+CREATE INDEX idx_workspaces_creator ON workspaces(creator_id);
+
+CREATE INDEX idx_workspaces_invite_code ON workspaces(invite_code);
+
+CREATE INDEX oauthAccessToken_authorizationCodeId_idx ON oauth_access_token(authorization_code_id);
+
+CREATE INDEX oauthAccessToken_clientId_idx ON oauth_access_token(client_id);
+
+CREATE INDEX oauthAccessToken_refreshId_idx ON oauth_access_token(refresh_id);
+
+CREATE INDEX oauthAccessToken_sessionId_idx ON oauth_access_token(session_id);
+
+CREATE INDEX oauthAccessToken_userId_idx ON oauth_access_token(user_id);
+
+CREATE INDEX oauthClientResource_clientId_idx ON oauth_client_resource(client_id);
+
+CREATE UNIQUE INDEX oauthClientResource_clientId_resourceId_uidx ON oauth_client_resource(client_id, resource_id);
+
+CREATE INDEX oauthClientResource_resourceId_idx ON oauth_client_resource(resource_id);
+
+CREATE INDEX oauthClient_userId_idx ON oauth_client(user_id);
+
+CREATE INDEX oauthConsent_clientId_idx ON oauth_consent(client_id);
+
+CREATE INDEX oauthConsent_userId_idx ON oauth_consent(user_id);
+
+CREATE INDEX oauthRefreshToken_authorizationCodeId_idx ON oauth_refresh_token(authorization_code_id);
+
+CREATE INDEX oauthRefreshToken_clientId_idx ON oauth_refresh_token(client_id);
+
+CREATE INDEX oauthRefreshToken_sessionId_idx ON oauth_refresh_token(session_id);
+
+CREATE INDEX oauthRefreshToken_userId_idx ON oauth_refresh_token(user_id);
+
+CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);
