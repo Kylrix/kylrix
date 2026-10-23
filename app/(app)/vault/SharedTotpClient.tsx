@@ -143,6 +143,29 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
+  const processAndSetTotp = useCallback(async (raw: any) => {
+    const dekRaw = keySegments?.[0];
+    let secretKey = raw?.secretKey || raw?.encryptedSecret;
+    let issuer = raw?.issuer || '';
+    let accountName = raw?.accountName || raw?.account || '';
+    const digits = raw?.digits || 6;
+    const step = raw?.period || raw?.step || 30;
+    const algo = raw?.algorithm || 'SHA1';
+
+    if (dekRaw) {
+      const dek = await importDek(dekRaw);
+      if (secretKey && looksEncrypted(secretKey)) secretKey = await decryptWithDek(secretKey, dek);
+      if (issuer && looksEncrypted(issuer)) issuer = await decryptWithDek(issuer, dek);
+      if (accountName && looksEncrypted(accountName)) accountName = await decryptWithDek(accountName, dek);
+    }
+
+    if (!secretKey) throw new Error('Could not retrieve TOTP seed from this link.');
+    const label = [issuer, accountName].filter(Boolean).join(' · ') || 'Shared TOTP';
+
+    setState({ kind: 'ready', label, code: '', digits, step, seed: secretKey, algo, isTemp: false });
+    startLive(secretKey, digits, step, algo);
+  }, [keySegments, startLive]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -180,35 +203,38 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
         }
 
         // ── Mode A: Seed DEK share ──────────────────────────────────────
-        const dekRaw = keySegments?.[0];
-        const raw = rawTotp;
-        if (!raw) throw new Error('Failed to load shared TOTP.');
+        const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+        const { getCurrentUserSnapshot } = await import('@/lib/data');
+        const currentUser = getCurrentUserSnapshot();
 
-        if (cancelled) return;
-
-        let secretKey = raw.secretKey;
-        let issuer = raw.issuer || '';
-        let accountName = raw.accountName || '';
-        const digits = raw.digits || 6;
-        const step = raw.period || 30;
-        const algo = raw.algorithm || 'SHA1';
-
-        if (dekRaw) {
-          // dekRaw is already URL-decoded by Next.js — pass directly to importDek
-          const dek = await importDek(dekRaw);
-          if (secretKey && looksEncrypted(secretKey)) secretKey = await decryptWithDek(secretKey, dek);
-          if (issuer && looksEncrypted(issuer)) issuer = await decryptWithDek(issuer, dek);
-          if (accountName && looksEncrypted(accountName)) accountName = await decryptWithDek(accountName, dek);
-        }
-
-        if (!secretKey) throw new Error('Could not retrieve TOTP seed from this link.');
-
-        const label = [issuer, accountName].filter(Boolean).join(' · ') || 'Shared TOTP';
-
-        if (!cancelled) {
-          setState({ kind: 'ready', label, code: '', digits, step, seed: secretKey, algo, isTemp: false });
-          startLive(secretKey, digits, step, algo);
-        }
+        await SharedOfflineSubstrate.syncSharedRoute<any>({
+          kind: 'vault',
+          id: totpId,
+          currentUserId: currentUser?.$id,
+          initialData: rawTotp,
+          onLocalHit: async (cachedRaw) => {
+            if (cancelled) return;
+            try {
+              await processAndSetTotp(cachedRaw);
+            } catch {}
+          },
+          fetchRemote: async () => {
+            if (rawTotp) return rawTotp;
+            return null;
+          },
+          onRemoteSuccess: async (freshRaw) => {
+            if (cancelled) return;
+            try {
+              await processAndSetTotp(freshRaw);
+            } catch (err: any) {
+              setState({ kind: 'error', message: err?.message || 'Decryption failed' });
+            }
+          },
+          onAccessRevoked: (reason) => {
+            if (cancelled) return;
+            setState({ kind: 'error', message: reason === 'not-found' ? 'Shared TOTP secret not found or deleted.' : 'Access to this TOTP secret was revoked.' });
+          },
+        });
       } catch (err: any) {
         if (!cancelled) setState({ kind: 'error', message: err.message || 'Unknown error.' });
       }
@@ -216,7 +242,53 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
 
     load();
     return () => { cancelled = true; };
-  }, [totpId, keySegments, startLive]);
+  }, [totpId, keySegments, rawTotp, processAndSetTotp, startLive]);
+
+  // ── Live Realtime Listener ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!totpId) return;
+    let unsub: any;
+
+    void (async () => {
+      try {
+        const { realtime } = await import('@/lib/data');
+        const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+
+        const channels = [
+          `totpSecrets:${totpId}`,
+          `doc:${totpId}`,
+          `row:${totpId}`,
+          'totpSecrets',
+        ];
+
+        unsub = realtime.subscribe(channels, async (response: any) => {
+          const payload = response.payload;
+          const targetId = payload?.$id || payload?.id;
+          if (targetId && targetId !== totpId) return;
+
+          const isDelete = response.events?.some((e: string) => e.endsWith('.delete'));
+
+          if (isDelete || payload?.isTrash || payload?.isDeleted) {
+            setState({ kind: 'error', message: 'This TOTP secret is no longer available.' });
+            void SharedOfflineSubstrate.evictShared('vault', totpId);
+            return;
+          }
+
+          if (payload) {
+            try {
+              await processAndSetTotp(payload);
+              void SharedOfflineSubstrate.saveShared('vault', totpId, payload);
+            } catch {}
+          }
+        });
+      } catch {}
+    })();
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
+    };
+  }, [totpId, processAndSetTotp]);
 
   const [copiedTitle, setCopiedTitle] = useState(false);
 

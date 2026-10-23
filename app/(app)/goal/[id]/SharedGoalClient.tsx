@@ -108,6 +108,7 @@ export default function SharedGoalClient({
           kind: 'goal',
           id: goalId,
           currentUserId: currentUser?.$id,
+          initialData: goal,
           onLocalHit: (cachedGoal) => {
             if (active) {
               setCurrentGoal(cachedGoal);
@@ -141,6 +142,62 @@ export default function SharedGoalClient({
 
     return () => {
       active = false;
+    };
+  }, [goalId, goal]);
+
+  // ── Live Realtime Subscription ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!goalId) return;
+    let unsub: any;
+
+    void (async () => {
+      try {
+        const { realtime } = await import('@/lib/data');
+        const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+
+        const channels = [
+          `tasks:${goalId}`,
+          `doc:${goalId}`,
+          `row:${goalId}`,
+          'tasks',
+        ];
+
+        unsub = realtime.subscribe(channels, (response: any) => {
+          const payload = response.payload;
+          const targetId = payload?.$id || payload?.id;
+          if (targetId && targetId !== goalId) return;
+
+          const isDelete = response.events?.some((e: string) => e.endsWith('.delete'));
+
+          if (isDelete || payload?.isTrash || payload?.isDeleted) {
+            setAccessDenied(true);
+            setCurrentGoal(null);
+            setView(null);
+            void SharedOfflineSubstrate.evictShared('goal', goalId);
+            return;
+          }
+
+          if (payload) {
+            const updatedGoal: PublicGoal = {
+              id: payload.id || payload.$id || goalId,
+              title: payload.title || '',
+              description: payload.description ?? null,
+              status: payload.status || 'todo',
+              priority: payload.priority || 'medium',
+              dueDate: payload.dueDate ?? null,
+              locked: payload.isLocked || payload.locked,
+            };
+            setCurrentGoal(updatedGoal);
+            setAccessDenied(false);
+            void SharedOfflineSubstrate.saveShared('goal', goalId, updatedGoal);
+          }
+        });
+      } catch {}
+    })();
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
     };
   }, [goalId]);
 

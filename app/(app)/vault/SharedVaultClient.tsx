@@ -87,6 +87,47 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
     }
   }, []);
 
+  const processAndSetCredential = useCallback(async (raw: any): Promise<DecryptedCredential> => {
+    const rawId = raw.$id || raw.id || credentialId;
+    if (!dekFragment) {
+      return {
+        $id: rawId,
+        name: raw.name || raw.title || 'Shared Item',
+        username: null,
+        password: null,
+        url: null,
+        notes: null,
+        customFields: [],
+        itemType: raw.itemType || raw.type || 'login',
+        isEnv: Boolean(raw.isEnv),
+        $createdAt: raw.$createdAt || raw.createdAt,
+        $updatedAt: raw.$updatedAt || raw.updatedAt,
+      };
+    }
+
+    const dek = await importDek(dekFragment);
+    const decrypt = async (val: string | null | undefined): Promise<string | null> => {
+      if (!val) return null;
+      if (!looksEncrypted(val)) return val;
+      return decryptWithDek(val, dek);
+    };
+
+    const customFieldsRaw = await decrypt(raw.customFields);
+    return {
+      $id: rawId,
+      name: (await decrypt(raw.name || raw.title)) || 'Shared Item',
+      username: await decrypt(raw.username),
+      password: await decrypt(raw.password || raw.encryptedData),
+      url: await decrypt(raw.url),
+      notes: await decrypt(raw.notes),
+      customFields: normalizeCustomFields(customFieldsRaw),
+      itemType: raw.itemType || raw.type || 'login',
+      isEnv: Boolean(raw.isEnv),
+      $createdAt: raw.$createdAt || raw.createdAt,
+      $updatedAt: raw.$updatedAt || raw.updatedAt,
+    };
+  }, [credentialId, dekFragment]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -95,55 +136,46 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
       setError(null);
 
       try {
-        const raw = rawCredential;
-        if (!raw) throw new Error('Failed to load shared credential.');
+        const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+        const { getCurrentUserSnapshot } = await import('@/lib/data');
+        const currentUser = getCurrentUserSnapshot();
 
-        if (cancelled) return;
-
-        // If no DEK fragment, display only plaintext-safe fields
-        if (!dekFragment) {
-          setCredential({
-            $id: raw.$id,
-            name: raw.name || 'Shared Item',
-            username: null,
-            password: null,
-            url: null,
-            notes: null,
-            customFields: [],
-            itemType: raw.itemType || 'login',
-            isEnv: Boolean(raw.isEnv),
-            $createdAt: raw.$createdAt,
-            $updatedAt: raw.$updatedAt,
-          });
-          return;
-        }
-
-        // Decode the DEK from URL — importDek handles URL-safe base64 decoding internally
-        const dek = await importDek(dekFragment);
-
-        // Decrypt all encrypted fields
-        const decrypt = async (val: string | null | undefined): Promise<string | null> => {
-          if (!val) return null;
-          if (!looksEncrypted(val)) return val;
-          return decryptWithDek(val, dek);
-        };
-
-        const customFieldsRaw = await decrypt(raw.customFields);
-        const decrypted: DecryptedCredential = {
-          $id: raw.$id,
-          name: (await decrypt(raw.name)) || 'Shared Item',
-          username: await decrypt(raw.username),
-          password: await decrypt(raw.password),
-          url: await decrypt(raw.url),
-          notes: await decrypt(raw.notes),
-          customFields: normalizeCustomFields(customFieldsRaw),
-          itemType: raw.itemType || 'login',
-          isEnv: Boolean(raw.isEnv),
-          $createdAt: raw.$createdAt,
-          $updatedAt: raw.$updatedAt,
-        };
-
-        if (!cancelled) setCredential(decrypted);
+        await SharedOfflineSubstrate.syncSharedRoute<any>({
+          kind: 'vault',
+          id: credentialId,
+          currentUserId: currentUser?.$id,
+          initialData: rawCredential,
+          onLocalHit: async (cachedRaw) => {
+            if (cancelled) return;
+            try {
+              const processed = await processAndSetCredential(cachedRaw);
+              setCredential(processed);
+              setLoading(false);
+            } catch {}
+          },
+          fetchRemote: async () => {
+            if (rawCredential) return rawCredential;
+            return null;
+          },
+          onRemoteSuccess: async (freshRaw) => {
+            if (cancelled) return;
+            try {
+              const processed = await processAndSetCredential(freshRaw);
+              setCredential(processed);
+              setError(null);
+            } catch (err: any) {
+              setError(err?.message || 'Decryption failed');
+            } finally {
+              setLoading(false);
+            }
+          },
+          onAccessRevoked: (reason) => {
+            if (cancelled) return;
+            setError(reason === 'not-found' ? 'Shared credential not found or deleted.' : 'Access to this credential was revoked.');
+            setCredential(null);
+            setLoading(false);
+          },
+        });
       } catch (err: any) {
         if (!cancelled) setError(err.message || 'Unknown error');
       } finally {
@@ -153,7 +185,56 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
 
     load();
     return () => { cancelled = true; };
-  }, [credentialId, dekFragment, rawCredential]);
+  }, [credentialId, rawCredential, processAndSetCredential]);
+
+  // ── Live Realtime Listener ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (!credentialId) return;
+    let unsub: any;
+
+    void (async () => {
+      try {
+        const { realtime } = await import('@/lib/data');
+        const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+
+        const channels = [
+          `credentials:${credentialId}`,
+          `doc:${credentialId}`,
+          `row:${credentialId}`,
+          'credentials',
+        ];
+
+        unsub = realtime.subscribe(channels, async (response: any) => {
+          const payload = response.payload;
+          const targetId = payload?.$id || payload?.id;
+          if (targetId && targetId !== credentialId) return;
+
+          const isDelete = response.events?.some((e: string) => e.endsWith('.delete'));
+
+          if (isDelete || payload?.isTrash || payload?.isDeleted) {
+            setError('This credential is no longer available.');
+            setCredential(null);
+            void SharedOfflineSubstrate.evictShared('vault', credentialId);
+            return;
+          }
+
+          if (payload) {
+            try {
+              const processed = await processAndSetCredential(payload);
+              setCredential(processed);
+              setError(null);
+              void SharedOfflineSubstrate.saveShared('vault', credentialId, payload);
+            } catch {}
+          }
+        });
+      } catch {}
+    })();
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+      else if (unsub?.unsubscribe) unsub.unsubscribe();
+    };
+  }, [credentialId, processAndSetCredential]);
 
   if (loading) {
     return (

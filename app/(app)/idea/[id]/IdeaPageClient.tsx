@@ -192,6 +192,7 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
         kind: 'note',
         id: noteId,
         currentUserId: user?.$id,
+        initialData: initialNote,
         onLocalHit: async (cachedRaw) => {
           try {
             const decrypted = await decryptNoteIfNeeded(cachedRaw, decryptionKey);
@@ -254,37 +255,46 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
     if (access.role === 'loading' || access.role === 'none') return;
 
     const channels = [
+      `notes:${noteId}`,
+      `doc:${noteId}`,
+      `row:${noteId}`,
+      'notes',
       `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${noteId}`,
       `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows.${noteId}`
     ];
     const sub = realtime.subscribe(channels, (response: any) => {
-      const isUpdate = response.events.some((e: string) => e.endsWith('.update'));
-      const isDelete = response.events.some((e: string) => e.endsWith('.delete'));
       const payload = response.payload as Notes;
+      const targetId = payload?.$id || payload?.id;
+      if (targetId && targetId !== noteId) return;
+
+      const isUpdate = !response.events || response.events.some((e: string) => e.endsWith('.update') || e.endsWith('.create'));
+      const isDelete = response.events?.some((e: string) => e.endsWith('.delete'));
 
       if (isDelete || (payload as any)?.isTrash === true || (payload as any)?.isDeleted === true) {
         setAccess({ role: 'none', reason: 'not-found' });
         invalidate(CACHE_KEY);
-        try {
-          const { LocalEngine } = require('@/lib/services/LocalEngine');
-          void LocalEngine.cacheDelete(CACHE_KEY);
-        } catch {}
+        void import('@/lib/share/shared-offline-substrate').then(({ SharedOfflineSubstrate }) => {
+          void SharedOfflineSubstrate.evictShared('note', noteId);
+        });
         return;
       }
 
-      if (isUpdate) {
+      if (isUpdate && payload) {
         void (async () => {
           try {
             const decrypted = await decryptNoteIfNeeded(payload, decryptionKey);
             const role = computeRole(decrypted, user?.$id);
-            if (role !== 'none') {
-              setAccess((prev) =>
-                prev.role !== 'loading' && prev.role !== 'none'
-                  ? { role: prev.role, note: decrypted }
-                  : prev
-              );
-              setCachedData(CACHE_KEY, decrypted);
+            if (role === 'none') {
+              setAccess({ role: 'none', reason: 'no-access' });
+              void import('@/lib/share/shared-offline-substrate').then(({ SharedOfflineSubstrate }) => {
+                void SharedOfflineSubstrate.evictShared('note', noteId);
+              });
+              return;
             }
+            const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
+            await SharedOfflineSubstrate.saveShared('note', noteId, decrypted);
+            setAccess({ role, note: decrypted });
+            setCachedData(CACHE_KEY, decrypted);
           } catch {}
         })();
       }
