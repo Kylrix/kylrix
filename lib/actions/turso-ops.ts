@@ -1281,9 +1281,48 @@ export async function upsertFormTurso(data: typeof schema.forms.$inferInsert) {
 
 export async function listFormsTurso(userId: string) {
   try {
-    const rows = await db.select().from(schema.forms).where(eq(schema.forms.userId, userId));
+    let allUserIds = [userId];
+    let userRows: any[] = [];
+    try {
+      userRows = await db
+        .select()
+        .from(schema.user)
+        .where(
+          or(
+            eq(schema.user.id, userId),
+            eq(schema.user.appwriteAccountId, userId),
+            eq(schema.user.email, userId.includes('@') ? userId.toLowerCase() : '')
+          )
+        );
+    } catch {}
+
+    if (userRows.length > 0) {
+      for (const u of userRows) {
+        if (u.id) allUserIds.push(u.id);
+        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
+        if (u.email) {
+          try {
+            const emailUsers = await db
+              .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
+              .from(schema.user)
+              .where(eq(schema.user.email, u.email.toLowerCase()));
+            for (const eu of emailUsers) {
+              if (eu.id) allUserIds.push(eu.id);
+              if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
+            }
+          } catch {}
+        }
+      }
+      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
+    }
+
+    const rows = await db
+      .select()
+      .from(schema.forms)
+      .where(inArray(schema.forms.userId, allUserIds));
     return { success: true, rows };
   } catch (err: any) {
+    console.error('[turso-ops] listFormsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
 }
@@ -1304,9 +1343,48 @@ export async function upsertEventTurso(data: typeof schema.events.$inferInsert) 
 
 export async function listEventsTurso(userId: string) {
   try {
-    const rows = await db.select().from(schema.events).where(eq(schema.events.userId, userId));
+    let allUserIds = [userId];
+    let userRows: any[] = [];
+    try {
+      userRows = await db
+        .select()
+        .from(schema.user)
+        .where(
+          or(
+            eq(schema.user.id, userId),
+            eq(schema.user.appwriteAccountId, userId),
+            eq(schema.user.email, userId.includes('@') ? userId.toLowerCase() : '')
+          )
+        );
+    } catch {}
+
+    if (userRows.length > 0) {
+      for (const u of userRows) {
+        if (u.id) allUserIds.push(u.id);
+        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
+        if (u.email) {
+          try {
+            const emailUsers = await db
+              .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
+              .from(schema.user)
+              .where(eq(schema.user.email, u.email.toLowerCase()));
+            for (const eu of emailUsers) {
+              if (eu.id) allUserIds.push(eu.id);
+              if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
+            }
+          } catch {}
+        }
+      }
+      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
+    }
+
+    const rows = await db
+      .select()
+      .from(schema.events)
+      .where(inArray(schema.events.userId, allUserIds));
     return { success: true, rows };
   } catch (err: any) {
+    console.error('[turso-ops] listEventsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
 }

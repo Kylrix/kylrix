@@ -30,16 +30,23 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
     }
     const { databases } = createSystemClient();
 
-    // Lookup existing session for this targetType/targetId
+    // Lookup existing session for this targetType/targetId or workspaceId/projectId
     let existing: any = null;
     try {
+      const targetWsId = (target as any).workspaceId || (target as any).projectId;
       const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
         Query.equal('userId', actor.$id),
         Query.equal('targetType', target.type),
         Query.equal('targetId', target.id),
-        Query.limit(1),
+        Query.limit(10),
       ]);
-      if (res.rows.length) existing = res.rows[0];
+      if (res.rows.length) {
+        if (targetWsId) {
+          existing = res.rows.find((r: any) => r.workspaceId === targetWsId || r.projectId === targetWsId) || res.rows[0];
+        } else {
+          existing = res.rows[0];
+        }
+      }
     } catch {}
 
     if (existing?.chatHistory) {
@@ -173,13 +180,20 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
     }
     if (!session) {
       try {
+        const targetWsId = (opts.target as any).workspaceId || (opts.target as any).projectId;
         const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
           Query.equal('userId', actor.$id),
           Query.equal('targetType', opts.target.type),
           Query.equal('targetId', opts.target.id),
-          Query.limit(1),
+          Query.limit(10),
         ]);
-        if (res.rows.length) session = res.rows[0];
+        if (res.rows.length) {
+          if (targetWsId) {
+            session = res.rows.find((r: any) => r.workspaceId === targetWsId || r.projectId === targetWsId) || res.rows[0];
+          } else {
+            session = res.rows[0];
+          }
+        }
       } catch {}
     }
     if (!session) {
