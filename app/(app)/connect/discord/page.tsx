@@ -62,7 +62,7 @@ function DiscordConnectContent() {
             setApplicationId(resolvedId);
             const resolvedUrl =
               data.installUrl ||
-              `https://discord.com/oauth2/authorize?client_id=${resolvedId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0,1`;
+              `https://discord.com/oauth2/authorize?client_id=${resolvedId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0`;
             setInstallUrl(resolvedUrl);
 
             if (autoRedirect && resolvedUrl) {
@@ -73,7 +73,7 @@ function DiscordConnectContent() {
       } catch {
         // Fallback to queryAppId if API is unreachable
         if (queryAppId) {
-          const fallbackUrl = `https://discord.com/oauth2/authorize?client_id=${queryAppId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0,1`;
+          const fallbackUrl = `https://discord.com/oauth2/authorize?client_id=${queryAppId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0`;
           setInstallUrl(fallbackUrl);
         }
       } finally {
@@ -91,7 +91,7 @@ function DiscordConnectContent() {
   const effectiveInstallUrl =
     installUrl ||
     (applicationId
-      ? `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0,1`
+      ? `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0`
       : '');
 
   const copyToClipboard = (text: string) => {
@@ -173,7 +173,7 @@ function DiscordConnectContent() {
                   onClick={() => {
                     if (applicationId) {
                       setInstallUrl(
-                        `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0,1`
+                        `https://discord.com/oauth2/authorize?client_id=${applicationId}&scope=bot+applications.commands&permissions=${DEFAULT_PERMISSIONS}&integration_type=0`
                       );
                     }
                   }}

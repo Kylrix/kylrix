@@ -39,12 +39,17 @@
 
 | Surface | Action / Command |
 |---|---|
+| **🌐 Web App** | [Launch kylrix.space](https://www.kylrix.space) |
+| **💻 CLI Tool** | `npm i -g @kylrix/cli` |
 | **🔌 MCP Server** | `npx -y @smithery/cli install kylrix/kylrix` |
 | **⚡ Local MCP** | `kylrix mcp` |
-| **💻 CLI Tool** | `npm i -g @kylrix/cli` |
-| **🌐 Web App** | [Launch kylrix.space](https://www.kylrix.space) |
-| **🐳 Docker** | `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` |
 | **📡 REST API** | [API Reference (`docs/api.md`)](docs/api.md) |
+| **🧩 VS Code Extension** | [Install VS Code Extension](https://marketplace.visualstudio.com/items?itemName=nathfavour.kylrix-vscode&ssr=false#review-details) |
+| **👾 Discord Bot** | [Connect Discord](https://www.kylrix.space/connect/discord) |
+| **✈️ Telegram Bot** | [Connect Telegram](https://www.kylrix.space/connect/telegram) |
+| **💬 Slack Bot** | *Coming Soon* |
+| **🌐 WebMCP** | [WebMCP Documentation](docs/webmcp.md) |
+| **🐳 Docker** | `docker run -d -p 5003:3000 --name kylrix ghcr.io/kylrix/kylrix:latest` |
 
 ---
 
