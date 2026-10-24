@@ -1451,6 +1451,18 @@ export async function upsertCouponTurso(data: typeof schema.coupons.$inferInsert
   }
 }
 
+export async function getCouponTurso(id: string) {
+  try {
+    const rows = await db.select().from(schema.coupons).where(eq(schema.coupons.id, id)).limit(1);
+    if (rows.length > 0) {
+      return { success: true, row: rows[0] };
+    }
+    return { success: false, row: null };
+  } catch (err: any) {
+    return { success: false, row: null, error: err.message };
+  }
+}
+
 export async function listCouponsTurso() {
   try {
     const rows = await db.select().from(schema.coupons);
