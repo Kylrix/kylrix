@@ -330,9 +330,11 @@ export const AppwriteService = {
   async hasMasterpass(userId?: string): Promise<boolean> { return KeychainService.hasMasterpass(userId); },
 };
 
+import { partyRealtime } from '@/lib/realtime/partykit';
+
 export const realtime = {
-  subscribe(_channels: any, _callback: any) {
-    return () => {};
+  subscribe(channels: any, callback: any) {
+    return partyRealtime.subscribe(channels, callback);
   },
 };
 

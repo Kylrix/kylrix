@@ -93,6 +93,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     kind: 'form',
                     id: resolvedParams.id,
                     currentUserId: user?.$id,
+                    initialData: form,
                     onLocalHit: (cachedData) => {
                         setForm(cachedData);
                         setLoading(false);
@@ -152,8 +153,11 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         void (async () => {
             try {
                 const { realtime } = await import('@/lib/data');
+                const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
                 const channels = [
                     `forms:${resolvedParams.id}`,
+                    `doc:${resolvedParams.id}`,
+                    `row:${resolvedParams.id}`,
                     `forms`,
                 ];
                 unsub = realtime.subscribe(channels, (response: any) => {
@@ -162,16 +166,22 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     if (response.events?.some((e: string) => e.endsWith('.delete')) || response.payload?.isTrash || response.payload?.isDeleted) {
                         setError('This form is no longer available.');
                         setForm(null);
+                        void SharedOfflineSubstrate.evictShared('form', resolvedParams.id);
                         return;
                     }
-                    if (response.events?.some((e: string) => e.endsWith('.update') || e.endsWith('.create'))) {
+                    if (!response.events || response.events.some((e: string) => e.endsWith('.update') || e.endsWith('.create'))) {
                         if (response.payload) {
                             if (response.payload.isPublic === false && response.payload.isGuest === false && response.payload.status !== 'published') {
                                 setError('This form is private and not currently accepting responses.');
                                 setForm(null);
+                                void SharedOfflineSubstrate.evictShared('form', resolvedParams.id);
                                 return;
                             }
-                            setForm((prev: any) => ({ ...prev, ...response.payload }));
+                            setForm((prev: any) => {
+                                const updated = { ...prev, ...response.payload };
+                                void SharedOfflineSubstrate.saveShared('form', resolvedParams.id, updated);
+                                return updated;
+                            });
                         }
                     }
                 });
