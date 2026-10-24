@@ -34,14 +34,8 @@ export function UnifiedBottomBar() {
 
   const primarySurfaceColor = useMemo(() => {
     if (config.mainColor) return config.mainColor;
-    if (pathname?.startsWith('/app') || pathname?.startsWith('/idea') || pathname?.startsWith('/notes')) return '#EC4899';
-    if (pathname?.startsWith('/goals') || pathname?.startsWith('/goal')) return '#A855F7';
-    if (pathname?.startsWith('/events') || pathname?.startsWith('/event')) return '#6366F1';
-    if (pathname?.startsWith('/forms') || pathname?.startsWith('/form')) return '#6366F1';
-    if (pathname?.startsWith('/vault') || pathname?.startsWith('/totp') || pathname?.startsWith('/credentials')) return '#10B981';
-    if (pathname?.startsWith('/settings')) return '#6366F1';
-    return '#EC4899';
-  }, [pathname, config.mainColor]);
+    return '#6366F1';
+  }, [config.mainColor]);
 
   const defaultMainClick = useCallback(() => {
     if (pathname?.startsWith('/goals') || pathname?.startsWith('/goal')) {
@@ -162,14 +156,7 @@ export function UnifiedBottomBar() {
           {leftNavItems.map((item) => {
             const Icon = item.icon;
             const isSelected = currentTab === item.key;
-            const itemColor =
-              item.key === 'vault'
-                ? '#10B981'
-                : item.key === 'goal'
-                ? '#A855F7'
-                : item.key === 'settings'
-                ? '#6366F1'
-                : '#EC4899';
+            const itemColor = '#6366F1';
 
             return (
               <Link
@@ -237,14 +224,7 @@ export function UnifiedBottomBar() {
           {rightNavItems.map((item) => {
             const Icon = item.icon;
             const isSelected = currentTab === item.key;
-            const itemColor =
-              item.key === 'vault'
-                ? '#10B981'
-                : item.key === 'goal'
-                ? '#A855F7'
-                : item.key === 'settings'
-                ? '#6366F1'
-                : '#EC4899';
+            const itemColor = '#6366F1';
 
             return (
               <Link

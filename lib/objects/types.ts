@@ -37,28 +37,20 @@ export type UnifiedObjectDetailModel = UnifiedObjectCardModel & {
   raw?: unknown;
 };
 
-/** Accent for card chrome — matches ecosystem app colors (ideas pink, goals violet, …). */
+/** Accent for card chrome — unified primary color across all object kinds. */
 export function objectKindAccent(kind: ObjectKind): string {
   switch (kind) {
     case 'note':
-      return '#EC4899';
     case 'goal':
-      return '#A855F7';
     case 'form':
-      return '#6366F1';
     case 'event':
-      return '#22C55E';
     case 'moment':
-      return '#F59E0B';
     case 'credential':
     case 'totp':
-      return '#F59E0B';
     case 'project':
-      return '#6366F1';
     case 'agent_session':
-      return '#F59E0B';
     default:
-      return '#9B9691';
+      return '#6366F1';
   }
 }
 

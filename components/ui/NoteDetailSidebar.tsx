@@ -1196,7 +1196,7 @@ export function NoteDetailSidebar({
               resourceId={note.$id}
               isPublic={!!isPublic}
               isGuest={!!(note as any).isGuest}
-              accentColor={isPublic ? '#10B981' : '#A855F7'}
+              accentColor={isPublic ? '#10B981' : '#6366F1'}
               onPublished={({ isPublic, isGuest }) => {
                   const updated = { ...note, isPublic, isGuest };
                   onUpdate(updated);

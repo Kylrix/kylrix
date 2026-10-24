@@ -142,12 +142,12 @@ export function getWorkflowSubmenuItems(options: WorkflowSubmenuOptions) {
   }
 
   return workflows.map((wf) => {
-    let icon = <Workflow size={15} className="text-[#A855F7]" />;
-    if (wf.icon === 'CheckSquare') icon = <CheckSquare size={15} className="text-[#A855F7]" />;
-    else if (wf.icon === 'FileText') icon = <FileText size={15} className="text-[#10B981]" />;
-    else if (wf.icon === 'Calendar') icon = <Calendar size={15} className="text-[#3B82F6]" />;
-    else if (wf.icon === 'Lock') icon = <Lock size={15} className="text-[#EC4899]" />;
-    else if (wf.icon === 'Sparkles') icon = <Sparkles size={15} className="text-[#A855F7]" />;
+    let icon = <Workflow size={15} className="text-[#6366F1]" />;
+    if (wf.icon === 'CheckSquare') icon = <CheckSquare size={15} className="text-[#6366F1]" />;
+    else if (wf.icon === 'FileText') icon = <FileText size={15} className="text-[#6366F1]" />;
+    else if (wf.icon === 'Calendar') icon = <Calendar size={15} className="text-[#6366F1]" />;
+    else if (wf.icon === 'Lock') icon = <Lock size={15} className="text-[#6366F1]" />;
+    else if (wf.icon === 'Sparkles') icon = <Sparkles size={15} className="text-[#6366F1]" />;
 
     return {
       label: wf.name,

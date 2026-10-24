@@ -28,12 +28,12 @@ type NavId = 'note' | 'form' | 'goal' | 'event' | 'vault' | 'totp' | 'settings';
 
 /** Desktop Left Sidebar Primary Items: Ideas, Forms, Goals, Events, Secrets (Vault), TOTPs, Settings */
 const NAV_COLORS: Record<NavId, string> = {
-  note: '#EC4899',
-  form: '#F59E0B',
-  goal: '#A855F7',
-  event: '#3B82F6',
-  vault: '#10B981',
-  totp: '#06B6D4',
+  note: '#6366F1',
+  form: '#6366F1',
+  goal: '#6366F1',
+  event: '#6366F1',
+  vault: '#6366F1',
+  totp: '#6366F1',
   settings: '#6366F1',
 };
 
@@ -559,9 +559,9 @@ export function UnifiedLeftSidebar() {
                 height: '34px',
                 borderRadius: '8px',
                 cursor: 'pointer',
-                color: '#EC4899',
-                backgroundColor: 'rgba(236, 72, 153, 0.07)',
-                border: '1px solid rgba(236, 72, 153, 0.2)',
+                color: '#6366F1',
+                backgroundColor: 'rgba(99, 102, 241, 0.07)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
                 transition: 'all 0.2s ease',
                 textDecoration: 'none',
                 boxSizing: 'border-box',
@@ -570,14 +570,14 @@ export function UnifiedLeftSidebar() {
                 margin: isCollapsed ? '0 auto' : '0',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#F472B6';
-                e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.14)';
-                e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.4)';
+                e.currentTarget.style.color = '#818CF8';
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.14)';
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#EC4899';
-                e.currentTarget.style.backgroundColor = 'rgba(236, 72, 153, 0.07)';
-                e.currentTarget.style.borderColor = 'rgba(236, 72, 153, 0.2)';
+                e.currentTarget.style.color = '#6366F1';
+                e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.07)';
+                e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.2)';
               }}
             >
               <HeartIcon size={15} style={{ flexShrink: 0 }} />

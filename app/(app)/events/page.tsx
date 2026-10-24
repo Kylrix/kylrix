@@ -29,7 +29,7 @@ export default function EventsPage() {
               <button
                 type="button"
                 onClick={() => router.push('/events')}
-                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#A855F7] text-white shadow-[0_4px_12px_rgba(168,85,247,0.25)]"
+                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
                 title="Events"
                 aria-label="Events"
               >

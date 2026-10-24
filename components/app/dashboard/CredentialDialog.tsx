@@ -1049,7 +1049,7 @@ export default function CredentialDialog({
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl font-bold bg-[#10B981] hover:bg-[#0fa976] text-black disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-clash"
+          className="w-full py-3 rounded-xl font-bold bg-[#6366F1] hover:bg-[#5254E8] text-white disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-clash"
         >
           {!loading && <Save className="w-4 h-4" />}
           <span>

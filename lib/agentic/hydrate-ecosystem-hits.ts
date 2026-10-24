@@ -26,11 +26,11 @@ export interface HydratedEcosystemHit {
 }
 
 const DOMAIN_ACCENT: Record<SearchDomain, string> = {
-  idea: '#EC4899',
-  goal: '#A855F7',
+  idea: '#6366F1',
+  goal: '#6366F1',
   event: '#6366F1',
   form: '#6366F1',
-  project: '#10B981',
+  project: '#6366F1',
   tag: '#F59E0B',
   ui: '#818CF8',
   all: '#9B9691'};

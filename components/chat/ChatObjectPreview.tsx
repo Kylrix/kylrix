@@ -97,7 +97,7 @@ export function ChatObjectPreview({
         // eslint-disable-next-line @next/next/no-img-element
         <img src={thumb} alt="" className="h-14 w-14 shrink-0 object-cover bg-[#161412]" />
       ) : (
-        <div className="grid h-14 w-14 shrink-0 place-items-center bg-[#161412] text-[#A855F7]">
+        <div className="grid h-14 w-14 shrink-0 place-items-center bg-[#161412] text-[#6366F1]">
           <ChatObjectKindIcon payload={payload} />
         </div>
       )}

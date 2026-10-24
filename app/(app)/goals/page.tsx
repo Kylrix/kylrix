@@ -27,7 +27,7 @@ export default function GoalsPage() {
               <button
                 type="button"
                 onClick={() => router.push('/goals')}
-                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#A855F7] text-white border border-[#A855F7] shadow-[0_4px_12px_rgba(168,85,247,0.25)]"
+                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white border border-[#6366F1] shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
                 title="Goals"
                 aria-label="Goals"
               >
@@ -55,7 +55,7 @@ export default function GoalsPage() {
 
                 type="button"
                 onClick={handleOpenCreate}
-                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white hover:bg-[#9333ea] active:scale-95 transition-all shadow-[0_4px_14px_rgba(168,85,247,0.3)] select-none shrink-0"
+                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254E8] active:scale-95 transition-all shadow-[0_4px_14px_rgba(99,102,241,0.3)] select-none shrink-0"
               >
                 <Plus size={16} strokeWidth={2.5} />
                 <span>New Goal</span>

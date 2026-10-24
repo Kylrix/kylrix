@@ -54,7 +54,7 @@ export const useTheme = () => ({
   palette: {
     mode: 'dark',
     primary: { main: '#6366F1', dark: '#4F46E5' },
-    secondary: { main: '#EC4899', dark: '#DB2777' },
+    secondary: { main: '#6366F1', dark: '#4F46E5' },
     background: { default: '#000000', paper: '#161514' },
     text: { primary: '#F8FAFC', secondary: '#9B9691' },
     divider: 'rgba(255, 255, 255, 0.05)'},
@@ -152,7 +152,7 @@ const THEME_FOR_SX = {
   palette: {
     mode: 'dark',
     primary: { main: '#6366F1', dark: '#4F46E5' },
-    secondary: { main: '#EC4899', dark: '#DB2777' },
+    secondary: { main: '#6366F1', dark: '#4F46E5' },
     background: { default: '#000000', paper: '#161514' },
     text: { primary: '#F8FAFC', secondary: '#9B9691' },
     divider: 'rgba(255, 255, 255, 0.05)'}};

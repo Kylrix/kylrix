@@ -691,12 +691,12 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
               placeholder="Search codes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[#000000] border-2 border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#10B981] transition-colors"
+              className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[#000000] border-2 border-white/20 text-white placeholder-white/40 focus:outline-none focus:border-[#6366F1] transition-colors"
             />
           </div>
           <button 
             onClick={() => requireUnlock(() => setShowNew(true))}
-            className="flex items-center justify-center gap-2 px-8 h-12 font-black bg-[#10B981] text-black hover:bg-[#059669] rounded-2xl transition-colors border-2 border-[#10B981] shadow-[0_0_14px_rgba(16,185,129,0.3)]"
+            className="flex items-center justify-center gap-2 px-8 h-12 font-black bg-[#6366F1] text-white hover:bg-[#5254E8] rounded-2xl transition-colors border-2 border-[#6366F1] shadow-[0_0_14px_rgba(99,102,241,0.3)]"
           >
             <Plus size={18} />
             Add Code
@@ -719,7 +719,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             </p>
             <button 
               onClick={() => requireUnlock(() => setShowNew(true))} 
-              className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+              className="inline-flex items-center gap-2 px-6 h-12 bg-[#6366F1] hover:bg-[#5254E8] text-white font-black rounded-2xl transition-colors border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.3)]"
             >
               <Plus size={18} />
               Add First Code

@@ -36,10 +36,10 @@ export type SourceTheme = {
 
 export const SOURCE_THEMES: Record<UnorganicEmailSource, SourceTheme> = {
   accounts: { color: '#6366F1', shape: 'Diamond', label: 'Accounts' },
-  flow: { color: '#A855F7', shape: 'Slanted Square', label: 'Flow' },
-  connect: { color: '#F59E0B', shape: 'Slanted Square', label: 'Connect' },
-  note: { color: '#EC4899', shape: 'Slanted Square', label: 'Note' },
-  vault: { color: '#10B981', shape: 'Slanted Square', label: 'Vault' },
+  flow: { color: '#6366F1', shape: 'Slanted Square', label: 'Flow' },
+  connect: { color: '#6366F1', shape: 'Slanted Square', label: 'Connect' },
+  note: { color: '#6366F1', shape: 'Slanted Square', label: 'Note' },
+  vault: { color: '#6366F1', shape: 'Slanted Square', label: 'Vault' },
 };
 
 export const SOURCE_PRIORITY: Record<UnorganicEmailSource, number> = {

@@ -3,7 +3,6 @@
  * Maps each Kylrix app to its brand identity color and secondary accent
  */
 
-
 export interface AppColorScheme {
   primary: string;
   secondary: string;
@@ -22,25 +21,26 @@ const ECOSYSTEM_APP_COLORS: Record<string, AppColorScheme> = {
     accent: '#4F46E5', // Darker Indigo
   },
   vault: {
-    primary: '#10B981', // Emerald - Secure State Store
-    secondary: '#34D399', // Lighter Emerald
-    accent: '#059669', // Darker Emerald
+    primary: '#6366F1',
+    secondary: '#818CF8',
+    accent: '#4F46E5',
   },
   flow: {
-    primary: '#A855F7', // Amethyst - Action Engine
-    secondary: '#D8B4FE', // Lighter Amethyst
-    accent: '#9333EA', // Darker Amethyst
+    primary: '#6366F1',
+    secondary: '#818CF8',
+    accent: '#4F46E5',
   },
   connect: {
-    primary: '#F59E0B', // Amber - Communication Relay
-    secondary: '#FBBF24', // Lighter Amber
-    accent: '#D97706', // Darker Amber
+    primary: '#6366F1',
+    secondary: '#818CF8',
+    accent: '#4F46E5',
   },
   note: {
-    primary: '#EC4899', // Pink - Intelligence Layer
-    secondary: '#F472B6', // Lighter Pink
-    accent: '#DB2777', // Darker Pink
-  }};
+    primary: '#6366F1',
+    secondary: '#818CF8',
+    accent: '#4F46E5',
+  },
+};
 
 /**
  * Get the color scheme for an ecosystem app
@@ -54,11 +54,3 @@ export function getAppColor(
   const scheme = ECOSYSTEM_APP_COLORS[app] || ECOSYSTEM_APP_COLORS.root;
   return scheme[colorType];
 }
-
-/**
- * Get Connect app secondary color for borrowed/cross-app components
- */
-
-/**
- * Get Connect app primary color for borrowed/cross-app components
- */
