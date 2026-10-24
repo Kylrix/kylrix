@@ -125,8 +125,19 @@ export async function createBillingCheckoutSessionAction(input: {
   let couponRow: any = null;
 
   if (couponId) {
-    const { databases } = createSystemClient();
-    couponRow = await databases.getRow(NOTE_DB_ID, COUPONS_TABLE_ID, String(couponId).trim()).catch(() => null);
+    const { getCouponTurso } = await import('@/lib/actions/turso-ops');
+    const tursoCoupon = await getCouponTurso(String(couponId).trim()).catch(() => null);
+    if (tursoCoupon?.success && tursoCoupon.row) {
+      const row = tursoCoupon.row;
+      couponRow = {
+        ...row,
+        $id: row.id,
+        $createdAt: row.createdAt,
+      };
+    } else {
+      const { databases } = createSystemClient();
+      couponRow = await databases.getRow(NOTE_DB_ID, COUPONS_TABLE_ID, String(couponId).trim()).catch(() => null);
+    }
     if (!couponRow) throw new Error('Coupon not found');
     const metadata = parseMetadata(couponRow.metadata);
     const claimedBy = metadata.claimedBy || null;
@@ -170,17 +181,39 @@ export async function createBillingCheckoutSessionAction(input: {
 
       const newRedemptionCount = redemptionCount + 1;
       const isLastRedemption = newRedemptionCount >= redemptionLimit;
+      const nextStatus = isLastRedemption ? 'depleted' : 'active';
+      const nextMetadata = JSON.stringify({
+        ...metadata,
+        claimedBy: user.$id,
+        appliedAt: new Date().toISOString(),
+        subscriptionId: subscription.$id,
+        claimState: 'applied'
+      });
 
-      await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponRow.$id, {
-        status: isLastRedemption ? 'depleted' : 'active',
+      const { upsertCouponTurso } = await import('@/lib/actions/turso-ops');
+      await upsertCouponTurso({
+        id: couponRow.$id,
+        createdBy: couponRow.createdBy || user.$id,
+        title: couponRow.title || null,
+        note: couponRow.note || null,
+        targetUserId: couponRow.targetUserId || null,
+        status: nextStatus,
+        discountPercent: Number(couponRow.discountPercent ?? couponRow.discountPercentage ?? 100),
+        discountPercentage: Number(couponRow.discountPercentage ?? couponRow.discountPercent ?? 100),
+        redemptionLimit,
         redemptionCount: newRedemptionCount,
-        metadata: JSON.stringify({
-          ...metadata,
-          claimedBy: user.$id, 
-          appliedAt: new Date().toISOString(), 
-          subscriptionId: subscription.$id, 
-          claimState: 'applied'
-        })});
+        expiresAt: couponRow.expiresAt || null,
+        metadata: nextMetadata,
+        updatedAt: new Date().toISOString(),
+      }).catch(() => {});
+
+      if (process.env.APPWRITE_API) {
+        await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponRow.$id, {
+          status: nextStatus,
+          redemptionCount: newRedemptionCount,
+          metadata: nextMetadata,
+        }).catch(() => {});
+      }
       try {
         const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
         await users.updatePrefs(
@@ -310,40 +343,69 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   const couponId = typeof couponIdInput === 'string' ? couponIdInput.trim() : '';
   let coupon: any = null;
   
+  const { getCouponTurso, listCouponsTurso } = await import('@/lib/actions/turso-ops');
+
   if (couponId) {
-    coupon = await databases.getRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId).catch(() => null);
-    if (!coupon) {
-      const eventCoupon = await databases.getRow(
-        APPWRITE_CONFIG.DATABASES.CHAT,
-        APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
-        couponId
-      ).catch(() => null);
-      if (eventCoupon && eventCoupon.type === 'coupon') {
-        const meta = parseMetadata(eventCoupon.metadata);
-        coupon = {
-          $id: eventCoupon.$id,
-          $createdAt: eventCoupon.$createdAt,
-          status: eventCoupon.status || 'active',
-          expiresAt: eventCoupon.expiresAt || null,
-          targetUserId: eventCoupon.relatedUserId || null,
-          createdBy: eventCoupon.actorId,
-          discountPercent: eventCoupon.discountPercent ?? 100,
-          redemptionLimit: 1,
-          redemptionCount: eventCoupon.status === 'applied' ? 1 : 0,
-          metadata: eventCoupon.metadata,
-          note: meta.gift?.giftMessage || '',
-          isEventCoupon: true};
+    const tursoCoupon = await getCouponTurso(couponId).catch(() => null);
+    if (tursoCoupon?.success && tursoCoupon.row) {
+      const r = tursoCoupon.row;
+      coupon = {
+        ...r,
+        $id: r.id,
+        $createdAt: r.createdAt,
+      };
+    } else {
+      coupon = await databases.getRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId).catch(() => null);
+      if (!coupon) {
+        const eventCoupon = await databases.getRow(
+          APPWRITE_CONFIG.DATABASES.CHAT,
+          APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
+          couponId
+        ).catch(() => null);
+        if (eventCoupon && eventCoupon.type === 'coupon') {
+          const meta = parseMetadata(eventCoupon.metadata);
+          coupon = {
+            $id: eventCoupon.$id,
+            $createdAt: eventCoupon.$createdAt,
+            status: eventCoupon.status || 'active',
+            expiresAt: eventCoupon.expiresAt || null,
+            targetUserId: eventCoupon.relatedUserId || null,
+            createdBy: eventCoupon.actorId,
+            discountPercent: eventCoupon.discountPercent ?? 100,
+            redemptionLimit: 1,
+            redemptionCount: eventCoupon.status === 'applied' ? 1 : 0,
+            metadata: eventCoupon.metadata,
+            note: meta.gift?.giftMessage || '',
+            isEventCoupon: true};
+        }
       }
     }
     if (!coupon) throw new Error('Coupon not found');
   } else {
-    const couponResult = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
-      Query.equal('targetUserId', user.$id),
-      Query.equal('status', 'active'),
-      Query.orderDesc('$createdAt'),
-      Query.limit(1)
-    ]);
-    coupon = couponResult.rows[0];
+    const tursoList = await listCouponsTurso().catch(() => null);
+    if (tursoList?.success && tursoList.rows) {
+      const activeUserCoupons = tursoList.rows
+        .filter((r: any) => r.targetUserId === user.$id && String(r.status || 'active').toLowerCase() === 'active')
+        .sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      if (activeUserCoupons.length > 0) {
+        const r = activeUserCoupons[0];
+        coupon = {
+          ...r,
+          $id: r.id,
+          $createdAt: r.createdAt,
+        };
+      }
+    }
+
+    if (!coupon) {
+      const couponResult = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
+        Query.equal('targetUserId', user.$id),
+        Query.equal('status', 'active'),
+        Query.orderDesc('$createdAt'),
+        Query.limit(1)
+      ]).catch(() => ({ rows: [] }));
+      coupon = couponResult.rows[0];
+    }
 
     if (!coupon) {
       const eventCouponResult = await databases.listRows(
@@ -356,7 +418,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
           Query.orderDesc('$createdAt'),
           Query.limit(1)
         ]
-      );
+      ).catch(() => ({ rows: [] }));
       const eventCoupon = eventCouponResult.rows[0];
       if (eventCoupon) {
         const meta = parseMetadata(eventCoupon.metadata);
@@ -493,31 +555,54 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     });
   } catch {}
 
+  const nextClaimStatus = isLastRedemption ? 'depleted' : 'active';
+  const appliedMeta = JSON.stringify({
+    ...nextMetadata,
+    appliedAt: new Date().toISOString(),
+    subscriptionId: subscription.$id,
+    claimState: 'applied'
+  });
+
+  const { upsertCouponTurso } = await import('@/lib/actions/turso-ops');
+  await upsertCouponTurso({
+    id: coupon.$id,
+    createdBy: coupon.createdBy || user.$id,
+    title: coupon.title || null,
+    note: coupon.note || null,
+    targetUserId: coupon.targetUserId || null,
+    status: nextClaimStatus,
+    discountPercent: Number(coupon.discountPercent ?? coupon.discountPercentage ?? 100),
+    discountPercentage: Number(coupon.discountPercentage ?? coupon.discountPercent ?? 100),
+    redemptionLimit,
+    redemptionCount: newRedemptionCount,
+    expiresAt: coupon.expiresAt || null,
+    metadata: appliedMeta,
+    updatedAt: new Date().toISOString(),
+  }).catch(() => {});
+
   if (coupon.isEventCoupon) {
-    await databases.updateRow(
-      APPWRITE_CONFIG.DATABASES.CHAT,
-      APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
-      coupon.$id,
-      {
-        status: 'applied',
-        metadata: JSON.stringify({
-          ...metadata,
-          claimedBy: user.$id,
-          appliedAt: new Date().toISOString(),
-          subscriptionId: subscription.$id,
-          claimState: 'applied'
-        })}
-    );
-  } else {
+    if (process.env.APPWRITE_API) {
+      await databases.updateRow(
+        APPWRITE_CONFIG.DATABASES.CHAT,
+        APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
+        coupon.$id,
+        {
+          status: 'applied',
+          metadata: JSON.stringify({
+            ...metadata,
+            claimedBy: user.$id,
+            appliedAt: new Date().toISOString(),
+            subscriptionId: subscription.$id,
+            claimState: 'applied'
+          })}
+      ).catch(() => {});
+    }
+  } else if (process.env.APPWRITE_API) {
     await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, coupon.$id, {
-      status: isLastRedemption ? 'depleted' : 'active',
+      status: nextClaimStatus,
       redemptionCount: newRedemptionCount,
-      metadata: JSON.stringify({
-        ...nextMetadata,
-        appliedAt: new Date().toISOString(), 
-        subscriptionId: subscription.$id, 
-        claimState: 'applied'
-      })});
+      metadata: appliedMeta,
+    }).catch(() => {});
   }
 
   try {
