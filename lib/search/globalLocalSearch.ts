@@ -48,17 +48,17 @@ export interface GlobalSearchCtx {
 }
 
 const ACCENT: Record<GlobalResultKind, string> = {
-  note: '#EC4899',
-  goal: '#A855F7',
+  note: '#6366F1',
+  goal: '#6366F1',
   workspace: '#6366F1',
-  event: '#F472B6',
-  form: '#A78BFA',
-  flow: '#818CF8',
-  secret: '#10B981',
-  totp: '#06B6D4',
-  moment: '#F59E0B',
-  chat: '#F59E0B',
-  thread: '#34D399',
+  event: '#6366F1',
+  form: '#6366F1',
+  flow: '#6366F1',
+  secret: '#6366F1',
+  totp: '#6366F1',
+  moment: '#6366F1',
+  chat: '#6366F1',
+  thread: '#6366F1',
   tag: '#F87171',
   trash: '#EF4444',
 };
@@ -78,7 +78,7 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     title: 'Workflows & Flows',
     subtitle: 'Automate repetitive workflows, Math Mode & Sidekick',
     href: '/flows',
-    accent: '#818CF8',
+    accent: '#6366F1',
     keywords: ['flow', 'flows', 'workflow', 'workflows', 'math mode', 'sidekick', 'automation', 'extensions'],
   },
   {
@@ -87,7 +87,7 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     title: 'Ideas & Notes',
     subtitle: 'Private and shared ideas workspace',
     href: '/app',
-    accent: '#EC4899',
+    accent: '#6366F1',
     keywords: ['note', 'notes', 'idea', 'ideas', 'thought', 'thoughts', 'scratchpad'],
   },
   {
@@ -96,7 +96,7 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     title: 'Goals & Tasks',
     subtitle: 'Deliverables, milestones and task tracking',
     href: '/goals',
-    accent: '#A855F7',
+    accent: '#6366F1',
     keywords: ['goal', 'goals', 'task', 'tasks', 'todo', 'todos', 'milestones'],
   },
   {
@@ -105,7 +105,7 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     title: 'Security Enclave & Vault',
     subtitle: 'Zero-knowledge passwords, TOTP and credentials',
     href: '/vault',
-    accent: '#10B981',
+    accent: '#6366F1',
     keywords: ['vault', 'secret', 'secrets', 'password', 'passwords', 'totp', 'credentials', 'enclave'],
   },
   {
@@ -114,7 +114,7 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     title: 'Forms & Surveys',
     subtitle: 'Reactive input collectors and forms',
     href: '/forms',
-    accent: '#A78BFA',
+    accent: '#6366F1',
     keywords: ['form', 'forms', 'survey', 'surveys', 'poll', 'polls', 'inputs'],
   },
   {
@@ -123,7 +123,7 @@ const ECOSYSTEM_DESTINATIONS: Array<{
     title: 'Events & Schedule',
     subtitle: 'Upcoming dates, reminders and calls',
     href: '/events',
-    accent: '#F472B6',
+    accent: '#6366F1',
     keywords: ['event', 'events', 'calendar', 'schedule', 'reminder', 'reminders'],
   },
   {

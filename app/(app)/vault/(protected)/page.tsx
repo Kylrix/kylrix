@@ -114,7 +114,7 @@ function DashboardPageContent() {
     if (activeTab === 'secrets') {
       setConfiguration({
         isVisible: true,
-        mainColor: '#10B981',
+        mainColor: '#6366F1',
         mainIcon: <Plus size={26} strokeWidth={2.5} />,
         onMainClick: handleAdd,
         actions: [
@@ -453,7 +453,7 @@ function DashboardPageContent() {
                   onClick={() => setActiveTab('secrets')}
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'secrets'
-                      ? 'bg-[#10B981] text-black border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
                       : 'text-white/70 border-2 border-transparent hover:text-white hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                   title="Secrets"
@@ -466,7 +466,7 @@ function DashboardPageContent() {
                   onClick={() => setActiveTab('totp')}
                   className={`flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all ${
                     activeTab === 'totp'
-                      ? 'bg-[#10B981] text-black border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.35)]'
+                      ? 'bg-[#6366F1] text-white border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.35)]'
                       : 'text-white/60 border-2 border-transparent hover:text-white hover:bg-white/[0.06] hover:border-white/20'
                   }`}
                   title="TOTP"
@@ -505,7 +505,7 @@ function DashboardPageContent() {
                     <div className="ml-auto flex items-center gap-2">
                       <button
                         onClick={handleAdd}
-                        className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-xl transition-colors text-xs border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                        className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 bg-[#6366F1] hover:bg-[#5254E8] text-white font-black rounded-xl transition-colors text-xs border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.3)]"
                       >
                         <Plus size={16} />
                         Add Secret
@@ -514,7 +514,7 @@ function DashboardPageContent() {
                       <button
                         onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}
                         className={`p-2 border-2 border-white/20 rounded-xl transition-colors ${
-                          isVaultBlurEnabled ? 'text-white/40 bg-[#000000]' : 'text-[#10B981] bg-[#000000] border-[#10B981]/50'
+                          isVaultBlurEnabled ? 'text-white/40 bg-[#000000]' : 'text-[#6366F1] bg-[#000000] border-[#6366F1]/50'
                         } hover:border-white/40 hover:bg-[#1C1A18]`}
                         title="Toggle secret blur visibility"
                       >
@@ -551,7 +551,7 @@ function DashboardPageContent() {
                         <div className="flex items-center gap-3">
                           <button
                             onClick={handleAdd}
-                            className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors border-2 border-[#10B981] shadow-[0_0_12px_rgba(16,185,129,0.3)]"
+                            className="inline-flex items-center gap-2 px-6 h-12 bg-[#6366F1] hover:bg-[#5254E8] text-white font-black rounded-2xl transition-colors border-2 border-[#6366F1] shadow-[0_0_12px_rgba(99,102,241,0.3)]"
                           >
                             <Plus size={18} />
                             Add Secret

@@ -90,7 +90,7 @@ export default async function SharedNoteOGImage({
       chips: [dateText, ...tags].filter(Boolean).slice(0, 3),
       cardType: 'object',
       objectIcon: isEncrypted ? 'vault' : 'idea',
-      objectColor: isEncrypted ? '#10B981' : '#EC4899',
+      objectColor: '#6366F1',
       mediaDataUrl: previewImageDataUrl,
       previewImageDataUrl,
       previewImageAlt: noteTitle}),

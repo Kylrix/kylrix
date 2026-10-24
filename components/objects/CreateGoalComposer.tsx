@@ -758,11 +758,11 @@ export function CreateGoalComposer({
                   type="text"
                   name="newTagName"
                   placeholder="Type new tag name & press Enter..."
-                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white font-mono placeholder-white/30 focus:outline-none focus:border-[#A855F7]"
+                  className="flex-1 bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white font-mono placeholder-white/30 focus:outline-none focus:border-[#6366F1]"
                 />
                 <button
                   type="submit"
-                  className="px-3 py-2 rounded-xl bg-[#A855F7] text-white text-xs font-bold font-mono hover:bg-[#9333EA] transition-colors shrink-0"
+                  className="px-3 py-2 rounded-xl bg-[#6366F1] text-white text-xs font-bold font-mono hover:bg-[#5254E8] transition-colors shrink-0"
                 >
                   Add
                 </button>

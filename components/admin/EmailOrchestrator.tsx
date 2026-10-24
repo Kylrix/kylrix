@@ -23,10 +23,10 @@ interface User {
 
 const logoVariations = [
   { id: 'root', name: 'Kylrix (Root)', color: '#6366F1' },
-  { id: 'vault', name: 'Vault', color: '#10B981' },
-  { id: 'note', name: 'Note', color: '#EC4899' },
-  { id: 'flow', name: 'Flow', color: '#A855F7' },
-  { id: 'connect', name: 'Connect', color: '#F59E0B' }
+  { id: 'vault', name: 'Vault', color: '#6366F1' },
+  { id: 'note', name: 'Note', color: '#6366F1' },
+  { id: 'flow', name: 'Flow', color: '#6366F1' },
+  { id: 'connect', name: 'Connect', color: '#6366F1' }
 ];
 
 export default function EmailOrchestrator() {

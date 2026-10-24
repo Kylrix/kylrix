@@ -79,23 +79,23 @@ export function ResourceItem({
         const lower = k?.toLowerCase() || '';
         switch (lower) {
             case 'note':
-                return { icon: <FileText size={20} />, accent: '#EC4899' }; // Pink
+                return { icon: <FileText size={20} />, accent: '#6366F1' };
             case 'goal':
-                return { icon: <CheckSquare size={20} />, accent: '#A855F7' }; // Purple
+                return { icon: <CheckSquare size={20} />, accent: '#6366F1' };
             case 'secret':
             case 'password':
             case 'credential':
-                return { icon: <Lock size={20} />, accent: '#10B981' }; // Emerald
+                return { icon: <Lock size={20} />, accent: '#6366F1' };
             case 'totp':
-                return { icon: <ShieldCheck size={20} />, accent: '#6366F1' }; // Indigo
+                return { icon: <ShieldCheck size={20} />, accent: '#6366F1' };
             case 'form':
-                return { icon: <FileSpreadsheet size={20} />, accent: '#3B82F6' }; // Blue
+                return { icon: <FileSpreadsheet size={20} />, accent: '#6366F1' };
             case 'event':
-                return { icon: <Calendar size={20} />, accent: '#F59E0B' }; // Amber
+                return { icon: <Calendar size={20} />, accent: '#6366F1' };
             case 'tag':
                 return { icon: <Tag size={20} />, accent: '#06B6D4' }; // Cyan
             case 'moment':
-                return { icon: <Camera size={20} />, accent: '#E11D48' }; // Rose
+                return { icon: <Camera size={20} />, accent: '#6366F1' };
             case 'call':
                 return { icon: <PhoneCall size={20} />, accent: '#EF4444' }; // Red
             default:

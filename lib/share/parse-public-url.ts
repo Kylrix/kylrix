@@ -73,42 +73,42 @@ export function parseKylrixPublicUrl(raw: string): ParsedPublicResource | null {
   });
 
   if (head === 'u' || head === 'user' || head === 'profile') {
-    return pack('profile', id || parts[0], id ? `@${id}` : 'Profile', '#3B82F6', 'accounts');
+    return pack('profile', id || parts[0], id ? `@${id}` : 'Profile', '#6366F1', 'accounts');
   }
   if (head === 'idea' || head === 'note' || head === 'notes') {
-    if (!id) return pack('note', '', 'Idea', '#EC4899', 'note');
-    return pack('note', id, 'Idea', '#EC4899', 'note');
+    if (!id) return pack('note', '', 'Idea', '#6366F1', 'note');
+    return pack('note', id, 'Idea', '#6366F1', 'note');
   }
   if (head === 'goal' || head === 'goals' || head === 'task' || head === 'tasks') {
-    if (!id) return pack('goal', '', 'Goal', '#A855F7', 'flow');
-    return pack('goal', id, 'Goal', '#A855F7', 'flow');
+    if (!id) return pack('goal', '', 'Goal', '#6366F1', 'flow');
+    return pack('goal', id, 'Goal', '#6366F1', 'flow');
   }
   if (head === 'form' || head === 'forms') {
-    if (!id) return pack('form', '', 'Form', '#A855F7', 'flow');
-    return pack('form', id, 'Form', '#A855F7', 'flow');
+    if (!id) return pack('form', '', 'Form', '#6366F1', 'flow');
+    return pack('form', id, 'Form', '#6366F1', 'flow');
   }
   if (head === 'events' || head === 'event') {
-    if (!id) return pack('event', '', 'Event', '#A855F7', 'flow');
-    return pack('event', id, 'Event', '#A855F7', 'flow');
+    if (!id) return pack('event', '', 'Event', '#6366F1', 'flow');
+    return pack('event', id, 'Event', '#6366F1', 'flow');
   }
   if (head === 'flow' || head === 'flows' || head === 'workflows') {
-    if (!id) return pack('flow', '', 'Flow', '#A855F7', 'flow');
-    return pack('flow', id, 'Flow', '#A855F7', 'flow');
+    if (!id) return pack('flow', '', 'Flow', '#6366F1', 'flow');
+    return pack('flow', id, 'Flow', '#6366F1', 'flow');
   }
   if (head === 'workspace' || head === 'workspaces' || head === 'project' || head === 'projects') {
     if (!id) return pack('project', '', 'Workspace', '#6366F1', 'root');
     return pack('project', id, 'Workspace', '#6366F1', 'root');
   }
   if (head === 'moment') {
-    if (!id) return pack('moment', '', 'Moment', '#F59E0B', 'connect');
-    return pack('moment', id, 'Moment', '#F59E0B', 'connect');
+    if (!id) return pack('moment', '', 'Moment', '#6366F1', 'connect');
+    return pack('moment', id, 'Moment', '#6366F1', 'connect');
   }
   if (head === 'vault') {
     if (parts[1]?.toLowerCase() === 'totp') {
       const totpId = parts[2] || '';
-      return pack('totp', totpId, 'Code', '#10B981', 'vault');
+      return pack('totp', totpId, 'Code', '#6366F1', 'vault');
     }
-    return pack('credential', id, 'Vault', '#10B981', 'vault');
+    return pack('credential', id, 'Vault', '#6366F1', 'vault');
   }
   if (head === 'agents') {
     if (parts[1]?.toLowerCase() === 'session' && parts[2]) {
@@ -119,10 +119,10 @@ export function parseKylrixPublicUrl(raw: string): ParsedPublicResource | null {
     }
   }
   if (head === 'connect' || head === 'chats' || head === 'hangouts') {
-    return pack('connect', id || 'connect', 'Connect', '#F59E0B', 'connect');
+    return pack('connect', id || 'connect', 'Connect', '#6366F1', 'connect');
   }
   if (head === 'app') {
-    return pack('note', id || '', 'Ideas', '#EC4899', 'note');
+    return pack('note', id || '', 'Ideas', '#6366F1', 'note');
   }
 
   // Bare kylrix host / unknown path — still mark as ecosystem

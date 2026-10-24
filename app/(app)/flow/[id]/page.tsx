@@ -149,7 +149,7 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
             <button
               type="button"
               onClick={() => router.push('/flows')}
-              className="px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white cursor-pointer"
+              className="px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
             >
               Back to Flows
             </button>
@@ -158,7 +158,7 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
           <>
             <section className="rounded-[22px] bg-[#161412] border-2 border-white/20 p-5 space-y-4">
               <div className="flex items-start gap-3">
-                <div className="p-3 rounded-2xl bg-[#000000] border-2 border-white/20 text-[#A855F7]">
+                <div className="p-3 rounded-2xl bg-[#000000] border-2 border-white/20 text-[#6366F1]">
                   <Layers size={22} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -193,7 +193,7 @@ export default function FlowSharePage({ params }: { params: Promise<{ id: string
                   <button
                     type="button"
                     onClick={() => void handleInstall()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#A855F7] text-white cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white cursor-pointer"
                   >
                     <Download size={14} />
                     Install

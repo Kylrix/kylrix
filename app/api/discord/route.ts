@@ -1199,7 +1199,7 @@ function buildIdeasEmbed(notes: any[], isLinked = true) {
         description: isLinked
           ? 'Your recent ideas:'
           : '💡 *Guest mode.* Use `/pair` to connect your Kylrix account.\n\nYour ideas:',
-        color: 0xec4899, // Pink #EC4899
+        color: 0x6366f1, // Indigo #6366F1
         fields,
       },
     ],
@@ -1276,7 +1276,7 @@ function buildGoalsEmbed(goals: any[], isLinked = true) {
         description: isLinked
           ? 'Your recent goals:'
           : '💡 *Guest mode.* Use `/pair` to connect your Kylrix account.\n\nYour goals:',
-        color: 0xa855f7, // Purple #A855F7
+        color: 0x6366f1, // Indigo #6366F1
         fields,
       },
     ],

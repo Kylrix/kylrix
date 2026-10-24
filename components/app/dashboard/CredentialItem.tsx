@@ -433,14 +433,14 @@ export default function CredentialItem({
       onContextMenu={handleContextMenu}
       className={`group h-full px-[18px] py-[14px] rounded-[24px] border-2 cursor-pointer transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-[12px] shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)] ${
         isSelected 
-          ? 'bg-[#000000] border-[#10B981] shadow-[0_0_14px_rgba(16,185,129,0.35)]' 
-          : 'bg-[#000000] border-white/20 hover:border-[#10B981] hover:shadow-[0_0_12px_rgba(16,185,129,0.2)] hover:-translate-y-0.5'
+          ? 'bg-[#000000] border-[#6366F1] shadow-[0_0_14px_rgba(99,102,241,0.35)]'
+          : 'bg-[#000000] border-white/20 hover:border-[#6366F1] hover:shadow-[0_0_12px_rgba(99,102,241,0.2)] hover:-translate-y-0.5'
       }`}
     >
       {isSelectMode && (
         <div className="shrink-0 flex items-center justify-center pr-1">
           <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
-            isSelected ? 'bg-[#10B981] border-[#10B981] text-[#000000]' : 'border-white/50 bg-transparent'
+            isSelected ? 'bg-[#6366F1] border-[#6366F1] text-[#000000]' : 'border-white/50 bg-transparent'
           }`}>
             {isSelected && <CheckSquare className="w-4 h-4 text-black" />}
           </div>
@@ -449,12 +449,12 @@ export default function CredentialItem({
 
       {/* Icon */}
       <div 
-        className="w-[52px] h-[52px] rounded-[16px] bg-[#161412] flex items-center justify-center shrink-0 border-2 border-white/20 overflow-hidden transition-all duration-300 group-hover:border-[#10B981]/60 group-hover:bg-[#10B981]/5"
+        className="w-[52px] h-[52px] rounded-[16px] bg-[#161412] flex items-center justify-center shrink-0 border-2 border-white/20 overflow-hidden transition-all duration-300 group-hover:border-[#6366F1]/60 group-hover:bg-[#6366F1]/5"
       >
         {faviconUrl ? (
           <img src={faviconUrl} className="w-8 h-8 object-contain" alt="" />
         ) : (
-          <span className="font-black text-[#10B981] text-[1.3rem] font-clash">
+          <span className="font-black text-[#6366F1] text-[1.3rem] font-clash">
             {(displayCredential as any).name?.charAt(0)?.toUpperCase() || "E"}
           </span>
         )}
@@ -470,8 +470,8 @@ export default function CredentialItem({
               : (displayCredential as any).name}
           </span>
           {Boolean(credential.isEnv) && (
-            <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black border border-[#10B981]/50 text-[0.62rem] font-bold text-white uppercase tracking-wider">
-              <FileCode2 className="w-2.5 h-2.5 text-[#10B981]" />
+            <span className="shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-black border border-[#6366F1]/50 text-[0.62rem] font-bold text-white uppercase tracking-wider">
+              <FileCode2 className="w-2.5 h-2.5 text-[#6366F1]" />
               Env
             </span>
           )}
@@ -500,7 +500,7 @@ export default function CredentialItem({
               : (displayCredential as any).username}
         </span>
         {(credential as any).sharedFrom && (
-          <div className="mt-1 h-5 text-[0.62rem] font-black bg-[#10B981]/10 text-[#10B981] rounded-[6px] px-2 py-0.5 uppercase tracking-[0.02em] inline-flex items-center w-fit">
+          <div className="mt-1 h-5 text-[0.62rem] font-black bg-[#6366F1]/10 text-[#6366F1] rounded-[6px] px-2 py-0.5 uppercase tracking-[0.02em] inline-flex items-center w-fit">
             Received from {(credential as any).sharedFrom}
           </div>
         )}
@@ -522,7 +522,7 @@ export default function CredentialItem({
               })
             );
           }}
-          className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#10B981] hover:bg-[#10B981]/5"
+          className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/5"
           title="Sidekick Assist"
           aria-label="Sidekick Assist"
         >
@@ -534,7 +534,7 @@ export default function CredentialItem({
           resourceId={credential.$id}
           isPublic={localIsPublic}
           isGuest={localIsGuest}
-          accentColor="#10B981"
+          accentColor="#6366F1"
           onPublished={(result) => {
             setLocalIsPublic(result?.isPublic ?? true);
             setLocalIsGuest(result?.isGuest ?? true);

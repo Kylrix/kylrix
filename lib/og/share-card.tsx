@@ -223,19 +223,19 @@ export function UserIdenticon({ userId, size = 260 }: { userId: string; size?: n
 }
 
 const OBJECT_DEFAULTS: Record<string, { color: string; icon: ObjectIconType }> = {
-  note: { color: '#EC4899', icon: 'idea' },
-  idea: { color: '#EC4899', icon: 'idea' },
-  goal: { color: '#A855F7', icon: 'goal' },
-  agent: { color: '#818CF8', icon: 'agent' },
-  session: { color: '#818CF8', icon: 'agent' },
-  chat: { color: '#818CF8', icon: 'agent' },
-  form: { color: '#3B82F6', icon: 'form' },
-  event: { color: '#F59E0B', icon: 'event' },
-  vault: { color: '#10B981', icon: 'vault' },
-  secret: { color: '#10B981', icon: 'vault' },
-  credential: { color: '#10B981', icon: 'vault' },
+  note: { color: '#6366F1', icon: 'idea' },
+  idea: { color: '#6366F1', icon: 'idea' },
+  goal: { color: '#6366F1', icon: 'goal' },
+  agent: { color: '#6366F1', icon: 'agent' },
+  session: { color: '#6366F1', icon: 'agent' },
+  chat: { color: '#6366F1', icon: 'agent' },
+  form: { color: '#6366F1', icon: 'form' },
+  event: { color: '#6366F1', icon: 'event' },
+  vault: { color: '#6366F1', icon: 'vault' },
+  secret: { color: '#6366F1', icon: 'vault' },
+  credential: { color: '#6366F1', icon: 'vault' },
   totp: { color: '#6366F1', icon: 'totp' },
-  logo: { color: '#818CF8', icon: 'logo' },
+  logo: { color: '#6366F1', icon: 'logo' },
 };
 
 function ObjectIconComponent({

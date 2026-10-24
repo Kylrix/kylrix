@@ -70,7 +70,7 @@ function AccessUnavailable() {
         </p>
         <Link
           href="/goals"
-          className="inline-flex items-center justify-center rounded-xl bg-[#A855F7] px-4 py-2 text-sm font-semibold text-white hover:bg-[#9333EA] transition-colors"
+          className="inline-flex items-center justify-center rounded-xl bg-[#6366F1] px-4 py-2 text-sm font-semibold text-white hover:bg-[#5254E8] transition-colors"
         >
           Open Flow
         </Link>
@@ -253,7 +253,7 @@ export default function SharedGoalClient({
     <div className="min-h-[70vh] bg-[#0A0908] text-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
         <SharedWorkspaceBar objectType="goal" />
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#A855F7] mb-3">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366F1] mb-3">
           Shared goal
         </p>
         {error ? (

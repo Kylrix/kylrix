@@ -2618,17 +2618,17 @@ export const ChatWindow = ({
                                     <button
                                         type="button"
                                         onClick={() => openCreateAsFromMessage('note', messageAnchorEl.msg)}
-                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#EC4899]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#EC4899]"
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#6366F1]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#6366F1]"
                                     >
-                                        <Lightbulb size={16} className="shrink-0 text-[#EC4899]" />
+                                        <Lightbulb size={16} className="shrink-0 text-[#6366F1]" />
                                         <span className="truncate">Idea</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => openCreateAsFromMessage('goal', messageAnchorEl.msg)}
-                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#A855F7]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#A855F7]"
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#6366F1]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#6366F1]"
                                     >
-                                        <Target size={16} className="shrink-0 text-[#A855F7]" />
+                                        <Target size={16} className="shrink-0 text-[#6366F1]" />
                                         <span className="truncate">Goal</span>
                                     </button>
                                     <button
@@ -2642,9 +2642,9 @@ export const ChatWindow = ({
                                     <button
                                         type="button"
                                         onClick={() => openCreateAsFromMessage('secret', messageAnchorEl.msg)}
-                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#10B981]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#10B981]"
+                                        className="flex min-h-[46px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-[#6366F1]/45 bg-[#161412] px-2 py-3 text-sm font-bold text-white hover:border-[#6366F1]"
                                     >
-                                        <Key size={16} className="shrink-0 text-[#10B981]" />
+                                        <Key size={16} className="shrink-0 text-[#6366F1]" />
                                         <span className="truncate">Secret</span>
                                     </button>
                                 </div>

@@ -345,7 +345,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   );
 
   const useMemo = React.useMemo; const contextMenuItems = useMemo(() => [
-    { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
+    { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#6366F1]' : ''} />, onClick: () => { handlePinToggle(); } },
     {
       label: 'Copy Content',
       icon: <Copy size={16} className="text-[#3B82F6]" />,
@@ -410,7 +410,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     },
     {
       label: 'Workflows',
-      icon: <TodoIcon size={16} className="text-[#A855F7]" />,
+      icon: <TodoIcon size={16} className="text-[#6366F1]" />,
       submenu: getWorkflowSubmenuItems({
         objectType: 'idea',
         targetObject: {
@@ -429,7 +429,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     ...(isPro ? [
       { 
         label: 'Sidekick', 
-        icon: <Sparkles size={16} className="text-[#A855F7]" />, 
+        icon: <Sparkles size={16} className="text-[#6366F1]" />,
         onClick: () => { setShowSidekick(true); },
       }
     ] : []),
@@ -536,7 +536,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                     e.stopPropagation();
                     setShowSidekick(true);
                   }}
-                  className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#A855F7] hover:bg-[#A855F7]/10"
+                  className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/10"
                   title="Sidekick Assist"
                   aria-label="Sidekick Assist"
                 >
@@ -549,7 +549,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                   isGuest={!!liveNote.isGuest}
                   resourceTitle={note.title ?? undefined}
                   dek={note.dek}
-                  accentColor="#EC4899"
+                  accentColor="#6366F1"
                   onPublished={({ isPublic, isGuest }) => {
                     const updated = { ...note, isPublic, isGuest };
                     upsertNote(updated);

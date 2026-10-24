@@ -36,7 +36,7 @@ export default async function Image({
       chips: [status, priority],
       cardType: 'object',
       objectIcon: 'goal',
-      objectColor: '#A855F7',
+      objectColor: '#6366F1',
       mediaDataUrl: (goal as any)?.cover || (goal as any)?.imageUrl || null,
     }),
     {

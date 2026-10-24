@@ -46,7 +46,7 @@ export default function IdeasPage() {
   useEffect(() => {
     setConfiguration({
       isVisible: true,
-      mainColor: '#EC4899',
+      mainColor: '#6366F1',
       mainIcon: <Plus size={26} strokeWidth={3} />,
       onMainClick: openCreateNote,
       suppressWorkflow: true,
@@ -89,7 +89,7 @@ export default function IdeasPage() {
             <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 bg-[#000000] border-2 border-white/20 rounded-2xl w-fit select-none shadow-md">
               <Link
                 href="/app"
-                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white border border-[#EC4899] shadow-[0_4px_12px_rgba(236,72,153,0.25)]"
+                className="flex items-center gap-1.5 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white border border-[#6366F1] shadow-[0_4px_12px_rgba(99,102,241,0.25)]"
                 title="Ideas"
                 aria-label="Ideas"
               >
@@ -113,7 +113,7 @@ export default function IdeasPage() {
               <button
                 type="button"
                 onClick={openCreateNote}
-                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] active:scale-95 transition-all shadow-[0_4px_14px_rgba(236,72,153,0.3)] select-none shrink-0"
+                className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254E8] active:scale-95 transition-all shadow-[0_4px_14px_rgba(99,102,241,0.3)] select-none shrink-0"
               >
                 <Plus size={16} strokeWidth={2.5} />
                 <span>New Idea</span>
@@ -124,7 +124,7 @@ export default function IdeasPage() {
           {/* Tags Filter Row */}
           {tags.length > 0 && (
             <div className="overflow-x-auto scrollbar-none p-2 bg-[#000000] border-2 border-white/20 rounded-[24px] flex items-center gap-2 select-none shadow-md">
-              <Tag size={14} className="text-[#EC4899] ml-2 shrink-0" />
+              <Tag size={14} className="text-[#6366F1] ml-2 shrink-0" />
               {tags.map((tag: string, index: number) => {
                 const tagColor = getTagColor(tag);
                 const isSelected = selectedTag === tag;
@@ -136,7 +136,7 @@ export default function IdeasPage() {
                     onClick={() => setSelectedTag(isSelected ? null : tag)}
                     className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                       isSelected 
-                        ? 'bg-[#EC4899] border-2 border-[#FFFFFF] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
+                        ? 'bg-[#6366F1] border-2 border-[#FFFFFF] text-white shadow-[0_4px_12px_rgba(99,102,241,0.2)]'
                         : 'bg-[#161412] border border-white/25 text-white hover:border-white/60 hover:bg-[#201D1A]'
                     }`}
                     style={
@@ -153,7 +153,7 @@ export default function IdeasPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedTag(null)}
-                  className="ml-2 px-3 py-1.5 text-xs text-[#EC4899] hover:text-[#f472b6] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0"
+                  className="ml-2 px-3 py-1.5 text-xs text-[#6366F1] hover:text-[#818CF8] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0"
                 >
                   <X size={12} />
                   Clear
@@ -176,7 +176,7 @@ export default function IdeasPage() {
               <button
                 type="button"
                 onClick={openCreateNote}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#EC4899] text-white hover:bg-[#db2777] transition-all shadow-[0_4px_12px_rgba(236,72,153,0.25)] select-none"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-extrabold bg-[#6366F1] text-white hover:bg-[#5254E8] transition-all shadow-[0_4px_12px_rgba(99,102,241,0.25)] select-none"
               >
                 <Plus size={14} strokeWidth={2.5} />
                 <span>Create your first idea</span>

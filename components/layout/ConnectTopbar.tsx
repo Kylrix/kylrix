@@ -543,21 +543,21 @@ export default function ConnectTopbar({
     // 1. Dynamic recommendations based on current app route
     const routeSuggestions = {
       note: [
-        { id: 'create-note', title: 'Write a New Idea', description: 'Create a private idea inside your workspace', href: '/app', kind: 'note', accent: '#EC4899' },
+        { id: 'create-note', title: 'Write a New Idea', description: 'Create a private idea inside your workspace', href: '/app', kind: 'note', accent: '#6366F1' },
         { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your ideas security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
       ],
       projects: [
         { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/app', kind: 'flow', accent: '#6366F1' },
-        { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/flows', kind: 'note', accent: '#A855F7' }
+        { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/flows', kind: 'note', accent: '#6366F1' }
       ],
       flow: [
-        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flows', kind: 'flow', accent: '#A855F7' }
+        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flows', kind: 'flow', accent: '#6366F1' }
       ],
       vault: [
-        { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault', kind: 'vault', accent: '#10B981' }
+        { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault', kind: 'vault', accent: '#6366F1' }
       ],
       connect: [
-        { id: 'start-huddle', title: 'Open Agent Inbox', description: 'Inbound agent logs, messages, and collaborative sessions', href: '/app', kind: 'connect', accent: '#F59E0B' }
+        { id: 'start-huddle', title: 'Open Agent Inbox', description: 'Inbound agent logs, messages, and collaborative sessions', href: '/app', kind: 'connect', accent: '#6366F1' }
       ]
     };
 
@@ -586,7 +586,7 @@ export default function ConnectTopbar({
         description: 'You spent a lot of time in workspace ideas recently. Resume writing?',
         href: '/app',
         kind: 'note',
-        accent: '#EC4899'
+        accent: '#6366F1'
       });
     } else if (topNiche === 'productivity' && activeApp !== 'flow') {
       historicalSuggestions.push({
@@ -595,7 +595,7 @@ export default function ConnectTopbar({
         description: 'Manage outstanding roadmaps and deliverables',
         href: '/flows',
         kind: 'flow',
-        accent: '#A855F7'
+        accent: '#6366F1'
       });
     }
  else if (topNiche === 'security' && activeApp !== 'vault') {
@@ -917,9 +917,9 @@ export default function ConnectTopbar({
                 </Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
                   {[
-                    { name: 'note', label: 'Ideas', color: '#EC4899', href: '/app', Icon: FileText },
-                    { name: 'goals', label: 'Goals', color: '#A855F7', href: '/goals', Icon: Target },
-                    { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault', Icon: Lock },
+                    { name: 'note', label: 'Ideas', color: '#6366F1', href: '/app', Icon: FileText },
+                    { name: 'goals', label: 'Goals', color: '#6366F1', href: '/goals', Icon: Target },
+                    { name: 'vault', label: 'Vault', color: '#6366F1', href: '/vault', Icon: Lock },
                     { name: 'tags', label: 'Tags', color: '#F87171', action: () => openUnified('tags'), Icon: TagIcon },
                     { name: 'trash', label: 'Trash', color: '#EF4444', action: () => openUnified('trash'), Icon: TrashIcon },
                   ].map((app) => {
@@ -993,7 +993,7 @@ export default function ConnectTopbar({
                         borderColor: 'rgba(168, 85, 247, 0.4)',
                         transform: 'translateX(2px)'}}}
                   >
-                    <GitFork size={18} strokeWidth={2} style={{ color: '#A855F7', flexShrink: 0 }} />
+                    <GitFork size={18} strokeWidth={2} style={{ color: '#6366F1', flexShrink: 0 }} />
                     <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                       <Typography component="span" sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
                         Workflows
@@ -1384,7 +1384,7 @@ export default function ConnectTopbar({
                               })
                             );
                           }}
-                          sx={{ color: '#A855F7', '&:hover': { bgcolor: 'rgba(168,85,247,0.15)' }, width: 30, height: 30 }}
+                          sx={{ color: '#6366F1', '&:hover': { bgcolor: 'rgba(99,102,241,0.15)' }, width: 30, height: 30 }}
                           title="Open Search Sidekick"
                         >
                           <Sparkles size={15} />
@@ -1702,7 +1702,7 @@ export default function ConnectTopbar({
             </Box>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-              <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1.25, py: 0.3, borderRadius: '999px', bgcolor: 'rgba(236,72,153,0.15)', color: '#EC4899', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, lineHeight: 1.2 }}>
+              <Box component="span" sx={{ fontSize: '9px', fontFamily: 'monospace', px: 1.25, py: 0.3, borderRadius: '999px', bgcolor: 'rgba(99,102,241,0.15)', color: '#6366F1', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, lineHeight: 1.2 }}>
                 {currentTier} PLAN
               </Box>
               {profileUsername && profileDisplayName && profileDisplayName !== profileUsername && (
@@ -1737,11 +1737,11 @@ export default function ConnectTopbar({
                   width: 30,
                   height: 30,
                   borderRadius: '999px',
-                  color: '#EC4899',
-                  bgcolor: 'rgba(236,72,153,0.12)',
-                  border: '1px solid rgba(236,72,153,0.25)',
+                  color: '#6366F1',
+                  bgcolor: 'rgba(99,102,241,0.12)',
+                  border: '1px solid rgba(99,102,241,0.25)',
                   flexShrink: 0,
-                  '&:hover': { bgcolor: 'rgba(236,72,153,0.25)', color: 'white' },
+                  '&:hover': { bgcolor: 'rgba(99,102,241,0.25)', color: 'white' },
                 }}
               >
                 <Users size={14} />
@@ -1847,7 +1847,7 @@ export default function ConnectTopbar({
                 handleCloseAll();
                 openProUpgrade();
               }}
-              sx={{ minHeight: 44, borderRadius: '16px', bgcolor: 'rgba(236,72,153,0.08)', color: '#EC4899', border: '1px solid rgba(236,72,153,0.22)', px: 2, py: 1.1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: 'rgba(236,72,153,0.15)' } }}
+              sx={{ minHeight: 44, borderRadius: '16px', bgcolor: 'rgba(99,102,241,0.08)', color: '#6366F1', border: '1px solid rgba(99,102,241,0.22)', px: 2, py: 1.1, fontSize: '0.84rem', textTransform: 'none', fontWeight: 800, minWidth: 0, overflow: 'hidden', '&:hover': { bgcolor: 'rgba(99,102,241,0.15)' } }}
               startIcon={<Sparkles size={14} style={{ flexShrink: 0 }} />}
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, lineHeight: 1.3 }}>Sync</span>
@@ -2543,7 +2543,7 @@ export default function ConnectTopbar({
                 >
                   <Bell size={18} strokeWidth={2.2} />
                   {(suggestions.length > 0 || notifHint || passiveNotification) && (
-                    <Box sx={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', bgcolor: '#EC4899', border: '1.5px solid #000' }} />
+                    <Box sx={{ position: 'absolute', top: 8, right: 8, width: 7, height: 7, borderRadius: '50%', bgcolor: '#6366F1', border: '1.5px solid #000' }} />
                   )}
                 </IconButton>
               )}

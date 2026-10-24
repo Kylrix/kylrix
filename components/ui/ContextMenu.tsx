@@ -112,12 +112,12 @@ export function ContextMenuPanel({ onCloseAction, items, title }: { onCloseActio
             className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 text-left border cursor-pointer ${
               item.variant === 'destructive'
                 ? 'bg-red-500/10 border-red-500/20 text-[#FF453A] hover:bg-red-500/20'
-                : 'bg-[#161412] border-[#1C1A18] text-[#F5F2ED] hover:border-[#A855F7] hover:text-white'
+                : 'bg-[#161412] border-[#1C1A18] text-[#F5F2ED] hover:border-[#6366F1] hover:text-white'
             }`}
           >
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
               {item.icon && (
-                <div className="p-1.5 rounded-lg bg-[#0A0908] border border-[#1C1A18] text-[#A855F7] shrink-0">
+                <div className="p-1.5 rounded-lg bg-[#0A0908] border border-[#1C1A18] text-[#6366F1] shrink-0">
                   {item.icon}
                 </div>
               )}

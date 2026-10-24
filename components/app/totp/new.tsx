@@ -240,7 +240,7 @@ export default function NewTotpDialog({
               value={form.issuer}
               onChange={(e) => setForm({ ...form, issuer: e.target.value })}
               required
-              className="w-full bg-[#0A0908] text-white placeholder-white/20 border border-[#1C1A18] hover:border-white/20 focus:border-[#10B981] rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition-all"
+              className="w-full bg-[#0A0908] text-white placeholder-white/20 border border-[#1C1A18] hover:border-white/20 focus:border-[#6366F1] rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition-all"
             />
           </div>
 
@@ -255,7 +255,7 @@ export default function NewTotpDialog({
               value={form.accountName}
               onChange={(e) => setForm({ ...form, accountName: e.target.value })}
               required
-              className="w-full bg-[#0A0908] text-white placeholder-white/20 border border-[#1C1A18] hover:border-white/20 focus:border-[#10B981] rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition-all"
+              className="w-full bg-[#0A0908] text-white placeholder-white/20 border border-[#1C1A18] hover:border-white/20 focus:border-[#6366F1] rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition-all"
             />
           </div>
 
@@ -270,7 +270,7 @@ export default function NewTotpDialog({
               value={form.secretKey}
               onChange={(e) => setForm({ ...form, secretKey: e.target.value })}
               required
-              className="w-full bg-[#0A0908] text-white placeholder-white/20 border border-[#1C1A18] hover:border-white/20 focus:border-[#10B981] rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition-all"
+              className="w-full bg-[#0A0908] text-white placeholder-white/20 border border-[#1C1A18] hover:border-white/20 focus:border-[#6366F1] rounded-2xl px-4 py-3.5 text-sm focus:outline-none transition-all"
             />
           </div>
 
@@ -280,7 +280,7 @@ export default function NewTotpDialog({
               type="checkbox"
               checked={showAdvanced}
               onChange={(e) => setShowAdvanced(e.target.checked)}
-              className="w-4 h-4 rounded border-[#1C1A18] text-[#10B981] focus:ring-[#10B981]/20 focus:ring-opacity-50 accent-[#10B981] cursor-pointer"
+              className="w-4 h-4 rounded border-[#1C1A18] text-[#6366F1] focus:ring-[#6366F1]/20 focus:ring-opacity-50 accent-[#6366F1] cursor-pointer"
             />
             <span className="text-sm font-semibold text-white/70">
               Advanced Settings
@@ -328,7 +328,7 @@ export default function NewTotpDialog({
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-3.5 rounded-2xl font-extrabold bg-[#10B981] hover:bg-[#059669] text-black disabled:bg-[#10B981]/30 disabled:text-black/50 disabled:pointer-events-none transition-all flex items-center justify-center text-sm cursor-pointer shadow-[0_4px_20px_rgba(16,185,129,0.15)]"
+            className="flex-1 py-3.5 rounded-2xl font-extrabold bg-[#6366F1] hover:bg-[#5254E8] text-white disabled:bg-[#6366F1]/30 disabled:text-white/50 disabled:pointer-events-none transition-all flex items-center justify-center text-sm cursor-pointer shadow-[0_4px_20px_rgba(99,102,241,0.15)]"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
