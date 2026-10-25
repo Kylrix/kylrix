@@ -219,6 +219,14 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             return;
           }
 
+          if (payload && (payload.name || payload.title || payload.password || payload.encryptedData)) {
+            try {
+              const processed = await processAndSetCredential(payload);
+              setCredential(processed);
+              setError(null);
+            } catch {}
+          }
+
           try {
             const { ApiResources } = await import('@/lib/api/resources');
             const fresh = await ApiResources.getPublicVaultItem(credentialId).catch(() => null);

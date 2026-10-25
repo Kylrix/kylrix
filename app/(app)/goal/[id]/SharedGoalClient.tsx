@@ -179,6 +179,21 @@ export default function SharedGoalClient({
             return;
           }
 
+          if (payload && (payload.title || payload.description !== undefined || payload.status)) {
+            const updatedGoal: PublicGoal = {
+              id: payload.id || payload.$id || goalId,
+              title: payload.title || '',
+              description: payload.description ?? null,
+              status: payload.status || 'todo',
+              priority: payload.priority || 'medium',
+              dueDate: payload.dueDate ?? null,
+              locked: payload.isLocked || payload.locked,
+            };
+            setCurrentGoal(updatedGoal);
+            setAccessDenied(false);
+            void SharedOfflineSubstrate.saveShared('goal', goalId, updatedGoal);
+          }
+
           // Trigger fresh remote fetch to ensure complete goal details
           try {
             const { getSharedGoalData } = await import('@/lib/actions/client-ops');
@@ -188,22 +203,7 @@ export default function SharedGoalClient({
               setAccessDenied(false);
               void SharedOfflineSubstrate.saveShared('goal', goalId, fresh);
             }
-          } catch {
-            if (payload) {
-              const updatedGoal: PublicGoal = {
-                id: payload.id || payload.$id || goalId,
-                title: payload.title || '',
-                description: payload.description ?? null,
-                status: payload.status || 'todo',
-                priority: payload.priority || 'medium',
-                dueDate: payload.dueDate ?? null,
-                locked: payload.isLocked || payload.locked,
-              };
-              setCurrentGoal(updatedGoal);
-              setAccessDenied(false);
-              void SharedOfflineSubstrate.saveShared('goal', goalId, updatedGoal);
-            }
-          }
+          } catch {}
         });
       } catch {}
     })();

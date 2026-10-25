@@ -171,6 +171,11 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                         return;
                     }
 
+                    if (response.payload && (response.payload.title || response.payload.schema)) {
+                        setForm(response.payload as unknown as Forms);
+                        void SharedOfflineSubstrate.saveShared('form', resolvedParams.id, response.payload);
+                    }
+
                     try {
                         const { getPublicFormData } = await import('@/lib/actions/client-ops');
                         const publicForm = await getPublicFormData(resolvedParams.id).catch(() => null);

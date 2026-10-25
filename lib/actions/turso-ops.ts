@@ -13,8 +13,8 @@ type CacheEntry<T> = {
 const queryTTLMs = 3000; // 3 seconds short TTL for list queries
 const resourceCache = new Map<string, CacheEntry<any>>();
 
-export async function invalidateResourceCache(keyPrefix?: string, userId?: string) {
-  if (!keyPrefix && !userId) {
+export async function invalidateResourceCache(keyPrefix?: string, userId?: string, rowId?: string) {
+  if (!keyPrefix && !userId && !rowId) {
     resourceCache.clear();
     await invalidateRowCache();
     return;
@@ -29,6 +29,9 @@ export async function invalidateResourceCache(keyPrefix?: string, userId?: strin
     }
   }
 
+  if (rowId) {
+    await invalidateRowCache(undefined, rowId);
+  }
   if (keyPrefix) {
     const tableMap: Record<string, string> = {
       notes: 'ideas',
@@ -43,7 +46,7 @@ export async function invalidateResourceCache(keyPrefix?: string, userId?: strin
       forms: 'forms',
       events: 'events',
     };
-    await invalidateRowCache(tableMap[keyPrefix] || keyPrefix);
+    await invalidateRowCache(tableMap[keyPrefix] || keyPrefix, rowId);
   }
 }
 
@@ -477,7 +480,8 @@ export async function deleteKeychainTurso(id: string) {
 export async function upsertVaultItemTurso(data: any) {
   try {
     const rawData = data || {};
-    invalidateResourceCache('vault', rawData.userId);
+    const vaultItemId = rawData.id || rawData.$id;
+    invalidateResourceCache('vault', rawData.userId, vaultItemId);
     const titleVal = rawData.title || rawData.name || 'Untitled Secret';
     const typeVal = rawData.type || rawData.itemType || 'login';
     const encryptedDataVal = rawData.encrypted_data || rawData.encryptedData || rawData.password || rawData.secret || '';
@@ -524,6 +528,17 @@ export async function upsertVaultItemTurso(data: any) {
       target: schema.vaultItems.id,
       set: { ...payload, updatedAt: payload.updatedAt || new Date().toISOString() },
     });
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      void broadcastRealtimeEvent({
+        tableId: 'credentials',
+        rowId: payload.id,
+        action: 'update',
+        payload: { $id: payload.id, ...payload },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertVaultItemTurso failed:', err);
@@ -591,11 +606,22 @@ export async function listVaultItemsTurso(userId: string) {
 
 export async function deleteVaultItemTurso(id: string) {
   try {
-    invalidateResourceCache('vault');
+    invalidateResourceCache('vault', undefined, id);
     await db
       .update(schema.vaultItems)
       .set({ isTrashed: true, updatedAt: new Date().toISOString() })
       .where(eq(schema.vaultItems.id, id));
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      void broadcastRealtimeEvent({
+        tableId: 'credentials',
+        rowId: id,
+        action: 'delete',
+        payload: { $id: id, id, isTrashed: true, isDeleted: true },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] deleteVaultItemTurso failed:', err);
@@ -606,7 +632,8 @@ export async function deleteVaultItemTurso(id: string) {
 export async function upsertTotpSecretTurso(data: any) {
   try {
     const rawData = data || {};
-    invalidateResourceCache('totp', rawData.userId);
+    const totpId = rawData.id || rawData.$id;
+    invalidateResourceCache('totp', rawData.userId, totpId);
     const accountVal = rawData.account || rawData.accountName || 'Account';
     const encryptedSecretVal = rawData.encryptedSecret || rawData.secretKey || rawData.secret || '';
 
@@ -640,6 +667,17 @@ export async function upsertTotpSecretTurso(data: any) {
       target: schema.totpSecrets.id,
       set: payload,
     });
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      void broadcastRealtimeEvent({
+        tableId: 'totpSecrets',
+        rowId: payload.id,
+        action: 'update',
+        payload: { $id: payload.id, ...payload },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertTotpSecretTurso failed:', err);
@@ -697,8 +735,19 @@ export async function listTotpSecretsTurso(userId: string) {
 
 export async function deleteTotpSecretTurso(id: string) {
   try {
-    invalidateResourceCache('totp');
+    invalidateResourceCache('totp', undefined, id);
     await db.delete(schema.totpSecrets).where(eq(schema.totpSecrets.id, id));
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      void broadcastRealtimeEvent({
+        tableId: 'totpSecrets',
+        rowId: id,
+        action: 'delete',
+        payload: { $id: id, id, isTrashed: true, isDeleted: true },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] deleteTotpSecretTurso failed:', err);
@@ -963,6 +1012,9 @@ export async function upsertNotesBatchTurso(items: (typeof schema.notes.$inferIn
 
   try {
     if (items[0]?.userId) invalidateResourceCache('notes', items[0].userId);
+    for (const item of items) {
+      if (item?.id) invalidateResourceCache('notes', undefined, item.id);
+    }
     const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
 
     await db.transaction(async (tx) => {
@@ -995,7 +1047,7 @@ export async function upsertNotesBatchTurso(items: (typeof schema.notes.$inferIn
 
 export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
   try {
-    invalidateResourceCache('notes', data.userId);
+    invalidateResourceCache('notes', data.userId, data.id);
     const updatedAt = data.updatedAt || new Date().toISOString();
     const payload = { ...data, updatedAt };
 
@@ -1006,9 +1058,16 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
 
     try {
       const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
-      await broadcastRealtimeEvent({
+      void broadcastRealtimeEvent({
         databaseId: 'turso',
         tableId: 'ideas',
+        rowId: data.id,
+        action: 'update',
+        payload: { $id: data.id, ...payload },
+      }).catch(() => {});
+      void broadcastRealtimeEvent({
+        databaseId: 'turso',
+        tableId: 'notes',
         rowId: data.id,
         action: 'update',
         payload: { $id: data.id, ...payload },
@@ -1024,7 +1083,7 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
 
 export async function deleteNoteTurso(noteId: string) {
   try {
-    invalidateResourceCache('notes');
+    invalidateResourceCache('notes', undefined, noteId);
     const updatedAt = new Date().toISOString();
     await db
       .update(schema.notes)
@@ -1136,7 +1195,7 @@ export async function upsertGoalTurso(
   data: Partial<typeof schema.goals.$inferInsert> & { id: string; userId: string; title: string }
 ) {
   try {
-    invalidateResourceCache('goals', data.userId);
+    invalidateResourceCache('goals', data.userId, data.id);
     const now = new Date().toISOString();
     const shapedPayload: any = {
       ...data,
@@ -1152,8 +1211,14 @@ export async function upsertGoalTurso(
 
     try {
       const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
-      await broadcastRealtimeEvent({
+      void broadcastRealtimeEvent({
         tableId: 'tasks',
+        rowId: data.id,
+        action: 'update',
+        payload: shapedPayload,
+      }).catch(() => {});
+      void broadcastRealtimeEvent({
+        tableId: 'goals',
         rowId: data.id,
         action: 'update',
         payload: shapedPayload,
@@ -1209,7 +1274,7 @@ export async function getGoalTurso(goalId: string) {
 
 export async function deleteGoalTurso(goalId: string) {
   try {
-    invalidateResourceCache('goals');
+    invalidateResourceCache('goals', undefined, goalId);
     await db.delete(schema.goals).where(eq(schema.goals.id, goalId));
     try {
       const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
@@ -1229,11 +1294,22 @@ export async function deleteGoalTurso(goalId: string) {
 
 export async function upsertFormTurso(data: typeof schema.forms.$inferInsert) {
   try {
-    invalidateResourceCache('forms', data.userId);
+    invalidateResourceCache('forms', data.userId, data.id);
     await db.insert(schema.forms).values(data).onConflictDoUpdate({
       target: schema.forms.id,
       set: data,
     });
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      void broadcastRealtimeEvent({
+        tableId: 'forms',
+        rowId: data.id,
+        action: 'update',
+        payload: { $id: data.id, ...data },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1265,11 +1341,22 @@ export async function listFormsTurso(userId: string) {
 
 export async function upsertEventTurso(data: typeof schema.events.$inferInsert) {
   try {
-    invalidateResourceCache('events', data.userId);
+    invalidateResourceCache('events', data.userId, data.id);
     await db.insert(schema.events).values(data).onConflictDoUpdate({
       target: schema.events.id,
       set: data,
     });
+
+    try {
+      const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
+      void broadcastRealtimeEvent({
+        tableId: 'events',
+        rowId: data.id,
+        action: 'update',
+        payload: { $id: data.id, ...data },
+      }).catch(() => {});
+    } catch {}
+
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };

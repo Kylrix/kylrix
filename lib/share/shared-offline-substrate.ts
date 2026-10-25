@@ -220,16 +220,7 @@ export const SharedOfflineSubstrate = {
       const offlineHit = await this.loadOffline<T>(kind, id, currentUserId);
       if (offlineHit && offlineHit.data) {
         hadLocalHit = true;
-
-        // InitialData from fresh SSR route fetch always takes precedence on page load/reload
-        if (options.initialData) {
-          await this.saveShared<T>(kind, id, options.initialData);
-          const ownerId = resolveResourceOwnerId(options.initialData as Record<string, unknown>);
-          const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
-          onLocalHit?.(options.initialData, isOwner);
-        } else {
-          onLocalHit?.(offlineHit.data, offlineHit.isOwner);
-        }
+        onLocalHit?.(offlineHit.data, offlineHit.isOwner);
       } else if (options.initialData) {
         // No local cache hit, but server-rendered initialData exists
         hadLocalHit = true;

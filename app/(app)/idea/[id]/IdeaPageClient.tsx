@@ -184,7 +184,7 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
   }, [initialNote, decryptionKey, user?.$id]);
 
   // ── Permission Resolution ─────────────────────────────────────────────────
-  const resolveAccess = useCallback(async (_forceRefresh = false): Promise<void> => {
+  const resolveAccess = useCallback(async (forceRefresh = false): Promise<void> => {
     try {
       const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
 
@@ -192,7 +192,7 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
         kind: 'note',
         id: noteId,
         currentUserId: user?.$id,
-        initialData: initialNote,
+        initialData: forceRefresh ? null : initialNote,
         onLocalHit: async (cachedRaw) => {
           try {
             const decrypted = await decryptNoteIfNeeded(cachedRaw, decryptionKey);
@@ -278,6 +278,18 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
           void SharedOfflineSubstrate.evictShared('note', noteId);
         });
         return;
+      }
+
+      if (payload && (payload.title !== undefined || payload.content !== undefined)) {
+        void (async () => {
+          try {
+            const note = await decryptNoteIfNeeded(payload, decryptionKey);
+            const role = computeRole(note, user?.$id);
+            if (role !== 'none') {
+              setAccess({ role: role as any, note });
+            }
+          } catch {}
+        })();
       }
 
       // Live update event received: re-trigger authoritative remote access resolution
