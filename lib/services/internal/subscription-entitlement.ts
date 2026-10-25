@@ -12,7 +12,23 @@ export type SubscriptionEntitlementSource =
   | 'prefs_sync'
   | 'none';
 
-export function invalidateEntitlementCache(_userId?: string) {}
+type EntitlementResult = {
+  active: boolean;
+  expiresAt: string | null;
+  source: SubscriptionEntitlementSource;
+  uiTier: BillingUiTier;
+};
+
+const entitlementCache = new Map<string, { data: EntitlementResult; expiresAt: number }>();
+const ENTITLEMENT_TTL_MS = 15000; // 15 seconds
+
+export function invalidateEntitlementCache(userId?: string) {
+  if (userId) {
+    entitlementCache.delete(userId);
+  } else {
+    entitlementCache.clear();
+  }
+}
 
 export async function suspendAccountAndLogIpSecure(_params: {
   userId: string;
@@ -23,12 +39,12 @@ export async function suspendAccountAndLogIpSecure(_params: {
   return true;
 }
 
-export async function getVerifiedProEntitlementForUser(userId: string): Promise<{
-  active: boolean;
-  expiresAt: string | null;
-  source: SubscriptionEntitlementSource;
-  uiTier: BillingUiTier;
-}> {
+export async function getVerifiedProEntitlementForUser(userId: string): Promise<EntitlementResult> {
+  const cleanUserId = String(userId || '').trim();
+  if (!cleanUserId) {
+    return { active: false, expiresAt: null, source: 'none', uiTier: 'FREE' };
+  }
+
   if (isSelfHostedDeployment()) {
     const open = getOpenSuiteEntitlement();
     return {
@@ -39,48 +55,55 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     };
   }
 
-  // 1. Resolve user email and check all matching account IDs for subscriptions or contributor flag
+  const cached = entitlementCache.get(cleanUserId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
+  // 1. Resolve user email and check matching account IDs for subscriptions or contributor flag
   try {
-    const targetUser = await db
+    let targetUser = await db
       .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
       .from(schema.user)
-      .where(eq(schema.user.id, userId))
+      .where(eq(schema.user.id, cleanUserId))
       .limit(1);
 
-    const userEmail = targetUser[0]?.email ? targetUser[0].email.trim().toLowerCase() : null;
-
-    let targetUserIds = [userId];
-    if (userEmail) {
-      const sameEmailUsers = await db
-        .select({ id: schema.user.id, isContributor: schema.user.isContributor })
+    if (!targetUser.length && cleanUserId.includes('@')) {
+      targetUser = await db
+        .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
         .from(schema.user)
-        .where(eq(schema.user.email, userEmail));
-      if (sameEmailUsers.length > 0) {
-        targetUserIds = Array.from(new Set([...targetUserIds, ...sameEmailUsers.map((u) => u.id)]));
-        if (sameEmailUsers.some((u) => Boolean(u.isContributor))) {
-          return {
-            active: true,
-            expiresAt: null,
-            source: 'subscription_row',
-            uiTier: 'CONTRIBUTOR',
-          };
-        }
-      }
+        .where(eq(schema.user.email, cleanUserId.toLowerCase()))
+        .limit(1);
     }
 
-    if (targetUser[0]?.isContributor) {
-      return {
-        active: true,
-        expiresAt: null,
-        source: 'subscription_row',
-        uiTier: 'CONTRIBUTOR',
-      };
+    if (!targetUser.length) {
+      targetUser = await db
+        .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
+        .from(schema.user)
+        .where(eq(schema.user.appwriteAccountId, cleanUserId))
+        .limit(1);
+    }
+
+    const u = targetUser[0];
+    let targetUserIds = [cleanUserId];
+    if (u) {
+      if (u.id) targetUserIds.push(u.id);
+      if (u.isContributor) {
+        const res: EntitlementResult = {
+          active: true,
+          expiresAt: null,
+          source: 'subscription_row',
+          uiTier: 'CONTRIBUTOR',
+        };
+        entitlementCache.set(cleanUserId, { data: res, expiresAt: Date.now() + ENTITLEMENT_TTL_MS });
+        return res;
+      }
     }
 
     const tursoSub = await db
       .select()
       .from(schema.subscriptions)
-      .where(inArray(schema.subscriptions.userId, targetUserIds))
+      .where(inArray(schema.subscriptions.userId, Array.from(new Set(targetUserIds))))
       .limit(10);
 
     for (const sub of tursoSub) {
@@ -94,12 +117,14 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
           const resTier = (tierUpper === 'PRO' || tierUpper === 'TEAMS' || tierUpper === 'LIFETIME' || tierUpper === 'CONTRIBUTOR')
             ? (tierUpper as BillingUiTier)
             : 'PRO';
-          return {
+          const res: EntitlementResult = {
             active: true,
             expiresAt: periodEnd ? new Date(periodEnd).toISOString() : null,
             source: 'subscription_row',
             uiTier: resTier,
           };
+          entitlementCache.set(cleanUserId, { data: res, expiresAt: Date.now() + ENTITLEMENT_TTL_MS });
+          return res;
         }
       }
     }

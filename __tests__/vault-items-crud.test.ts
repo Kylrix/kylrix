@@ -27,12 +27,22 @@ vi.mock('@/lib/db', async () => {
       }),
       insert: (table: any) => ({
         values: (val: any) => {
-          if (table === actualSchema.vaultItems) {
-            mockVaultRows.push(val);
-          } else {
-            mockTotpRows.push(val);
-          }
-          return Promise.resolve();
+          const handleInsert = () => {
+            if (table === actualSchema.vaultItems) {
+              const idx = mockVaultRows.findIndex((r) => r.id === val.id);
+              if (idx >= 0) mockVaultRows[idx] = val;
+              else mockVaultRows.push(val);
+            } else if (table === actualSchema.totpSecrets) {
+              const idx = mockTotpRows.findIndex((r) => r.id === val.id);
+              if (idx >= 0) mockTotpRows[idx] = val;
+              else mockTotpRows.push(val);
+            }
+            return Promise.resolve();
+          };
+          const res = handleInsert();
+          (res as any).onConflictDoUpdate = (_opts: any) => handleInsert();
+          (res as any).onConflictDoNothing = () => handleInsert();
+          return res;
         },
       }),
       update: (table: any) => ({
