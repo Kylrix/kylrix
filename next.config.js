@@ -35,9 +35,9 @@ const _nextConfig = {
     NEXT_PUBLIC_PRICING_PLANS_JSON: buildPublicPricingPlansJson(),
     NEXT_PUBLIC_FEEDBACK_FORM_ID: process.env.NEXT_PUBLIC_FEEDBACK_FORM_ID || '',
   },
-  // Standalone output produces a self-contained server in .next/standalone
-  // Required for efficient Docker deployments (no node_modules in final image)
-  output: 'standalone',
+  // Standalone output produces a self-contained server in .next/standalone (for Docker self-hosting)
+  // On Vercel, serverless function bundling handles dependencies natively, so output should be undefined to avoid redundant function storage overhead.
+  output: process.env.VERCEL ? undefined : 'standalone',
   typescript: {
     tsconfigPath: './tsconfig.json',
     ignoreBuildErrors: false,
@@ -47,7 +47,12 @@ const _nextConfig = {
     optimizePackageImports: [
       'lucide-react',
       'lodash',
-      'date-fns'],
+      'date-fns',
+      '@better-auth/passkey',
+      '@better-auth/oauth-provider',
+      '@libsql/client',
+      '@scure/bip39',
+      'viem'],
   },
   webpack: (config, { isServer }) => {
     if (!isServer) {

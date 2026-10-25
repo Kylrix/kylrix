@@ -62,7 +62,8 @@ class AuditLogger {
   private readonly FLUSH_INTERVAL = 5000; // 5 seconds
 
   constructor() {
-    // Auto-flush logs periodically
+    // Auto-flush logs periodically in browser environments only.
+    // In serverless / Node / Edge environments, do not run setInterval to avoid CPU consumption / un-terminated loops.
     if (typeof window !== 'undefined') {
       this.flushInterval = setInterval(() => {
         this.flush();
