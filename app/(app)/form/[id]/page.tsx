@@ -159,8 +159,9 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     `doc:${resolvedParams.id}`,
                     `row:${resolvedParams.id}`,
                     `forms`,
+                    `databases.turso.collections.forms.documents.${resolvedParams.id}`,
                 ];
-                unsub = realtime.subscribe(channels, (response: any) => {
+                unsub = realtime.subscribe(channels, async (response: any) => {
                     const rowId = response.payload?.$id || response.payload?.id;
                     if (rowId && rowId !== resolvedParams.id) return;
                     if (response.events?.some((e: string) => e.endsWith('.delete')) || response.payload?.isTrash || response.payload?.isDeleted) {
@@ -169,21 +170,21 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                         void SharedOfflineSubstrate.evictShared('form', resolvedParams.id);
                         return;
                     }
-                    if (!response.events || response.events.some((e: string) => e.endsWith('.update') || e.endsWith('.create'))) {
-                        if (response.payload) {
-                            if (response.payload.isPublic === false && response.payload.isGuest === false && response.payload.status !== 'published') {
+
+                    try {
+                        const publicForm = await getPublicFormData(resolvedParams.id).catch(() => null);
+                        const source = publicForm || response.payload;
+                        if (source) {
+                            if (source.isPublic === false && source.isGuest === false && source.status !== 'published') {
                                 setError('This form is private and not currently accepting responses.');
                                 setForm(null);
                                 void SharedOfflineSubstrate.evictShared('form', resolvedParams.id);
                                 return;
                             }
-                            setForm((prev: any) => {
-                                const updated = { ...prev, ...response.payload };
-                                void SharedOfflineSubstrate.saveShared('form', resolvedParams.id, updated);
-                                return updated;
-                            });
+                            setForm(source as unknown as Forms);
+                            void SharedOfflineSubstrate.saveShared('form', resolvedParams.id, source);
                         }
-                    }
+                    } catch {}
                 });
             } catch {}
         })();

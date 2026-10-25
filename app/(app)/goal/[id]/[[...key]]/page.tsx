@@ -7,6 +7,8 @@ import SharedGoalClient from '../SharedGoalClient';
  * Public goal share: /goal/[id] or /goal/[id]/[dek]
  * DEK in path unlocks vault-locked goals without exposing the master key.
  */
+export const dynamic = 'force-dynamic';
+
 export default async function SharedGoalPage({
   params,
 }: {

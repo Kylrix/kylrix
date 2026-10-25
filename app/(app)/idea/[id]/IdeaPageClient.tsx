@@ -203,7 +203,6 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
           } catch {}
         },
         fetchRemote: async () => {
-          if (initialNote && !_forceRefresh) return initialNote;
           const { getSharedNoteData } = await import('@/lib/actions/client-ops');
           return await getSharedNoteData(noteId);
         },
@@ -255,10 +254,13 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
     if (access.role === 'loading' || access.role === 'none') return;
 
     const channels = [
+      `ideas:${noteId}`,
       `notes:${noteId}`,
       `doc:${noteId}`,
       `row:${noteId}`,
+      'ideas',
       'notes',
+      `databases.turso.collections.ideas.documents.${noteId}`,
       `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${noteId}`,
       `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.rows.${noteId}`
     ];
@@ -267,7 +269,6 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
       const targetId = payload?.$id || payload?.id;
       if (targetId && targetId !== noteId) return;
 
-      const isUpdate = !response.events || response.events.some((e: string) => e.endsWith('.update') || e.endsWith('.create'));
       const isDelete = response.events?.some((e: string) => e.endsWith('.delete'));
 
       if (isDelete || (payload as any)?.isTrash === true || (payload as any)?.isDeleted === true) {
@@ -279,25 +280,8 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
         return;
       }
 
-      if (isUpdate && payload) {
-        void (async () => {
-          try {
-            const decrypted = await decryptNoteIfNeeded(payload, decryptionKey);
-            const role = computeRole(decrypted, user?.$id);
-            if (role === 'none') {
-              setAccess({ role: 'none', reason: 'no-access' });
-              void import('@/lib/share/shared-offline-substrate').then(({ SharedOfflineSubstrate }) => {
-                void SharedOfflineSubstrate.evictShared('note', noteId);
-              });
-              return;
-            }
-            const { SharedOfflineSubstrate } = await import('@/lib/share/shared-offline-substrate');
-            await SharedOfflineSubstrate.saveShared('note', noteId, decrypted);
-            setAccess({ role, note: decrypted });
-            setCachedData(CACHE_KEY, decrypted);
-          } catch {}
-        })();
-      }
+      // Live update event received: re-trigger authoritative remote access resolution
+      void resolveAccess(true);
     });
 
     return () => {

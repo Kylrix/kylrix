@@ -154,8 +154,8 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             } catch {}
           },
           fetchRemote: async () => {
-            if (rawCredential) return rawCredential;
-            return null;
+            const { ApiResources } = await import('@/lib/api/resources');
+            return await ApiResources.getPublicVaultItem(credentialId).catch(() => null);
           },
           onRemoteSuccess: async (freshRaw) => {
             if (cancelled) return;
@@ -202,6 +202,7 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
           `doc:${credentialId}`,
           `row:${credentialId}`,
           'credentials',
+          `databases.turso.collections.credentials.documents.${credentialId}`,
         ];
 
         unsub = realtime.subscribe(channels, async (response: any) => {
@@ -218,14 +219,17 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
             return;
           }
 
-          if (payload) {
-            try {
-              const processed = await processAndSetCredential(payload);
+          try {
+            const { ApiResources } = await import('@/lib/api/resources');
+            const fresh = await ApiResources.getPublicVaultItem(credentialId).catch(() => null);
+            const source = fresh || payload;
+            if (source) {
+              const processed = await processAndSetCredential(source);
               setCredential(processed);
               setError(null);
-              void SharedOfflineSubstrate.saveShared('vault', credentialId, payload);
-            } catch {}
-          }
+              void SharedOfflineSubstrate.saveShared('vault', credentialId, source);
+            }
+          } catch {}
         });
       } catch {}
     })();
