@@ -33,7 +33,7 @@ export default function TaskList() {
     }
   }, [ecosystemTags, refreshEcosystemTags]);
 
-  const [showCompletedSection, setShowCompletedSection] = useState(false);
+  const [showCompletedSection, setShowCompletedSection] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
 
   const openCreateGoal = useCallback(() => {
