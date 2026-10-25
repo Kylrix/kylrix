@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -43,7 +44,7 @@ async function sendTemplatedEmail(
     ctaUrl: 'https://www.kylrix.space/accounts',
     ...vars});
 
-  return { success: true, messageId: crypto.randomUUID(), subject: rendered.subject };
+  return { success: true, messageId: ulid(), subject: rendered.subject };
 }
 
 export async function notifySubscriptionActivated(input: {

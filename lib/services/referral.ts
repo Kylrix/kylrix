@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, or, desc } from 'drizzle-orm';
@@ -172,7 +173,7 @@ export const ReferralService = {
 
       const src = payload.src || resolved.src || 'user';
       const origin = payload.origin || 'direct';
-      const rowId = crypto.randomUUID();
+      const rowId = ulid();
       const now = new Date().toISOString();
 
       // 3. Create unique referral row
@@ -270,7 +271,7 @@ export const ReferralService = {
     }
 
     for (let i = 0; i < 5; i++) {
-      const suffix = Math.floor(1000 + Math.random() * 9000);
+      const suffix = ((typeof globalThis !== "undefined" && globalThis.crypto?.getRandomValues) ? (globalThis.crypto.getRandomValues(new Uint32Array(1))[0] % 9000 + 1000) : Math.floor(1000 + Math.random() * 9000));
       const candidate = `${base}${suffix}`;
       try {
         const existing = await db
@@ -294,7 +295,7 @@ export const ReferralService = {
               .where(eq(schema.profiles.id, userProfile[0].id));
           } else {
             await db.insert(schema.profiles).values({
-              id: crypto.randomUUID(),
+              id: ulid(),
               userId,
               username: candidate,
               displayName: name || candidate,

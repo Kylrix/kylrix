@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { WalletService, type SupportedWalletChain } from './wallets';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -64,7 +65,7 @@ export const Web3WalletService = {
     value: string;
     symbol: string;
   }) {
-    const id = input.hash || crypto.randomUUID();
+    const id = input.hash || ulid();
     const data = {
       id,
       userId: input.userId,

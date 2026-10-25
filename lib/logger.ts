@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Secure logging utility for production applications
  * Only logs in development environment
@@ -39,10 +40,7 @@ function parseSentryDsn(dsn: string): ParsedSentryDsn | null {
  * Helper to generate a 32-character hex ID for Sentry event IDs
  */
 function generateEventId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID().replace(/-/g, '');
-  }
-  return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  return ulid().toLowerCase();
 }
 
 export class SecureLogger {

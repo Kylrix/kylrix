@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Intelligent Object Patching Engine for Kylrix
  * Enables surgical, non-destructive updates to Notes, Forms, Goals, and structural objects.
@@ -205,7 +206,7 @@ export function applyFormPatch(
 
     if (patch.action === 'add') {
       const newField: FormField = {
-        id: patch.field?.id || `field_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: patch.field?.id || `field_${ulid()}`,
         label: patch.field?.label || 'New Question',
         type: patch.field?.type || 'text',
         required: Boolean(patch.field?.required),

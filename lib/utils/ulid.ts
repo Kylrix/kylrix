@@ -14,17 +14,26 @@ export function ulid(seedTime: number = Date.now()): string {
     now = Math.floor(now / ENCODING_LEN);
   }
 
-  // 80 bits of cryptographically secure randomness
-  const bytes = new Uint8Array(10);
-  if (globalThis.crypto?.getRandomValues) {
+  // 80 bits (16 base32 characters) of cryptographically secure randomness
+  const bytes = new Uint8Array(16);
+  if (typeof globalThis !== 'undefined' && globalThis.crypto?.getRandomValues) {
     globalThis.crypto.getRandomValues(bytes);
   } else {
-    for (let i = 0; i < bytes.length; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+    try {
+      // Node.js fallback
+      const cryptoModule = require('node:crypto');
+      const buf = cryptoModule.randomBytes(16);
+      bytes.set(buf);
+    } catch {
+      for (let i = 0; i < bytes.length; i += 1) {
+        bytes[i] = Math.floor(Math.random() * 256);
+      }
+    }
   }
+
   let randStr = '';
   for (let i = 0; i < 16; i++) {
-    const byte = bytes[i % 10];
-    randStr += ENCODING[byte % ENCODING_LEN];
+    randStr += ENCODING[bytes[i] & 31];
   }
 
   return timeStr + randStr;

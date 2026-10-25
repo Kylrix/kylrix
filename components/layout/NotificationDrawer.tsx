@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -161,7 +162,7 @@ export function NotificationContent({
         const rawLogs = await LocalEngine.cacheGet<any[]>(`f_notifications_${userId}`).catch(() => null);
         if (Array.isArray(rawLogs) && rawLogs.length > 0) {
           cached = rawLogs.map((log: any) => ({
-            id: log.$id || log.id || `notif_${Math.random()}`,
+            id: log.$id || log.id || `notif_${ulid()}`,
             category: 'system' as any,
             title: log.action || 'Activity Notification',
             message: log.details || 'New activity on your account.',

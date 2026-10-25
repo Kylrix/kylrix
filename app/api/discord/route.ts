@@ -7,6 +7,7 @@ import { PairingService } from '@/lib/services/pairing';
 import { PatService } from '@/lib/services/pats';
 import { systemTables } from '@/lib/data/system-tables';
 import { APPWRITE_CONFIG } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or } from 'drizzle-orm';
@@ -579,7 +580,7 @@ export async function linkDiscordUserAccount(
       await tables.createRow({
         databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
         tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
-        rowId: crypto.randomUUID(),
+        rowId: ulid(),
         data: {
           clientId: 'discord_account',
           userId,

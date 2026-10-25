@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import {
   buildFlowScopeKey,
   type FlowScopeInput,
@@ -89,7 +90,7 @@ export const FlowInstallService = {
     const isBuiltin = params.flowId.startsWith('kylrix-');
     if (!wf && !isBuiltin) throw new Error('Flow not found');
 
-    const id = crypto.randomUUID();
+    const id = ulid();
     await db.insert(schema.flowInstalls).values({
       id,
       flowId: params.flowId,

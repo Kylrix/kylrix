@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 /**
  * LocalEngine — Decoupled universal local storage substrate for local copy & RxDB IndexedDB.
@@ -217,7 +218,7 @@ export const LocalEngine = {
 
   async writeTelemetry(kind: string, payload: Record<string, any>): Promise<void> {
     if (typeof window === 'undefined') return;
-    const telemetryId = `telemetry_${kind}_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const telemetryId = `telemetry_${kind}_${ulid()}`;
     await this.cacheSet(telemetryId, {
       kind,
       payload,

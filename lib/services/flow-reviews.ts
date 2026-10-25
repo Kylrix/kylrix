@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { detectFlowPii } from '@/lib/flows/pii';
 import { WorkflowDbService } from '@/lib/services/workflows';
 import { db } from '@/lib/db';
@@ -21,7 +22,7 @@ export const FlowReviewService = {
     piiSummary?: string | null;
   }): Promise<any> {
     const now = new Date().toISOString();
-    const id = crypto.randomUUID();
+    const id = ulid();
 
     await db.insert(schema.flowReviews).values({
       id,

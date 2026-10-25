@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Client-side agentic tool executor — single path for UI + object mutations.
  */
@@ -161,11 +162,10 @@ async function executeAgenticToolCall(
       const tags = Array.isArray(args.tags) ? args.tags : args.tags ? [args.tags] : [];
       const isPublic = args.isPublic === true || args.isPublic === 'true';
 
-      const { ID } = await import('@/lib/data');
       const { resolveNoteCardTitle } = await import('@/constants/noteTitle');
       const { markNotePersistedRemote } = await import('@/lib/notes/compose-draft-registry');
       const { isValidAppwriteRowId } = await import('@/lib/utils/resource-ids');
-      const draftId = ID.unique();
+      const draftId = ulid();
       const now = new Date().toISOString();
       const draftNote = {
         $id: draftId,

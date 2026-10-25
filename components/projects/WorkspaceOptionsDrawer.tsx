@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { useState } from 'react';
 import { Settings, UserPlus, Link2, LogOut, Check, X } from 'lucide-react';
@@ -38,7 +39,7 @@ export function WorkspaceOptionsDrawer({
   const handleCopyInviteLink = async () => {
     let code = workspace.inviteCode;
     if (!code) {
-      code = crypto.randomUUID();
+      code = ulid();
       workspace.inviteCode = code;
       void ProjectsService.rotateInviteCode(wsId, code).catch((err) => {
         console.warn('[WorkspaceOptionsDrawer] Failed to sync generated inviteCode:', err);

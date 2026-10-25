@@ -1,4 +1,5 @@
-import { ID, Permission, Query, Role } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
+import { Permission, Query, Role } from '@/lib/data';
 import { systemTables, type SystemTablesPort } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/data';
 import type { ApiActor } from '@/lib/api/guard';
@@ -172,7 +173,7 @@ async function linkObjectToWorkspace(
     return await tables.createRow({
       databaseId: CHAT_DB,
       tableId: PROJECT_OBJECTS,
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         projectId,
         entityKind,
@@ -268,7 +269,7 @@ async function ensureTagsExist(
           .createRow({
             databaseId: DB,
             tableId: TAGS_TABLE,
-            rowId: ID.unique(),
+            rowId: ulid(),
             data: {
               name,
               nameLower,
@@ -538,7 +539,7 @@ export const ApiResources = {
     }
     const tables = systemTables();
     const now = new Date().toISOString();
-    const noteId = ID.unique();
+    const noteId = ulid();
 
     const isPublic = body?.isPublic !== undefined ? Boolean(body.isPublic) : true;
     const isGuest = body?.isGuest !== undefined ? Boolean(body.isGuest) : (body?.isPublic !== undefined ? Boolean(body.isPublic) : true);
@@ -800,7 +801,7 @@ export const ApiResources = {
       throw new WorkspaceJailError('Creating personal goals is forbidden for jailed workspace actors');
     }
     const tables = systemTables();
-    const goalId = ID.unique();
+    const goalId = ulid();
 
     const rowData = buildGoalCreateRow(actor.userId, body);
     if (wsId) {
@@ -1159,7 +1160,7 @@ export const ApiResources = {
       const wsRow = await tables.createRow({
         databaseId: FLOW_DB,
         tableId: 'projects',
-        rowId: ID.unique(),
+        rowId: ulid(),
         data: {
           title: workspaceTitle,
           summary: `Autonomous workspace for agent ${name}`,
@@ -1306,7 +1307,7 @@ export const ApiResources = {
       requireScope(actor, 'agents:provision');
     }
     
-    const targetAgentId = body.agentId ? String(body.agentId).trim() : ID.unique();
+    const targetAgentId = body.agentId ? String(body.agentId).trim() : ulid();
     const initResult = await this.initAgentIdentity(actor, targetAgentId, body);
 
     const name = String(body.name || initResult.name || 'Autonomous Agent').trim().slice(0, 128);
@@ -1503,7 +1504,7 @@ export const ApiResources = {
     const created = await tables.createRow({
       databaseId: FLOW_DATABASE_ID,
       tableId: COLLABORATORS_TABLE,
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         resourceId: workspaceId,
         resourceType: 'project',
@@ -1684,7 +1685,7 @@ export const ApiResources = {
     const wsId = body?.workspaceId || body?.projectId ? String(body.workspaceId || body.projectId) : null;
     const tables = systemTables();
     const now = new Date().toISOString();
-    const sessionId = ID.unique();
+    const sessionId = ulid();
     const title = String(body.title || `[${harness}] mirror`).slice(0, 200);
     const seed = {
       role: 'system',
@@ -1811,7 +1812,7 @@ export const ApiResources = {
       conv = await tables.createRow({
         databaseId: chatDb,
         tableId: convTable,
-        rowId: ID.unique(),
+        rowId: ulid(),
         data: {
           type: 'direct',
           name: body.name ? String(body.name).slice(0, 100) : null,
@@ -2033,7 +2034,7 @@ export const ApiResources = {
     const row = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: msgTable,
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         conversationId,
         senderId: actor.userId,
@@ -2107,7 +2108,7 @@ export const ApiResources = {
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: 'projects',
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         title: title.slice(0, 255),
         summary: body.summary != null ? String(body.summary) : '',
@@ -2207,7 +2208,7 @@ export const ApiResources = {
     const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops');
     const res = await addObjectToProjectSecure(workspaceId, entityKind, entityId, body.role as string, body.metadata);
     return {
-      id: (res as any)?.$id || ID.unique(),
+      id: (res as any)?.$id || ulid(),
       workspaceId,
       entityKind,
       entityId,
@@ -2261,7 +2262,7 @@ export const ApiResources = {
         const cal = await tables.createRow({
           databaseId: FLOW_DB,
           tableId: 'calendars',
-          rowId: ID.unique(),
+          rowId: ulid(),
           data: {
             name: 'Personal',
             color: '#F59E0B',
@@ -2282,7 +2283,7 @@ export const ApiResources = {
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: 'events',
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         title: title.slice(0, 255),
         description: body.description != null ? String(body.description) : '',
@@ -2403,7 +2404,7 @@ export const ApiResources = {
     const row = await tables.createRow({
       databaseId: FLOW_DB,
       tableId: 'forms',
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         title: title.slice(0, 255),
         description: body.description != null ? String(body.description) : '',
@@ -2859,7 +2860,7 @@ export const ApiResources = {
       mekBytes
     );
 
-    const itemId = ID.unique();
+    const itemId = ulid();
     const now = new Date().toISOString();
     const itemType = String(body.itemType || body.type || 'login').slice(0, 50);
 
@@ -3220,7 +3221,7 @@ export const ApiResources = {
     );
 
     const tags = Array.isArray(body.tags) ? body.tags.map(String) : [];
-    const itemId = ID.unique();
+    const itemId = ulid();
     const now = new Date().toISOString();
 
     const row = await tables.createRow({
@@ -3928,7 +3929,7 @@ export const ApiResources = {
     const created = await tables.createRow({
       databaseId: DB,
       tableId: TAGS_TABLE,
-      rowId: ID.unique(),
+      rowId: ulid(),
       data: {
         name,
         nameLower,
@@ -4074,7 +4075,7 @@ export const ApiResources = {
           // Create new user account on Cloud via Server SDK
           try {
             const newUser = await sysUsers.create(
-              sourceUserId || ID.unique(),
+              sourceUserId || ulid(),
               targetEmail,
               undefined,
               undefined,
@@ -4117,7 +4118,7 @@ export const ApiResources = {
           await sysTables.createRow({
             databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
             tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
-            rowId: ID.unique(),
+            rowId: ulid(),
             data: {
               userId: targetUserId,
               type: entryType,
@@ -4229,7 +4230,7 @@ export const ApiResources = {
       await databases.createRow(
         APPWRITE_CONFIG.DATABASES.NOTE,
         'billing_transactions',
-        ID.unique(),
+        ulid(),
         {
           paymentId: direct.paymentId,
           userId: actor.userId,

@@ -1,4 +1,5 @@
-import { Databases, ID, Permission, Query, Role, Storage } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
+import { Databases, Permission, Query, Role, Storage } from '@/lib/data';
 import { createHash } from 'node:crypto';
 import { APPWRITE_CONFIG } from '@/lib/data';
 
@@ -192,7 +193,7 @@ async function createEpoch(
   return await databases.createRow(
     CHAT_DB,
     EPOCHS_TABLE,
-    ID.unique(),
+    ulid(),
     {
       resourceId,
       epochNumber,

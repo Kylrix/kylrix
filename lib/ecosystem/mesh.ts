@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Kylrix Ecosystem Mesh Protocol
  * Defines the communication and state synchronization between distributed nodes.
@@ -50,7 +51,7 @@ export const MeshProtocol = {
   broadcast: (message: Omit<MeshMessage, 'id' | 'timestamp' | 'sourceNode'>, sourceId: string) => {
     const fullMessage: MeshMessage = {
       ...message,
-      id: typeof crypto !== 'undefined' ? crypto.randomUUID() : Math.random().toString(36),
+      id: ulid(),
       sourceNode: sourceId,
       timestamp: Date.now()
     };

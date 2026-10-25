@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -54,7 +55,7 @@ export const ChatService = {
   },
 
   async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string, _opts?: any) {
-    const id = crypto.randomUUID();
+    const id = ulid();
     const now = new Date().toISOString();
 
     await db.insert(schema.conversations).values({

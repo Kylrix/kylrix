@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -123,7 +124,7 @@ export function NewTagDrawer() {
     setError(null);
 
     const tagName = formData.name.trim();
-    const tagId = editingTag ? editingTag.$id : crypto.randomUUID();
+    const tagId = editingTag ? editingTag.$id : ulid();
     const now = new Date().toISOString();
     const liveTag: Tags = {
       $id: tagId,

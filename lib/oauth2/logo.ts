@@ -1,6 +1,7 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
-import { ID, Permission, Role } from '@/lib/data';
+import { Permission, Role } from '@/lib/data';
 import { account, storage } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/data';
 import { compressImageToWebP, validateFileUploadLimit } from '@/lib/storage/framework';
@@ -31,7 +32,7 @@ export async function uploadOAuthAppLogo(file: File): Promise<{
   validateFileUploadLimit(compressed, BUCKET);
 
   const user = await account.get();
-  const fileId = ID.unique();
+  const fileId = ulid();
   await storage.createFile(BUCKET, fileId, compressed, [
     Permission.read(Role.any()),
     Permission.read(Role.user(user?.$id || user?.id || 'guest')),

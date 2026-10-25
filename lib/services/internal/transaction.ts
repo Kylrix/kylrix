@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { systemTables } from '@/lib/data/system-tables';
 /**
  * Modular Transactions helper — system SDK / server actions only.
@@ -25,7 +26,7 @@ export async function withSystemTransaction<T>(
 ): Promise<T> {
   const tables: any = systemTables();
   if (typeof tables?.createTransaction !== 'function') {
-    return await fn(`tx_fallback_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`);
+    return await fn(`tx_fallback_${ulid()}`);
   }
   const tx = await tables.createTransaction(opts?.ttl ? { ttl: opts.ttl } : {});
   const txId: string = tx.$id;

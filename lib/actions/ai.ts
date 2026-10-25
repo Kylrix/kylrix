@@ -11,6 +11,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { TelemetryService } from "@/lib/services/telemetry";
 import { getAgenticUserMessage } from "@/lib/agentic/errors";
+import { ulid } from "@/lib/utils/ulid";
 
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
@@ -82,7 +83,7 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
         .limit(1);
 
       if (rows.length === 0) {
-        const newId = crypto.randomUUID();
+        const newId = ulid();
         const now = new Date().toISOString();
         await db.insert(schema.computeBalances).values({
           id: newId,
@@ -246,7 +247,7 @@ Please utilize this contextual memory to optimize your recommendations if releva
           .where(eq(schema.computeBalances.id, balanceRow.id || balanceRow.$id));
 
         await db.insert(schema.computeLedger).values({
-          id: crypto.randomUUID(),
+          id: ulid(),
           userId: actor.$id,
           tokensConsumed: totalTokens,
           timestamp: new Date().toISOString(),

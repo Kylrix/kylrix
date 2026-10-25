@@ -1,4 +1,5 @@
 "use client";
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
@@ -282,7 +283,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
       }
 
       const amountMicro = String(Math.floor(amountNum * 1_000_000));
-      const idempotencyKey = `transfer:instant:${nowMs()}_${Math.random().toString(36).slice(2, 10)}`;
+      const idempotencyKey = `transfer:instant:${ulid()}`;
 
       // Execute transfer instantly via Server Action
       const result = await getTokenClient().transfer({

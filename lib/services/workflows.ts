@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -6,7 +7,7 @@ import { TelemetryNiche } from '@/lib/context-engine';
 
 export const WorkflowDbService = {
   async saveWorkflow(wf: WorkflowChain, userId?: string): Promise<string> {
-    const id = wf.id || crypto.randomUUID();
+    const id = wf.id || ulid();
     const now = new Date().toISOString();
     const stepsArr = Array.isArray(wf.steps) ? wf.steps : [];
 

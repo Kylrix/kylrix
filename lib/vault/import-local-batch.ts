@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Local-only import batch earmarks + high-priority outbox.
  * LocalEngine substrate only.
@@ -49,7 +50,7 @@ const kickInflight = new Set<string>();
 const lifecycleInstalled = new Set<string>();
 
 export async function startImportBatch(userId: string): Promise<string> {
-  const batchId = `imp_${crypto.randomUUID().replace(/-/g, '')}`;
+  const batchId = `imp_${ulid().replace(/-/g, '')}`;
   const meta: ImportBatchMeta = {
     batchId,
     userId,

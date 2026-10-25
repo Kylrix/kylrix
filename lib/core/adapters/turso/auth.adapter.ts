@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { AuthPort, Actor } from '../../ports/auth.port';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -163,7 +164,7 @@ export class TursoAuthAdapter implements AuthPort {
 
   async createJWT(): Promise<{ jwt: string }> {
     // Generate sovereign JWT signed via Better Auth / internal key
-    return { jwt: `turso_${Date.now()}_${Math.random().toString(36).substring(2)}` };
+    return { jwt: `turso_${ulid()}` };
   }
 
   isEmailAdmin(email: string): boolean {

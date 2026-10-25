@@ -10,6 +10,7 @@ import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { TokenAction } from './shared';
+import { ulid } from '@/lib/utils/ulid';
 
 const { getActor, isEnvAdminUser, isEnvSERVERSDKUser } = shared;
 
@@ -76,7 +77,7 @@ export async function runTokenOperationSecure(body: any) {
       targetId: String(body?.targetId || '').trim(),
       targetOwnerId: String(body?.targetOwnerId || '').trim(),
       amountMicro: String(body?.amountMicro || '1'),
-      idempotencyKey: String(body?.idempotencyKey || `zap:${Date.now()}`),
+      idempotencyKey: String(body?.idempotencyKey || `zap:${ulid()}`),
       comment: body?.comment,
     });
   }
@@ -206,7 +207,7 @@ export async function createRowSecure(
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const tables = systemTables();
-  const rowId = data?.$id || data?.id || crypto.randomUUID();
+  const rowId = data?.$id || data?.id || ulid();
   const created = await tables.createRow({
     databaseId,
     tableId,
@@ -512,7 +513,7 @@ export async function createStandaloneTagSecure(tagName: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const id = crypto.randomUUID();
+  const id = ulid();
   const nameLower = tagName.trim().toLowerCase();
 
   await db.insert(schema.tags).values({

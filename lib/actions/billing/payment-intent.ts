@@ -4,7 +4,7 @@ import { createSystemClient } from '@/lib/data';
 import { getActor } from '@/lib/actions/secure-ops';
 import { dispatchTelegramNotification } from '@/lib/services/internal/telegram-dispatch';
 import { renderEmailTemplate } from '@/lib/email-renderer';
-import { ID } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 
 export interface PaymentIntentRecord {
   tier: string;
@@ -148,7 +148,7 @@ export async function checkAndRemindPaymentIntentAction(jwt?: string) {
         });
 
         await messaging.createEmail({
-          messageId: ID.unique(),
+          messageId: ulid(),
           subject: `Finish setting up ${tierName}`,
           content: rendered.html,
           users: [actor.$id],

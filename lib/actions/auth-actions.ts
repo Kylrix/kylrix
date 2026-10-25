@@ -1,6 +1,7 @@
 'use server';
 
 import { generateAuthenticationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from '@simplewebauthn/server';
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
@@ -294,8 +295,8 @@ export async function verifyPasskeyLoginAction(
         });
       }
 
-      const sessionToken = crypto.randomUUID();
-      const sessionId = crypto.randomUUID();
+      const sessionToken = ulid();
+      const sessionId = ulid();
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
       await db.insert(schema.session).values({
@@ -432,7 +433,7 @@ export async function selfHostedSignUpAction(payload: {
       return { success: false, error: 'An account with this email already exists. Please log in.' };
     }
 
-    const userId = crypto.randomUUID();
+    const userId = ulid();
     const now = new Date();
 
     await db.insert(schema.user).values({
@@ -478,7 +479,7 @@ export async function initializeSelfHostedUserVaultAction(payload: {
 
     if (keychain?.wrappedKey && keychain?.salt) {
       await db.insert(schema.keychain).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         userId,
         account: 'masterpass',
         type: 'password',
@@ -492,7 +493,7 @@ export async function initializeSelfHostedUserVaultAction(payload: {
 
     if (profile?.username) {
       await db.insert(schema.profiles).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         userId,
         username: profile.username.toLowerCase(),
         displayName: profile.displayName || profile.username,

@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { getEcosystemUrl } from '../constants';
 import { sendKylrixEmailNotification } from '../email-notifications';
 import { db } from '@/lib/db';
@@ -106,7 +107,7 @@ export const FormsService = {
       throw new Error('This form is not accepting submissions.');
     }
 
-    const submissionId = crypto.randomUUID();
+    const submissionId = ulid();
     const nowIso = new Date().toISOString();
 
     await db.insert(schema.formSubmissions).values({

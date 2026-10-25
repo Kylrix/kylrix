@@ -34,8 +34,9 @@ export async function initializeTelegramConnection(
     }
     const userId = actor.$id;
 
-    // Generate secure 6-digit pairing code
-    const pairCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate cryptographically secure 6-digit pairing code
+    const { randomInt } = await import('node:crypto');
+    const pairCode = String(randomInt(100000, 1000000));
 
     // Create the system tables client to write with proper terminology rows methods
     const databases = systemTables();

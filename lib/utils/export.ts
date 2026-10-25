@@ -1,4 +1,5 @@
 import { renderMarkdownHtml } from '@/lib/markdown/render';
+import { ulid } from '@/lib/utils/ulid';
 
 /**
  * Downloads a text file dynamically on the client.
@@ -128,7 +129,7 @@ export function exportToICS(title: string, description: string, startTime: strin
     "VERSION:2.0",
     "PRODID:-//Kylrix//Calendar//EN",
     "BEGIN:VEVENT",
-    `UID:${crypto.randomUUID()}`,
+    `UID:${ulid()}`,
     `DTSTAMP:${new Date().toISOString().replace(/-|:|\.\d\d\d/g, "")}`,
     `DTSTART:${startStr}`,
     `DTEND:${endStr}`,

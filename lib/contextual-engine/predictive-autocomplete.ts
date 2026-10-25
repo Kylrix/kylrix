@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { patternMatcher } from './pattern-matcher';
 import { PredictiveSuggestion, ContextualNiche } from './types';
 import { localKnowledgeGraph } from './local-graph';
@@ -46,7 +47,7 @@ export class PredictiveAutocompleteEngine {
 
       for (const m of matches) {
         suggestions.push({
-          id: `sug_${Math.random().toString(36).slice(2, 9)}`,
+          id: `sug_${ulid()}`,
           text: m.completion,
           type: 'inline_completion',
           confidence: m.confidence,

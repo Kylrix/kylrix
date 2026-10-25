@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { systemTables } from '@/lib/data/system-tables';
 import { NextRequest, NextResponse } from 'next/server';
 import { PatService } from '@/lib/services/pats';
@@ -50,7 +51,7 @@ export async function handleAuthUnauthenticated(req: NextRequest, parts: string[
         );
       }
 
-      const userId = `usr_${crypto.randomUUID().replace(/-/g, '')}`;
+      const userId = `usr_${ulid().replace(/-/g, '')}`;
       const now = new Date();
 
       await db.insert(userTable).values({

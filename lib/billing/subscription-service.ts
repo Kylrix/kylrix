@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -24,7 +25,7 @@ export class SubscriptionService {
 
     const planTier = String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
 
-    const subId = crypto.randomUUID();
+    const subId = ulid();
     const now = new Date().toISOString();
 
     await db.insert(schema.subscriptions).values({
@@ -116,7 +117,7 @@ export class SubscriptionService {
 
     try {
       await db.insert(schema.activityLog).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         userId: actorUserId,
         action: 'MANUAL_ENABLE_PRO',
         resourceType: 'subscription',
@@ -160,7 +161,7 @@ export class SubscriptionService {
 
     try {
       await db.insert(schema.activityLog).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         userId: actorUserId,
         action: 'GRANT_CATEGORY_ACCESS',
         resourceType: 'subscription_batch',

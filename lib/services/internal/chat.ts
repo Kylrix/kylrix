@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -27,7 +28,7 @@ export async function createMessageInternal(payload: {
   jwt?: string;
   actorId?: string;
 }) {
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   await db.insert(schema.messages).values({
@@ -125,7 +126,7 @@ export async function createConversationTransactionalInternal(payload: {
   contextId?: string;
   isPublic?: boolean;
 }) {
-  const id = payload.contextId ? `ws-${payload.contextId}` : crypto.randomUUID();
+  const id = payload.contextId ? `ws-${payload.contextId}` : ulid();
   const now = new Date().toISOString();
 
   await db.insert(schema.conversations).values({

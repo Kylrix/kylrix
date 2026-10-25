@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
@@ -862,8 +863,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const createWorkspace = useCallback(
     async (title: string, summary?: string): Promise<WorkspaceItem | null> => {
       try {
-        const inviteCode = crypto.randomUUID();
-        const wsId = `ws_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const inviteCode = ulid();
+        const wsId = `ws_${ulid()}`;
         const localCreated = {
           $id: wsId,
           id: wsId,

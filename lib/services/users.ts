@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { seedIdentityCache } from '../identity-cache';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -175,7 +176,7 @@ export const UsersService = {
       let username = defaultUsername;
       let attempts = 0;
       while (!(await this.isUsernameAvailable(username)) && attempts < 5) {
-        username = `${defaultUsername}${Math.random().toString(36).substring(7)}`;
+        username = `${defaultUsername}${ulid().slice(-6).toLowerCase()}`;
         attempts++;
       }
 

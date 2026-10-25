@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 import React, { useEffect, useMemo, useState } from 'react';
 import { GripVertical, Plus, Trash2, Sparkles, X, Wand2, AlertCircle, Check, Layers, Copy } from 'lucide-react';
 import type { WorkflowChain, WorkflowStep } from '@/lib/workflow-engine';
@@ -31,7 +32,7 @@ export function CreateFlowDrawer({ onClose, onCreated, draftId: draftIdProp, ini
       activeWorkspace.role !== 'member'
   );
 
-  const [draftId] = useState(() => draftIdProp || `draft-${Date.now()}-${Math.random().toString(36).slice(2,6)}`);
+  const [draftId] = useState(() => draftIdProp || `draft-${ulid()}`);
   const [title, setTitle] = useState(initialDraft?.title || '');
   const [description, setDescription] = useState(initialDraft?.description || '');
   const [niche, setNiche] = useState<typeof NICHES[number]>((initialDraft?.niche as any) || 'workspace');
