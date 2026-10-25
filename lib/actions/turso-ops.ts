@@ -4,6 +4,30 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, inArray } from 'drizzle-orm';
 
+type CacheEntry<T> = {
+  data: T;
+  expiresAt: number;
+};
+
+const queryTTLMs = 3000; // 3 seconds short TTL for list queries
+const resourceCache = new Map<string, CacheEntry<any>>();
+
+export function invalidateResourceCache(keyPrefix?: string, userId?: string) {
+  if (!keyPrefix && !userId) {
+    resourceCache.clear();
+    return;
+  }
+  for (const key of resourceCache.keys()) {
+    if (keyPrefix && key.startsWith(keyPrefix)) {
+      if (!userId || key.includes(`:${userId}`)) {
+        resourceCache.delete(key);
+      }
+    } else if (userId && key.includes(`:${userId}`)) {
+      resourceCache.delete(key);
+    }
+  }
+}
+
 /**
  * Consolidates duplicate user entries matching the same email into a single canonical user ID.
  * Re-links accounts, sessions, and domain resources to ensure seamless data access across all auth methods.
@@ -295,23 +319,12 @@ export async function getUserPasswordSyncStatusTurso(_userIdentifier: {
 
 export async function upsertKeychainTurso(data: typeof schema.keychain.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.keychain.id })
-      .from(schema.keychain)
-      .where(eq(schema.keychain.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.keychain)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.keychain.id, data.id));
-    } else {
-      await db.insert(schema.keychain).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.keychain).values(payload).onConflictDoUpdate({
+      target: schema.keychain.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertKeychainTurso failed:', err);
@@ -325,36 +338,69 @@ export async function normalizeKeychainRow(row: any): Promise<any> {
   return normalizeKeychainRowSync(row);
 }
 
-export async function listKeychainTurso(userId: string) {
-  try {
-    let allUserIds = [userId];
-    const userRows = await db
-      .select()
-      .from(schema.user)
-      .where(
-        or(
-          eq(schema.user.id, userId),
-          eq(schema.user.appwriteAccountId, userId)
-        )
-      );
+/**
+ * Resolves canonical user IDs for a user using indexed lookups (id PK and email index)
+ * to avoid expensive unindexed OR table scans across the user table.
+ */
+async function resolveAllUserIds(userId: string): Promise<string[]> {
+  const cleanId = String(userId || '').trim();
+  if (!cleanId) return [];
 
-    if (userRows.length > 0) {
-      for (const u of userRows) {
-        if (u.id) allUserIds.push(u.id);
-        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
-        if (u.email) {
-          const emailUsers = await db
-            .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
-            .from(schema.user)
-            .where(eq(schema.user.email, u.email));
-          for (const eu of emailUsers) {
-            if (eu.id) allUserIds.push(eu.id);
-            if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
-          }
+  let allUserIds = [cleanId];
+  let userRow: { id: string; appwriteAccountId: string | null; email: string | null } | null = null;
+
+  try {
+    const rowsById = await db
+      .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId, email: schema.user.email })
+      .from(schema.user)
+      .where(eq(schema.user.id, cleanId))
+      .limit(1);
+
+    if (rowsById.length > 0) {
+      userRow = rowsById[0];
+    } else if (cleanId.includes('@')) {
+      const rowsByEmail = await db
+        .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId, email: schema.user.email })
+        .from(schema.user)
+        .where(eq(schema.user.email, cleanId.toLowerCase()))
+        .limit(1);
+      if (rowsByEmail.length > 0) {
+        userRow = rowsByEmail[0];
+      }
+    } else {
+      const rowsByAppwrite = await db
+        .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId, email: schema.user.email })
+        .from(schema.user)
+        .where(eq(schema.user.appwriteAccountId, cleanId))
+        .limit(1);
+      if (rowsByAppwrite.length > 0) {
+        userRow = rowsByAppwrite[0];
+      }
+    }
+
+    if (userRow) {
+      if (userRow.id) allUserIds.push(userRow.id);
+      if (userRow.appwriteAccountId) allUserIds.push(userRow.appwriteAccountId);
+      if (userRow.email) {
+        const sameEmailUsers = await db
+          .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
+          .from(schema.user)
+          .where(eq(schema.user.email, userRow.email.toLowerCase()))
+          .limit(10);
+        for (const eu of sameEmailUsers) {
+          if (eu.id) allUserIds.push(eu.id);
+          if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
         }
       }
-      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
     }
+  } catch {}
+
+  return Array.from(new Set(allUserIds.filter(Boolean)));
+}
+
+export async function listKeychainTurso(userId: string) {
+  try {
+    const allUserIds = await resolveAllUserIds(userId);
 
     const rows = await db
       .select()
@@ -381,6 +427,7 @@ export async function deleteKeychainTurso(id: string) {
 export async function upsertVaultItemTurso(data: any) {
   try {
     const rawData = data || {};
+    invalidateResourceCache('vault', rawData.userId);
     const titleVal = rawData.title || rawData.name || 'Untitled Secret';
     const typeVal = rawData.type || rawData.itemType || 'login';
     const encryptedDataVal = rawData.encrypted_data || rawData.encryptedData || rawData.password || rawData.secret || '';
@@ -423,23 +470,10 @@ export async function upsertVaultItemTurso(data: any) {
       updatedAt: rawData.updatedAt || new Date().toISOString(),
     };
 
-    const existing = await db
-      .select({ id: schema.vaultItems.id })
-      .from(schema.vaultItems)
-      .where(eq(schema.vaultItems.id, payload.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.vaultItems)
-        .set({
-          ...payload,
-          updatedAt: payload.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.vaultItems.id, payload.id));
-    } else {
-      await db.insert(schema.vaultItems).values(payload);
-    }
+    await db.insert(schema.vaultItems).values(payload).onConflictDoUpdate({
+      target: schema.vaultItems.id,
+      set: { ...payload, updatedAt: payload.updatedAt || new Date().toISOString() },
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertVaultItemTurso failed:', err);
@@ -448,6 +482,12 @@ export async function upsertVaultItemTurso(data: any) {
 }
 
 export async function listVaultItemsTurso(userId: string) {
+  const cacheKey = `vault:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   try {
     const rows = await db
       .select()
@@ -488,7 +528,9 @@ export async function listVaultItemsTurso(userId: string) {
         cardType: fields.cardType || null,
       };
     });
-    return { success: true, rows: normalizedRows };
+    const result = { success: true, rows: normalizedRows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listVaultItemsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -497,6 +539,7 @@ export async function listVaultItemsTurso(userId: string) {
 
 export async function deleteVaultItemTurso(id: string) {
   try {
+    invalidateResourceCache('vault');
     await db
       .update(schema.vaultItems)
       .set({ isTrashed: true, updatedAt: new Date().toISOString() })
@@ -511,6 +554,7 @@ export async function deleteVaultItemTurso(id: string) {
 export async function upsertTotpSecretTurso(data: any) {
   try {
     const rawData = data || {};
+    invalidateResourceCache('totp', rawData.userId);
     const accountVal = rawData.account || rawData.accountName || 'Account';
     const encryptedSecretVal = rawData.encryptedSecret || rawData.secretKey || rawData.secret || '';
 
@@ -540,20 +584,10 @@ export async function upsertTotpSecretTurso(data: any) {
       createdAt: rawData.createdAt || new Date().toISOString(),
     };
 
-    const existing = await db
-      .select({ id: schema.totpSecrets.id })
-      .from(schema.totpSecrets)
-      .where(eq(schema.totpSecrets.id, payload.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.totpSecrets)
-        .set(payload)
-        .where(eq(schema.totpSecrets.id, payload.id));
-    } else {
-      await db.insert(schema.totpSecrets).values(payload);
-    }
+    await db.insert(schema.totpSecrets).values(payload).onConflictDoUpdate({
+      target: schema.totpSecrets.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertTotpSecretTurso failed:', err);
@@ -562,6 +596,12 @@ export async function upsertTotpSecretTurso(data: any) {
 }
 
 export async function listTotpSecretsTurso(userId: string) {
+  const cacheKey = `totp:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   try {
     const rows = await db
       .select()
@@ -592,7 +632,9 @@ export async function listTotpSecretsTurso(userId: string) {
         isShared: Boolean(meta.isShared),
       };
     });
-    return { success: true, rows: normalizedRows };
+    const result = { success: true, rows: normalizedRows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listTotpSecretsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -601,6 +643,7 @@ export async function listTotpSecretsTurso(userId: string) {
 
 export async function deleteTotpSecretTurso(id: string) {
   try {
+    invalidateResourceCache('totp');
     await db.delete(schema.totpSecrets).where(eq(schema.totpSecrets.id, id));
     return { success: true };
   } catch (err: any) {
@@ -611,12 +654,7 @@ export async function deleteTotpSecretTurso(id: string) {
 
 export async function upsertProjectTurso(data: Partial<typeof schema.projects.$inferInsert> & { id: string; creatorId: string; name?: string; title?: string }) {
   try {
-    const existing = await db
-      .select({ id: schema.projects.id })
-      .from(schema.projects)
-      .where(eq(schema.projects.id, data.id))
-      .limit(1);
-
+    invalidateResourceCache('workspaces', data.creatorId);
     const now = new Date().toISOString();
     const nameVal = data.name || data.title || 'Workspace';
     const titleVal = data.title || data.name || nameVal;
@@ -647,18 +685,11 @@ export async function upsertProjectTurso(data: Partial<typeof schema.projects.$i
       updatedAt: data.updatedAt || now,
     };
 
-    if (existing.length > 0) {
-      const { id: _id, createdAt: _ca, ...updateData } = payload;
-      await db
-        .update(schema.projects)
-        .set({
-          ...updateData,
-          updatedAt: now,
-        })
-        .where(eq(schema.projects.id, data.id));
-    } else {
-      await db.insert(schema.projects).values(payload);
-    }
+    const { id: _id, createdAt: _ca, ...updateData } = payload;
+    await db.insert(schema.projects).values(payload).onConflictDoUpdate({
+      target: schema.projects.id,
+      set: { ...updateData, updatedAt: now },
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertProjectTurso failed:', err);
@@ -668,6 +699,7 @@ export async function upsertProjectTurso(data: Partial<typeof schema.projects.$i
 
 export async function deleteWorkspaceTurso(workspaceId: string) {
   try {
+    invalidateResourceCache('workspaces');
     await db.delete(schema.projectObjects).where(eq(schema.projectObjects.workspaceId, workspaceId)).catch(() => {});
     await db.delete(schema.workspaceMembers).where(eq(schema.workspaceMembers.workspaceId, workspaceId)).catch(() => {});
     await db.delete(schema.collaborators).where(
@@ -685,41 +717,14 @@ export async function deleteWorkspaceTurso(workspaceId: string) {
 }
 
 export async function listWorkspacesTurso(userId: string) {
-  try {
-    let allUserIds = [userId];
-    let userRows: any[] = [];
-    try {
-      userRows = await db
-        .select()
-        .from(schema.user)
-        .where(
-          or(
-            eq(schema.user.id, userId),
-            eq(schema.user.appwriteAccountId, userId),
-            eq(schema.user.email, userId.includes('@') ? userId.toLowerCase() : '')
-          )
-        );
-    } catch {}
+  const cacheKey = `workspaces:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
 
-    if (userRows.length > 0) {
-      for (const u of userRows) {
-        if (u.id) allUserIds.push(u.id);
-        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
-        if (u.email) {
-          try {
-            const emailUsers = await db
-              .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
-              .from(schema.user)
-              .where(eq(schema.user.email, u.email.toLowerCase()));
-            for (const eu of emailUsers) {
-              if (eu.id) allUserIds.push(eu.id);
-              if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
-            }
-          } catch {}
-        }
-      }
-      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
-    }
+  try {
+    const allUserIds = await resolveAllUserIds(userId);
 
     const ownedRows = await db
       .select()
@@ -778,7 +783,9 @@ export async function listWorkspacesTurso(userId: string) {
     }
 
     const rows = Array.from(combinedMap.values());
-    return { success: true, rows };
+    const result = { success: true, rows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listWorkspacesTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -802,20 +809,10 @@ export async function getWorkspaceTurso(id: string) {
 
 export async function upsertWorkspaceObjectTurso(data: typeof schema.projectObjects.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.projectObjects.id })
-      .from(schema.projectObjects)
-      .where(eq(schema.projectObjects.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.projectObjects)
-        .set(data)
-        .where(eq(schema.projectObjects.id, data.id));
-    } else {
-      await db.insert(schema.projectObjects).values(data);
-    }
+    await db.insert(schema.projectObjects).values(data).onConflictDoUpdate({
+      target: schema.projectObjects.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertWorkspaceObjectTurso failed:', err);
@@ -825,24 +822,15 @@ export async function upsertWorkspaceObjectTurso(data: typeof schema.projectObje
 
 export async function upsertUserSettingsTurso(data: typeof schema.userSettings.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.userSettings.id })
-      .from(schema.userSettings)
-      .where(eq(schema.userSettings.userId, data.userId))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.userSettings)
-        .set({
-          preferences: data.preferences,
-          securityFlags: data.securityFlags,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(schema.userSettings.userId, data.userId));
-    } else {
-      await db.insert(schema.userSettings).values(data);
-    }
+    const updatedAt = new Date().toISOString();
+    await db.insert(schema.userSettings).values({ ...data, updatedAt }).onConflictDoUpdate({
+      target: schema.userSettings.userId,
+      set: {
+        preferences: data.preferences,
+        securityFlags: data.securityFlags,
+        updatedAt,
+      },
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertUserSettingsTurso failed:', err);
@@ -886,23 +874,12 @@ export async function deleteUserSessionTurso(sessionId: string) {
 
 export async function upsertThreadTurso(data: typeof schema.threads.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.threads.id })
-      .from(schema.threads)
-      .where(eq(schema.threads.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.threads)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.threads.id, data.id));
-    } else {
-      await db.insert(schema.threads).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.threads).values(payload).onConflictDoUpdate({
+      target: schema.threads.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertThreadTurso failed:', err);
@@ -912,23 +889,12 @@ export async function upsertThreadTurso(data: typeof schema.threads.$inferInsert
 
 export async function upsertThreadMessageTurso(data: typeof schema.threadMessages.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.threadMessages.id })
-      .from(schema.threadMessages)
-      .where(eq(schema.threadMessages.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.threadMessages)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.threadMessages.id, data.id));
-    } else {
-      await db.insert(schema.threadMessages).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.threadMessages).values(payload).onConflictDoUpdate({
+      target: schema.threadMessages.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertThreadMessageTurso failed:', err);
@@ -942,46 +908,26 @@ export async function upsertNotesBatchTurso(items: (typeof schema.notes.$inferIn
   }
 
   try {
+    if (items[0]?.userId) invalidateResourceCache('notes', items[0].userId);
     const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
 
     await db.transaction(async (tx) => {
       for (const data of items) {
         if (!data || !data.id) continue;
-        const existing = await tx
-          .select({ id: schema.notes.id })
-          .from(schema.notes)
-          .where(eq(schema.notes.id, data.id))
-          .limit(1);
+        const updatedAt = data.updatedAt || new Date().toISOString();
+        const payload = { ...data, updatedAt };
 
-        let isCreate = false;
-        let shapedPayload: any = null;
-
-        if (existing.length > 0) {
-          const updateData: any = {
-            updatedAt: data.updatedAt || new Date().toISOString(),
-          };
-          for (const [key, val] of Object.entries(data)) {
-            if (val !== undefined && key !== 'id') {
-              updateData[key] = val;
-            }
-          }
-          await tx
-            .update(schema.notes)
-            .set(updateData)
-            .where(eq(schema.notes.id, data.id));
-          shapedPayload = { $id: data.id, ...updateData };
-        } else {
-          isCreate = true;
-          await tx.insert(schema.notes).values(data);
-          shapedPayload = { $id: data.id, ...data };
-        }
+        await tx.insert(schema.notes).values(payload).onConflictDoUpdate({
+          target: schema.notes.id,
+          set: payload,
+        });
 
         void broadcastRealtimeEvent({
           databaseId: 'turso',
           tableId: 'ideas',
           rowId: data.id,
-          action: isCreate ? 'create' : 'update',
-          payload: shapedPayload,
+          action: 'update',
+          payload: { $id: data.id, ...payload },
         }).catch(() => {});
       }
     });
@@ -995,34 +941,14 @@ export async function upsertNotesBatchTurso(items: (typeof schema.notes.$inferIn
 
 export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.notes.id })
-      .from(schema.notes)
-      .where(eq(schema.notes.id, data.id))
-      .limit(1);
+    invalidateResourceCache('notes', data.userId);
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
 
-    let isCreate = false;
-    let shapedPayload: any = null;
-
-    if (existing.length > 0) {
-      const updateData: any = {
-        updatedAt: data.updatedAt || new Date().toISOString(),
-      };
-      for (const [key, val] of Object.entries(data)) {
-        if (val !== undefined && key !== 'id') {
-          updateData[key] = val;
-        }
-      }
-      await db
-        .update(schema.notes)
-        .set(updateData)
-        .where(eq(schema.notes.id, data.id));
-      shapedPayload = { $id: data.id, ...updateData };
-    } else {
-      isCreate = true;
-      await db.insert(schema.notes).values(data);
-      shapedPayload = { $id: data.id, ...data };
-    }
+    await db.insert(schema.notes).values(payload).onConflictDoUpdate({
+      target: schema.notes.id,
+      set: payload,
+    });
 
     try {
       const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
@@ -1030,8 +956,8 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
         databaseId: 'turso',
         tableId: 'ideas',
         rowId: data.id,
-        action: isCreate ? 'create' : 'update',
-        payload: shapedPayload,
+        action: 'update',
+        payload: { $id: data.id, ...payload },
       }).catch(() => {});
     } catch {}
 
@@ -1044,6 +970,7 @@ export async function upsertNoteTurso(data: typeof schema.notes.$inferInsert) {
 
 export async function deleteNoteTurso(noteId: string) {
   try {
+    invalidateResourceCache('notes');
     const updatedAt = new Date().toISOString();
     await db
       .update(schema.notes)
@@ -1069,12 +996,20 @@ export async function deleteNoteTurso(noteId: string) {
 }
 
 export async function listNotesTurso(userId: string) {
+  const cacheKey = `notes:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   try {
     const rows = await db
       .select()
       .from(schema.notes)
       .where(and(eq(schema.notes.userId, userId), eq(schema.notes.isTrashed, false)));
-    return { success: true, rows };
+    const result = { success: true, rows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listNotesTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -1106,49 +1041,29 @@ export async function upsertGoalsBatchTurso(
   }
 
   try {
+    if (items[0]?.userId) invalidateResourceCache('goals', items[0].userId);
     const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
 
     await db.transaction(async (tx) => {
       for (const data of items) {
         if (!data || !data.id) continue;
-        const existing = await tx
-          .select({ id: schema.goals.id })
-          .from(schema.goals)
-          .where(eq(schema.goals.id, data.id))
-          .limit(1);
+        const now = new Date().toISOString();
+        const shapedPayload: any = {
+          ...data,
+          $id: data.id,
+          createdAt: data.createdAt || now,
+          updatedAt: data.updatedAt || now,
+        };
 
-        let isCreate = false;
-        let shapedPayload: any = null;
-
-        if (existing.length > 0) {
-          const updateData: any = {
-            updatedAt: data.updatedAt || new Date().toISOString(),
-          };
-          for (const [key, val] of Object.entries(data)) {
-            if (val !== undefined && key !== 'id') {
-              updateData[key] = val;
-            }
-          }
-          await tx
-            .update(schema.goals)
-            .set(updateData)
-            .where(eq(schema.goals.id, data.id));
-          shapedPayload = { $id: data.id, ...updateData };
-        } else {
-          isCreate = true;
-          shapedPayload = {
-            ...data,
-            $id: data.id,
-            createdAt: data.createdAt || new Date().toISOString(),
-            updatedAt: data.updatedAt || new Date().toISOString(),
-          };
-          await tx.insert(schema.goals).values(shapedPayload as any);
-        }
+        await tx.insert(schema.goals).values(shapedPayload as any).onConflictDoUpdate({
+          target: schema.goals.id,
+          set: shapedPayload as any,
+        });
 
         void broadcastRealtimeEvent({
           tableId: 'tasks',
           rowId: data.id,
-          action: isCreate ? 'create' : 'update',
+          action: 'update',
           payload: shapedPayload,
         }).catch(() => {});
       }
@@ -1165,46 +1080,26 @@ export async function upsertGoalTurso(
   data: Partial<typeof schema.goals.$inferInsert> & { id: string; userId: string; title: string }
 ) {
   try {
-    const existing = await db
-      .select({ id: schema.goals.id })
-      .from(schema.goals)
-      .where(eq(schema.goals.id, data.id))
-      .limit(1);
+    invalidateResourceCache('goals', data.userId);
+    const now = new Date().toISOString();
+    const shapedPayload: any = {
+      ...data,
+      $id: data.id,
+      createdAt: data.createdAt || now,
+      updatedAt: data.updatedAt || now,
+    };
 
-    let isCreate = false;
-    let shapedPayload: any = null;
-
-    if (existing.length > 0) {
-      const updateData: any = {
-        updatedAt: data.updatedAt || new Date().toISOString(),
-      };
-      for (const [key, val] of Object.entries(data)) {
-        if (val !== undefined && key !== 'id') {
-          updateData[key] = val;
-        }
-      }
-      await db
-        .update(schema.goals)
-        .set(updateData)
-        .where(eq(schema.goals.id, data.id));
-      shapedPayload = { $id: data.id, ...updateData };
-    } else {
-      isCreate = true;
-      shapedPayload = {
-        ...data,
-        $id: data.id,
-        createdAt: data.createdAt || new Date().toISOString(),
-        updatedAt: data.updatedAt || new Date().toISOString(),
-      };
-      await db.insert(schema.goals).values(shapedPayload as any);
-    }
+    await db.insert(schema.goals).values(shapedPayload as any).onConflictDoUpdate({
+      target: schema.goals.id,
+      set: shapedPayload as any,
+    });
 
     try {
       const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
       await broadcastRealtimeEvent({
         tableId: 'tasks',
         rowId: data.id,
-        action: isCreate ? 'create' : 'update',
+        action: 'update',
         payload: shapedPayload,
       }).catch(() => {});
     } catch {}
@@ -1217,12 +1112,20 @@ export async function upsertGoalTurso(
 }
 
 export async function listGoalsTurso(userId: string) {
+  const cacheKey = `goals:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
+
   try {
     const rows = await db
       .select()
       .from(schema.goals)
       .where(eq(schema.goals.userId, userId));
-    return { success: true, rows };
+    const result = { success: true, rows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listGoalsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -1248,6 +1151,7 @@ export async function getGoalTurso(goalId: string) {
 
 export async function deleteGoalTurso(goalId: string) {
   try {
+    invalidateResourceCache('goals');
     await db.delete(schema.goals).where(eq(schema.goals.id, goalId));
     try {
       const { broadcastRealtimeEvent } = await import('@/lib/realtime/partykit');
@@ -1267,12 +1171,11 @@ export async function deleteGoalTurso(goalId: string) {
 
 export async function upsertFormTurso(data: typeof schema.forms.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.forms.id }).from(schema.forms).where(eq(schema.forms.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.forms).set(data).where(eq(schema.forms.id, data.id));
-    } else {
-      await db.insert(schema.forms).values(data);
-    }
+    invalidateResourceCache('forms', data.userId);
+    await db.insert(schema.forms).values(data).onConflictDoUpdate({
+      target: schema.forms.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1280,47 +1183,22 @@ export async function upsertFormTurso(data: typeof schema.forms.$inferInsert) {
 }
 
 export async function listFormsTurso(userId: string) {
-  try {
-    let allUserIds = [userId];
-    let userRows: any[] = [];
-    try {
-      userRows = await db
-        .select()
-        .from(schema.user)
-        .where(
-          or(
-            eq(schema.user.id, userId),
-            eq(schema.user.appwriteAccountId, userId),
-            eq(schema.user.email, userId.includes('@') ? userId.toLowerCase() : '')
-          )
-        );
-    } catch {}
+  const cacheKey = `forms:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
 
-    if (userRows.length > 0) {
-      for (const u of userRows) {
-        if (u.id) allUserIds.push(u.id);
-        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
-        if (u.email) {
-          try {
-            const emailUsers = await db
-              .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
-              .from(schema.user)
-              .where(eq(schema.user.email, u.email.toLowerCase()));
-            for (const eu of emailUsers) {
-              if (eu.id) allUserIds.push(eu.id);
-              if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
-            }
-          } catch {}
-        }
-      }
-      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
-    }
+  try {
+    const allUserIds = await resolveAllUserIds(userId);
 
     const rows = await db
       .select()
       .from(schema.forms)
       .where(inArray(schema.forms.userId, allUserIds));
-    return { success: true, rows };
+    const result = { success: true, rows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listFormsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -1329,12 +1207,11 @@ export async function listFormsTurso(userId: string) {
 
 export async function upsertEventTurso(data: typeof schema.events.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.events.id }).from(schema.events).where(eq(schema.events.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.events).set(data).where(eq(schema.events.id, data.id));
-    } else {
-      await db.insert(schema.events).values(data);
-    }
+    invalidateResourceCache('events', data.userId);
+    await db.insert(schema.events).values(data).onConflictDoUpdate({
+      target: schema.events.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1342,47 +1219,22 @@ export async function upsertEventTurso(data: typeof schema.events.$inferInsert) 
 }
 
 export async function listEventsTurso(userId: string) {
-  try {
-    let allUserIds = [userId];
-    let userRows: any[] = [];
-    try {
-      userRows = await db
-        .select()
-        .from(schema.user)
-        .where(
-          or(
-            eq(schema.user.id, userId),
-            eq(schema.user.appwriteAccountId, userId),
-            eq(schema.user.email, userId.includes('@') ? userId.toLowerCase() : '')
-          )
-        );
-    } catch {}
+  const cacheKey = `events:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
 
-    if (userRows.length > 0) {
-      for (const u of userRows) {
-        if (u.id) allUserIds.push(u.id);
-        if (u.appwriteAccountId) allUserIds.push(u.appwriteAccountId);
-        if (u.email) {
-          try {
-            const emailUsers = await db
-              .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
-              .from(schema.user)
-              .where(eq(schema.user.email, u.email.toLowerCase()));
-            for (const eu of emailUsers) {
-              if (eu.id) allUserIds.push(eu.id);
-              if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
-            }
-          } catch {}
-        }
-      }
-      allUserIds = Array.from(new Set(allUserIds.filter(Boolean)));
-    }
+  try {
+    const allUserIds = await resolveAllUserIds(userId);
 
     const rows = await db
       .select()
       .from(schema.events)
       .where(inArray(schema.events.userId, allUserIds));
-    return { success: true, rows };
+    const result = { success: true, rows };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     console.error('[turso-ops] listEventsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
@@ -1391,12 +1243,10 @@ export async function listEventsTurso(userId: string) {
 
 export async function upsertAgenticSessionTurso(data: typeof schema.agenticSessions.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.agenticSessions.id }).from(schema.agenticSessions).where(eq(schema.agenticSessions.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.agenticSessions).set(data).where(eq(schema.agenticSessions.id, data.id));
-    } else {
-      await db.insert(schema.agenticSessions).values(data);
-    }
+    await db.insert(schema.agenticSessions).values(data).onConflictDoUpdate({
+      target: schema.agenticSessions.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1414,12 +1264,10 @@ export async function listAgenticSessionsTurso(userId: string) {
 
 export async function upsertWorkflowTurso(data: typeof schema.workflows.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.workflows.id }).from(schema.workflows).where(eq(schema.workflows.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.workflows).set(data).where(eq(schema.workflows.id, data.id));
-    } else {
-      await db.insert(schema.workflows).values(data);
-    }
+    await db.insert(schema.workflows).values(data).onConflictDoUpdate({
+      target: schema.workflows.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1439,12 +1287,10 @@ export async function listWorkflowsTurso(ownerId?: string) {
 
 export async function upsertCouponTurso(data: typeof schema.coupons.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.coupons.id }).from(schema.coupons).where(eq(schema.coupons.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.coupons).set(data).where(eq(schema.coupons.id, data.id));
-    } else {
-      await db.insert(schema.coupons).values(data);
-    }
+    await db.insert(schema.coupons).values(data).onConflictDoUpdate({
+      target: schema.coupons.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1483,23 +1329,12 @@ export async function deleteCouponTurso(id: string) {
 
 export async function upsertSubscriptionTurso(data: typeof schema.subscriptions.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.subscriptions.id })
-      .from(schema.subscriptions)
-      .where(eq(schema.subscriptions.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.subscriptions)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.subscriptions.id, data.id));
-    } else {
-      await db.insert(schema.subscriptions).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.subscriptions).values(payload).onConflictDoUpdate({
+      target: schema.subscriptions.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1508,23 +1343,12 @@ export async function upsertSubscriptionTurso(data: typeof schema.subscriptions.
 
 export async function upsertWalletTurso(data: typeof schema.wallets.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.wallets.id })
-      .from(schema.wallets)
-      .where(eq(schema.wallets.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.wallets)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.wallets.id, data.id));
-    } else {
-      await db.insert(schema.wallets).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.wallets).values(payload).onConflictDoUpdate({
+      target: schema.wallets.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1533,23 +1357,12 @@ export async function upsertWalletTurso(data: typeof schema.wallets.$inferInsert
 
 export async function upsertKylrixTokenLedgerTurso(data: typeof schema.kylrixTokenLedger.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.kylrixTokenLedger.id })
-      .from(schema.kylrixTokenLedger)
-      .where(eq(schema.kylrixTokenLedger.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.kylrixTokenLedger)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.kylrixTokenLedger.id, data.id));
-    } else {
-      await db.insert(schema.kylrixTokenLedger).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.kylrixTokenLedger).values(payload).onConflictDoUpdate({
+      target: schema.kylrixTokenLedger.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1559,32 +1372,18 @@ export async function upsertKylrixTokenLedgerTurso(data: typeof schema.kylrixTok
 export async function upsertTelegramConnectionTurso(data: typeof schema.telegramConnections.$inferInsert) {
   try {
     if (!data.id) return { success: false, error: 'Missing telegram connection ID' };
-    const existing = await db
-      .select({ id: schema.telegramConnections.id })
-      .from(schema.telegramConnections)
-      .where(eq(schema.telegramConnections.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.telegramConnections)
-        .set({
-          pairCode: data.pairCode || null,
-          tgChatId: data.tgChatId || null,
-          tgUsername: data.tgUsername || null,
-          isVerified: Boolean(data.isVerified),
-        })
-        .where(eq(schema.telegramConnections.id, data.id));
-    } else {
-      await db.insert(schema.telegramConnections).values({
-        id: data.id,
-        pairCode: data.pairCode || null,
-        tgChatId: data.tgChatId || null,
-        tgUsername: data.tgUsername || null,
-        isVerified: Boolean(data.isVerified),
-        createdAt: data.createdAt || new Date().toISOString(),
-      });
-    }
+    const payload = {
+      id: data.id,
+      pairCode: data.pairCode || null,
+      tgChatId: data.tgChatId || null,
+      tgUsername: data.tgUsername || null,
+      isVerified: Boolean(data.isVerified),
+      createdAt: data.createdAt || new Date().toISOString(),
+    };
+    await db.insert(schema.telegramConnections).values(payload).onConflictDoUpdate({
+      target: schema.telegramConnections.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.warn('[upsertTelegramConnectionTurso] Warning:', err.message);
@@ -1635,33 +1434,16 @@ export async function upsertConversationTurso(
   data: Partial<typeof schema.conversations.$inferInsert> & { id: string; creatorId: string }
 ) {
   try {
-    const existing = await db
-      .select({ id: schema.conversations.id })
-      .from(schema.conversations)
-      .where(eq(schema.conversations.id, data.id))
-      .limit(1);
-
     const now = new Date().toISOString();
-    if (existing.length > 0) {
-      const updateData: any = {
-        updatedAt: data.updatedAt || now,
-      };
-      for (const [key, val] of Object.entries(data)) {
-        if (val !== undefined && key !== 'id') {
-          updateData[key] = val;
-        }
-      }
-      await db
-        .update(schema.conversations)
-        .set(updateData)
-        .where(eq(schema.conversations.id, data.id));
-    } else {
-      await db.insert(schema.conversations).values({
-        ...data,
-        createdAt: data.createdAt || now,
-        updatedAt: data.updatedAt || now,
-      } as any);
-    }
+    const payload: typeof schema.conversations.$inferInsert = {
+      ...data,
+      createdAt: data.createdAt || now,
+      updatedAt: data.updatedAt || now,
+    } as any;
+    await db.insert(schema.conversations).values(payload).onConflictDoUpdate({
+      target: schema.conversations.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertConversationTurso failed:', err);
@@ -1755,33 +1537,16 @@ export async function upsertMessageTurso(
   data: Partial<typeof schema.messages.$inferInsert> & { id: string; conversationId: string; senderId: string; content?: string }
 ) {
   try {
-    const existing = await db
-      .select({ id: schema.messages.id })
-      .from(schema.messages)
-      .where(eq(schema.messages.id, data.id))
-      .limit(1);
-
     const now = new Date().toISOString();
-    if (existing.length > 0) {
-      const updateData: any = {
-        updatedAt: data.updatedAt || now,
-      };
-      for (const [key, val] of Object.entries(data)) {
-        if (val !== undefined && key !== 'id') {
-          updateData[key] = val;
-        }
-      }
-      await db
-        .update(schema.messages)
-        .set(updateData)
-        .where(eq(schema.messages.id, data.id));
-    } else {
-      await db.insert(schema.messages).values({
-        ...data,
-        createdAt: data.createdAt || now,
-        updatedAt: data.updatedAt || now,
-      } as any);
-    }
+    const payload: typeof schema.messages.$inferInsert = {
+      ...data,
+      createdAt: data.createdAt || now,
+      updatedAt: data.updatedAt || now,
+    } as any;
+    await db.insert(schema.messages).values(payload).onConflictDoUpdate({
+      target: schema.messages.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertMessageTurso failed:', err);
@@ -1819,25 +1584,16 @@ export async function upsertConversationMemberTurso(
   data: { id: string; conversationId: string; userId: string; role?: string }
 ) {
   try {
-    const existing = await db
-      .select({ id: schema.conversationMembers.id })
-      .from(schema.conversationMembers)
-      .where(eq(schema.conversationMembers.id, data.id))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.conversationMembers)
-        .set({ role: data.role || 'member' })
-        .where(eq(schema.conversationMembers.id, data.id));
-    } else {
-      await db.insert(schema.conversationMembers).values({
-        id: data.id,
-        conversationId: data.conversationId,
-        userId: data.userId,
-        role: data.role || 'member',
-      });
-    }
+    const payload = {
+      id: data.id,
+      conversationId: data.conversationId,
+      userId: data.userId,
+      role: data.role || 'member',
+    };
+    await db.insert(schema.conversationMembers).values(payload).onConflictDoUpdate({
+      target: schema.conversationMembers.id,
+      set: { role: payload.role },
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertConversationMemberTurso failed:', err);
@@ -1847,12 +1603,10 @@ export async function upsertConversationMemberTurso(
 
 export async function upsertContextTurso(data: typeof schema.contexts.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.contexts.id }).from(schema.contexts).where(eq(schema.contexts.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.contexts).set(data).where(eq(schema.contexts.id, data.id));
-    } else {
-      await db.insert(schema.contexts).values(data);
-    }
+    await db.insert(schema.contexts).values(data).onConflictDoUpdate({
+      target: schema.contexts.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertContextTurso failed:', err);
@@ -1875,12 +1629,10 @@ export async function listContextsTurso(userId: string, workspaceId?: string) {
 
 export async function upsertKnowledgeGraphTurso(data: typeof schema.knowledgeGraph.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.knowledgeGraph.id }).from(schema.knowledgeGraph).where(eq(schema.knowledgeGraph.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.knowledgeGraph).set(data).where(eq(schema.knowledgeGraph.id, data.id));
-    } else {
-      await db.insert(schema.knowledgeGraph).values(data);
-    }
+    await db.insert(schema.knowledgeGraph).values(data).onConflictDoUpdate({
+      target: schema.knowledgeGraph.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertKnowledgeGraphTurso failed:', err);
@@ -1890,12 +1642,10 @@ export async function upsertKnowledgeGraphTurso(data: typeof schema.knowledgeGra
 
 export async function upsertPatternTurso(data: typeof schema.patterns.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.patterns.id }).from(schema.patterns).where(eq(schema.patterns.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.patterns).set(data).where(eq(schema.patterns.id, data.id));
-    } else {
-      await db.insert(schema.patterns).values(data);
-    }
+    await db.insert(schema.patterns).values(data).onConflictDoUpdate({
+      target: schema.patterns.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     console.error('[turso-ops] upsertPatternTurso failed:', err);
@@ -1915,12 +1665,10 @@ export async function insertSecurityLogTurso(data: typeof schema.securityLogs.$i
 
 export async function upsertResourcePinTurso(data: typeof schema.userResourcePins.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.userResourcePins.id }).from(schema.userResourcePins).where(eq(schema.userResourcePins.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.userResourcePins).set(data).where(eq(schema.userResourcePins.id, data.id));
-    } else {
-      await db.insert(schema.userResourcePins).values(data);
-    }
+    await db.insert(schema.userResourcePins).values(data).onConflictDoUpdate({
+      target: schema.userResourcePins.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1938,12 +1686,10 @@ export async function deleteResourcePinTurso(pinId: string) {
 
 export async function upsertCommentTurso(data: typeof schema.comments.$inferInsert) {
   try {
-    const existing = await db.select({ id: schema.comments.id }).from(schema.comments).where(eq(schema.comments.id, data.id)).limit(1);
-    if (existing.length > 0) {
-      await db.update(schema.comments).set(data).where(eq(schema.comments.id, data.id));
-    } else {
-      await db.insert(schema.comments).values(data);
-    }
+    await db.insert(schema.comments).values(data).onConflictDoUpdate({
+      target: schema.comments.id,
+      set: data,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -1952,23 +1698,12 @@ export async function upsertCommentTurso(data: typeof schema.comments.$inferInse
 
 export async function upsertProfileTurso(data: typeof schema.profiles.$inferInsert) {
   try {
-    const existing = await db
-      .select({ id: schema.profiles.id })
-      .from(schema.profiles)
-      .where(or(eq(schema.profiles.id, data.id), eq(schema.profiles.userId, data.userId)))
-      .limit(1);
-
-    if (existing.length > 0) {
-      await db
-        .update(schema.profiles)
-        .set({
-          ...data,
-          updatedAt: data.updatedAt || new Date().toISOString(),
-        })
-        .where(eq(schema.profiles.id, existing[0].id));
-    } else {
-      await db.insert(schema.profiles).values(data);
-    }
+    const updatedAt = data.updatedAt || new Date().toISOString();
+    const payload = { ...data, updatedAt };
+    await db.insert(schema.profiles).values(payload).onConflictDoUpdate({
+      target: schema.profiles.id,
+      set: payload,
+    });
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };

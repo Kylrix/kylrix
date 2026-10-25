@@ -19,7 +19,11 @@ vi.mock('../lib/db', () => {
         }),
       }),
       insert: vi.fn().mockReturnValue({
-        values: vi.fn().mockResolvedValue([{ id: 'mock' }]),
+        values: vi.fn().mockReturnValue({
+          onConflictDoUpdate: vi.fn().mockResolvedValue([{ id: 'mock' }]),
+          onConflictDoNothing: vi.fn().mockResolvedValue([{ id: 'mock' }]),
+          then: (resolve: any) => resolve([{ id: 'mock' }]),
+        }),
       }),
       update: vi.fn().mockReturnValue({
         set: vi.fn().mockReturnValue({
