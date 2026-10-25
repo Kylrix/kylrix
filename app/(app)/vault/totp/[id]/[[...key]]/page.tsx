@@ -44,6 +44,8 @@ export async function generateMetadata({
   }
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function SharedTotpPage({
   params}: {
   params: Promise<{ id: string; key?: string[] }>;

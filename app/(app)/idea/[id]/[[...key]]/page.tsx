@@ -8,6 +8,8 @@ import SharedNoteClient from '../SharedNoteClient';
  * Do not regenerate OG here — absolute `/opengraph-image` URLs get swallowed
  * by this catch-all and break link previews (goals work because they have no catch-all).
  */
+export const dynamic = 'force-dynamic';
+
 export default async function SharedNotePage({
   params}: {
   params: Promise<{ id: string; key?: string[] }>;

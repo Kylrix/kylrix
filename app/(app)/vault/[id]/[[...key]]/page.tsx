@@ -41,6 +41,8 @@ export async function generateMetadata({
   }
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function SharedVaultPage({
   params}: {
   params: Promise<{ id: string; key?: string[] }>;

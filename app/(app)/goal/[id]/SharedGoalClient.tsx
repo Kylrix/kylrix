@@ -115,7 +115,6 @@ export default function SharedGoalClient({
             }
           },
           fetchRemote: async () => {
-            if (goal) return goal;
             const { getSharedGoalData } = await import('@/lib/actions/client-ops');
             return (await getSharedGoalData(goalId)) as PublicGoal;
           },
@@ -157,12 +156,15 @@ export default function SharedGoalClient({
 
         const channels = [
           `tasks:${goalId}`,
+          `goals:${goalId}`,
           `doc:${goalId}`,
           `row:${goalId}`,
           'tasks',
+          'goals',
+          `databases.turso.collections.tasks.documents.${goalId}`,
         ];
 
-        unsub = realtime.subscribe(channels, (response: any) => {
+        unsub = realtime.subscribe(channels, async (response: any) => {
           const payload = response.payload;
           const targetId = payload?.$id || payload?.id;
           if (targetId && targetId !== goalId) return;
@@ -177,19 +179,30 @@ export default function SharedGoalClient({
             return;
           }
 
-          if (payload) {
-            const updatedGoal: PublicGoal = {
-              id: payload.id || payload.$id || goalId,
-              title: payload.title || '',
-              description: payload.description ?? null,
-              status: payload.status || 'todo',
-              priority: payload.priority || 'medium',
-              dueDate: payload.dueDate ?? null,
-              locked: payload.isLocked || payload.locked,
-            };
-            setCurrentGoal(updatedGoal);
-            setAccessDenied(false);
-            void SharedOfflineSubstrate.saveShared('goal', goalId, updatedGoal);
+          // Trigger fresh remote fetch to ensure complete goal details
+          try {
+            const { getSharedGoalData } = await import('@/lib/actions/client-ops');
+            const fresh = (await getSharedGoalData(goalId)) as PublicGoal;
+            if (fresh) {
+              setCurrentGoal(fresh);
+              setAccessDenied(false);
+              void SharedOfflineSubstrate.saveShared('goal', goalId, fresh);
+            }
+          } catch {
+            if (payload) {
+              const updatedGoal: PublicGoal = {
+                id: payload.id || payload.$id || goalId,
+                title: payload.title || '',
+                description: payload.description ?? null,
+                status: payload.status || 'todo',
+                priority: payload.priority || 'medium',
+                dueDate: payload.dueDate ?? null,
+                locked: payload.isLocked || payload.locked,
+              };
+              setCurrentGoal(updatedGoal);
+              setAccessDenied(false);
+              void SharedOfflineSubstrate.saveShared('goal', goalId, updatedGoal);
+            }
           }
         });
       } catch {}

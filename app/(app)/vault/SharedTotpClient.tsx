@@ -219,8 +219,9 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
             } catch {}
           },
           fetchRemote: async () => {
-            if (rawTotp) return rawTotp;
-            return null;
+            const { ApiResources } = await import('@/lib/api/resources');
+            const actor = { userId: 'guest', scopes: ['vault:read'] } as any;
+            return await ApiResources.getTotpSecret(actor, totpId).catch(() => null);
           },
           onRemoteSuccess: async (freshRaw) => {
             if (cancelled) return;
@@ -259,6 +260,7 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
           `doc:${totpId}`,
           `row:${totpId}`,
           'totpSecrets',
+          `databases.turso.collections.totpSecrets.documents.${totpId}`,
         ];
 
         unsub = realtime.subscribe(channels, async (response: any) => {
@@ -274,12 +276,16 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
             return;
           }
 
-          if (payload) {
-            try {
-              await processAndSetTotp(payload);
-              void SharedOfflineSubstrate.saveShared('vault', totpId, payload);
-            } catch {}
-          }
+          try {
+            const { ApiResources } = await import('@/lib/api/resources');
+            const actor = { userId: 'guest', scopes: ['vault:read'] } as any;
+            const fresh = await ApiResources.getTotpSecret(actor, totpId).catch(() => null);
+            const source = fresh || payload;
+            if (source) {
+              await processAndSetTotp(source);
+              void SharedOfflineSubstrate.saveShared('vault', totpId, source);
+            }
+          } catch {}
         });
       } catch {}
     })();
