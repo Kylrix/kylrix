@@ -17,7 +17,7 @@ async function hydrateSharedNoteRow(noteId: string) {
     const { getNoteTurso } = await import('@/lib/actions/turso-ops');
     const tursoRes = await getNoteTurso(noteId);
     if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
-      const r = tursoRes.row;
+      const r = tursoRes.row as any;
       let tags: string[] = [];
       try {
         tags = typeof r.tags === 'string' ? JSON.parse(r.tags) : (r.tags || []);
@@ -30,9 +30,11 @@ async function hydrateSharedNoteRow(noteId: string) {
         title: r.title,
         content: r.content,
         userId: r.userId,
-        isPublic: true,
-        isGuest: true,
+        isPublic: Boolean(r.isPublished || r.isPublic),
+        isGuest: Boolean(r.isGuest ?? true),
         isWorkspace: Boolean(r.isWorkspace),
+        dek: r.dek || null,
+        metadata: r.metadata || null,
         tags,
         attachments: [],
         createdAt: r.createdAt,
@@ -48,7 +50,8 @@ async function canReadSharedNoteSecure(noteId: string, actorId?: string | null) 
     const { getNoteTurso } = await import('@/lib/actions/turso-ops');
     const tursoRes = await getNoteTurso(noteId);
     if (tursoRes.success && tursoRes.row && !tursoRes.row.isTrashed) {
-      if (tursoRes.row.isPublished || tursoRes.row.userId === actorId) return true;
+      const r = tursoRes.row as any;
+      if (r.isPublished || r.isPublic || r.isGuest || (actorId && r.userId === actorId)) return true;
     }
   } catch {}
 
