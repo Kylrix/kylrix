@@ -215,34 +215,18 @@ export const SharedOfflineSubstrate = {
 
     // 1. Instant 0ms Offline Pass / Initial Data Reconciliation
     let hadLocalHit = false;
-    let localDataTimestamp = 0;
-
-    const parseTs = (item: any): number => {
-      if (!item) return 0;
-      const ts = item.updatedAt || item.$updatedAt || item.createdAt || item.$createdAt;
-      if (!ts) return 0;
-      const parsed = new Date(ts).getTime();
-      return isNaN(parsed) ? 0 : parsed;
-    };
 
     try {
       const offlineHit = await this.loadOffline<T>(kind, id, currentUserId);
       if (offlineHit && offlineHit.data) {
         hadLocalHit = true;
-        localDataTimestamp = parseTs(offlineHit.data);
 
-        // If initialData is provided and newer than or equal to cached offline hit,
-        // sync cache and prefer initialData over stale cache
+        // InitialData from fresh SSR route fetch always takes precedence on page load/reload
         if (options.initialData) {
-          const initTs = parseTs(options.initialData);
-          if (initTs >= localDataTimestamp) {
-            await this.saveShared<T>(kind, id, options.initialData);
-            const ownerId = resolveResourceOwnerId(options.initialData as Record<string, unknown>);
-            const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
-            onLocalHit?.(options.initialData, isOwner);
-          } else {
-            onLocalHit?.(offlineHit.data, offlineHit.isOwner);
-          }
+          await this.saveShared<T>(kind, id, options.initialData);
+          const ownerId = resolveResourceOwnerId(options.initialData as Record<string, unknown>);
+          const isOwner = Boolean(currentUserId && ownerId && currentUserId === ownerId);
+          onLocalHit?.(options.initialData, isOwner);
         } else {
           onLocalHit?.(offlineHit.data, offlineHit.isOwner);
         }

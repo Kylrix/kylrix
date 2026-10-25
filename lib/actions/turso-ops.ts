@@ -3,6 +3,7 @@
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, inArray } from 'drizzle-orm';
+import { invalidateRowCache } from '@/lib/actions/secure-ops/shared';
 
 type CacheEntry<T> = {
   data: T;
@@ -12,9 +13,10 @@ type CacheEntry<T> = {
 const queryTTLMs = 3000; // 3 seconds short TTL for list queries
 const resourceCache = new Map<string, CacheEntry<any>>();
 
-export function invalidateResourceCache(keyPrefix?: string, userId?: string) {
+export async function invalidateResourceCache(keyPrefix?: string, userId?: string) {
   if (!keyPrefix && !userId) {
     resourceCache.clear();
+    await invalidateRowCache();
     return;
   }
   for (const key of resourceCache.keys()) {
@@ -25,6 +27,23 @@ export function invalidateResourceCache(keyPrefix?: string, userId?: string) {
     } else if (userId && key.includes(`:${userId}`)) {
       resourceCache.delete(key);
     }
+  }
+
+  if (keyPrefix) {
+    const tableMap: Record<string, string> = {
+      notes: 'ideas',
+      ideas: 'ideas',
+      goals: 'tasks',
+      tasks: 'tasks',
+      vault: 'credentials',
+      credentials: 'credentials',
+      totp: 'totpSecrets',
+      workspaces: 'projects',
+      projects: 'projects',
+      forms: 'forms',
+      events: 'events',
+    };
+    await invalidateRowCache(tableMap[keyPrefix] || keyPrefix);
   }
 }
 

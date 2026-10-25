@@ -7,6 +7,22 @@ import { Registry } from '@/lib/core/di/registry';
 export const rowCache = new Map<string, { row: any; timestamp: number }>();
 const CACHE_TTL_MS = 30000; // 30 seconds
 
+export async function invalidateRowCache(tableId?: string, rowId?: string) {
+  if (!tableId) {
+    rowCache.clear();
+    return;
+  }
+  for (const key of Array.from(rowCache.keys())) {
+    if (rowId) {
+      if (key.endsWith(`:${tableId}:${rowId}`)) {
+        rowCache.delete(key);
+      }
+    } else if (key.includes(`:${tableId}:`)) {
+      rowCache.delete(key);
+    }
+  }
+}
+
 export type TokenAction =
   | 'state'
   | 'initialize'
