@@ -172,6 +172,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     }
 
                     try {
+                        const { getPublicFormData } = await import('@/lib/actions/client-ops');
                         const publicForm = await getPublicFormData(resolvedParams.id).catch(() => null);
                         const source = publicForm || response.payload;
                         if (source) {
