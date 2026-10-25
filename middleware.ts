@@ -52,9 +52,30 @@ function readResumePathFromCookie(request: NextRequest): string | null {
 }
 
 export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const pathname = request.nextUrl.pathname;
 
-  // ── 0. Instant Scanner Probe & Exploit Rejection (Drops probe compute at Edge) ──
+  // ── 0. Static Assets & File Extensions Instant Fast-Path (Zero compute overhead) ──
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+
+  // ── 1. RSC Flight Pass-Through (Instant pass-through before parsing extra params) ──
+  const isRscFlight =
+    request.headers.get('RSC') === '1' ||
+    request.headers.has('next-router-prefetch') ||
+    request.headers.has('next-router-state-tree') ||
+    request.headers.has('Next-Action') ||
+    request.headers.get('accept')?.includes('text/x-component');
+
+  if (isRscFlight) {
+    return NextResponse.next();
+  }
+
+  // ── 2. Instant Scanner Probe & Exploit Rejection (Drops probe compute at Edge) ──
   if (isKnownScannerProbe(pathname)) {
     return new NextResponse('Not Found', {
       status: 404,
@@ -65,26 +86,7 @@ export function middleware(request: NextRequest) {
     });
   }
 
-  // ── 1. Static Assets & RSC Flight Instant Pass-Through (Zero allocation) ──
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon') ||
-    pathname.includes('.')
-  ) {
-    return NextResponse.next();
-  }
-
-  const isRscFlight =
-    request.headers.get('RSC') === '1' ||
-    request.headers.has('next-router-prefetch') ||
-    request.headers.has('next-router-state-tree') ||
-    request.headers.has('Next-Action') ||
-    searchParams.has('_rsc') ||
-    request.headers.get('accept')?.includes('text/x-component');
-
-  if (isRscFlight) {
-    return NextResponse.next();
-  }
+  const searchParams = request.nextUrl.searchParams;
 
   // ── 2. API & MCP Surface Shielding (Programmatic Agents, Tools, and External Integrations) ──
   if (
