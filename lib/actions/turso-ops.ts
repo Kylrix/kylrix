@@ -339,63 +339,94 @@ export async function normalizeKeychainRow(row: any): Promise<any> {
 }
 
 /**
- * Resolves canonical user IDs for a user using indexed lookups (id PK and email index)
- * to avoid expensive unindexed OR table scans across the user table.
+ * Resolves canonical user IDs for a user using indexed lookups (id PK, email index, account userId)
+ * to bridge fragmented user accounts across OAuth providers and legacy Appwrite migrations.
  */
 async function resolveAllUserIds(userId: string): Promise<string[]> {
   const cleanId = String(userId || '').trim();
   if (!cleanId) return [];
 
-  let allUserIds = [cleanId];
-  let userRow: { id: string; appwriteAccountId: string | null; email: string | null } | null = null;
+  const allUserIds = new Set<string>([cleanId]);
+  const emailsToQuery = new Set<string>();
+
+  if (cleanId.includes('@')) {
+    emailsToQuery.add(cleanId.toLowerCase());
+  }
 
   try {
-    const rowsById = await db
-      .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId, email: schema.user.email })
-      .from(schema.user)
-      .where(eq(schema.user.id, cleanId))
-      .limit(1);
+    // 1. Look up account table entries directly linked to cleanId
+    const accountRows = await db
+      .select({ userId: schema.account.userId })
+      .from(schema.account)
+      .where(eq(schema.account.userId, cleanId))
+      .limit(20);
 
-    if (rowsById.length > 0) {
-      userRow = rowsById[0];
-    } else if (cleanId.includes('@')) {
-      const rowsByEmail = await db
-        .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId, email: schema.user.email })
-        .from(schema.user)
-        .where(eq(schema.user.email, cleanId.toLowerCase()))
-        .limit(1);
-      if (rowsByEmail.length > 0) {
-        userRow = rowsByEmail[0];
-      }
-    } else {
-      const rowsByAppwrite = await db
-        .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId, email: schema.user.email })
-        .from(schema.user)
-        .where(eq(schema.user.appwriteAccountId, cleanId))
-        .limit(1);
-      if (rowsByAppwrite.length > 0) {
-        userRow = rowsByAppwrite[0];
-      }
+    for (const acc of accountRows) {
+      if (acc.userId) allUserIds.add(acc.userId);
     }
 
-    if (userRow) {
-      if (userRow.id) allUserIds.push(userRow.id);
-      if (userRow.appwriteAccountId) allUserIds.push(userRow.appwriteAccountId);
-      if (userRow.email) {
-        const sameEmailUsers = await db
-          .select({ id: schema.user.id, appwriteAccountId: schema.user.appwriteAccountId })
+    // 2. Query user records by id or appwriteAccountId or email
+    const userConditions = [
+      eq(schema.user.id, cleanId),
+      eq(schema.user.appwriteAccountId, cleanId),
+    ];
+    if (cleanId.includes('@')) {
+      userConditions.push(eq(schema.user.email, cleanId.toLowerCase()));
+    }
+
+    const matchedUsers = await db
+      .select({
+        id: schema.user.id,
+        appwriteAccountId: schema.user.appwriteAccountId,
+        email: schema.user.email,
+      })
+      .from(schema.user)
+      .where(or(...userConditions))
+      .limit(10);
+
+    for (const u of matchedUsers) {
+      if (u.id) allUserIds.add(u.id);
+      if (u.appwriteAccountId) allUserIds.add(u.appwriteAccountId);
+      if (u.email) emailsToQuery.add(u.email.trim().toLowerCase());
+    }
+
+    // 3. Cross-reference all matching email addresses to find shared user records & account entries
+    if (emailsToQuery.size > 0) {
+      for (const email of emailsToQuery) {
+        const sharedEmailUsers = await db
+          .select({
+            id: schema.user.id,
+            appwriteAccountId: schema.user.appwriteAccountId,
+          })
           .from(schema.user)
-          .where(eq(schema.user.email, userRow.email.toLowerCase()))
-          .limit(10);
-        for (const eu of sameEmailUsers) {
-          if (eu.id) allUserIds.push(eu.id);
-          if (eu.appwriteAccountId) allUserIds.push(eu.appwriteAccountId);
+          .where(eq(schema.user.email, email))
+          .limit(20);
+
+        for (const sharedU of sharedEmailUsers) {
+          if (sharedU.id) allUserIds.add(sharedU.id);
+          if (sharedU.appwriteAccountId) allUserIds.add(sharedU.appwriteAccountId);
         }
       }
     }
-  } catch {}
 
-  return Array.from(new Set(allUserIds.filter(Boolean)));
+    // 4. Query accounts linked to any resolved user IDs in case additional accounts exist
+    const currentResolved = Array.from(allUserIds).filter(Boolean);
+    if (currentResolved.length > 0) {
+      const extraAccountRows = await db
+        .select({ userId: schema.account.userId })
+        .from(schema.account)
+        .where(inArray(schema.account.userId, currentResolved))
+        .limit(50);
+
+      for (const acc of extraAccountRows) {
+        if (acc.userId) allUserIds.add(acc.userId);
+      }
+    }
+  } catch (err) {
+    console.warn('[turso-ops] resolveAllUserIds warning:', err);
+  }
+
+  return Array.from(allUserIds).filter(Boolean);
 }
 
 export async function listKeychainTurso(userId: string) {
@@ -489,10 +520,12 @@ export async function listVaultItemsTurso(userId: string) {
   }
 
   try {
+    const allUserIds = await resolveAllUserIds(userId);
+
     const rows = await db
       .select()
       .from(schema.vaultItems)
-      .where(and(eq(schema.vaultItems.userId, userId), eq(schema.vaultItems.isTrashed, false)));
+      .where(and(inArray(schema.vaultItems.userId, allUserIds), eq(schema.vaultItems.isTrashed, false)));
     const normalizedRows = rows.map((row: any) => {
       let nested = row.metadata;
       for (let i = 0; i < 3 && typeof nested === 'string'; i += 1) {
@@ -603,10 +636,12 @@ export async function listTotpSecretsTurso(userId: string) {
   }
 
   try {
+    const allUserIds = await resolveAllUserIds(userId);
+
     const rows = await db
       .select()
       .from(schema.totpSecrets)
-      .where(eq(schema.totpSecrets.userId, userId));
+      .where(inArray(schema.totpSecrets.userId, allUserIds));
     const normalizedRows = rows.map((row: any) => {
       let meta: any = {};
       try {
@@ -1003,10 +1038,12 @@ export async function listNotesTurso(userId: string) {
   }
 
   try {
+    const allUserIds = await resolveAllUserIds(userId);
+
     const rows = await db
       .select()
       .from(schema.notes)
-      .where(and(eq(schema.notes.userId, userId), eq(schema.notes.isTrashed, false)));
+      .where(and(inArray(schema.notes.userId, allUserIds), eq(schema.notes.isTrashed, false)));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
@@ -1119,10 +1156,12 @@ export async function listGoalsTurso(userId: string) {
   }
 
   try {
+    const allUserIds = await resolveAllUserIds(userId);
+
     const rows = await db
       .select()
       .from(schema.goals)
-      .where(eq(schema.goals.userId, userId));
+      .where(inArray(schema.goals.userId, allUserIds));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
