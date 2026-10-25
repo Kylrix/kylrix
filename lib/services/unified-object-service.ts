@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { systemTables } from '@/lib/data/system-tables';
 
 export type ObjectKind =
@@ -43,7 +44,7 @@ export async function unifiedCreate<T = any>(
   data: Record<string, any>,
   opts?: { permissions?: string[]; ownerId?: string }
 ): Promise<T> {
-  const localId = data.$id || data.id || crypto.randomUUID();
+  const localId = data.$id || data.id || ulid();
   const now = new Date().toISOString();
 
   try {

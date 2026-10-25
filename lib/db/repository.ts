@@ -3,6 +3,7 @@ import * as schema from './schema';
 import { QueryExpression } from './queries';
 import { eq, ne, lt, lte, gt, gte, and, desc, asc, like, isNull, isNotNull, sql } from 'drizzle-orm';
 import { broadcastRealtimeEvent } from '@/lib/realtime/partykit';
+import { ulid } from '@/lib/utils/ulid';
 
 export interface ListRowsResult<T> {
   total: number;
@@ -606,7 +607,7 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
       throw new Error(`[TursoDatabaseAdapter] Cannot createRow: Table not mapped: "${tableId}"`);
     }
 
-    const id = rowId || (data as any)?.id || (data as any)?.$id || crypto.randomUUID();
+    const id = rowId || (data as any)?.id || (data as any)?.$id || ulid();
     const now = new Date().toISOString();
 
     const insertData: Record<string, any> = {

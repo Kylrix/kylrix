@@ -8,6 +8,7 @@ import {
   ProjectSchema
 } from '@/lib/validations/schemas';
 import { filterRootWorkspaceProjects } from '@/lib/projects/sub-projects';
+import { ulid } from '@/lib/utils/ulid';
 import { DEFAULT_FEEDBACK_FORM_ID, DEFAULT_FEEDBACK_FORM_ROW } from '@/constants/forms';
 
 const {
@@ -77,7 +78,7 @@ export async function submitPublicFormDataSecure(input: {
   const formId = String(input?.formId || '').trim();
   if (!formId) throw new Error('formId is required');
 
-  const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  const submissionId = `sub_${ulid()}`;
   const nowIso = new Date().toISOString();
 
   await db.insert(schema.formSubmissions).values({
@@ -165,7 +166,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
   };
   const validated = ProjectSchema.parse(payloadToValidate);
   const now = new Date().toISOString();
-  const projectId = data?.$id || data?.id || crypto.randomUUID();
+  const projectId = data?.$id || data?.id || ulid();
 
   const { upsertProjectTurso } = await import('@/lib/actions/turso-ops');
   await upsertProjectTurso({
@@ -174,7 +175,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
     name: validated.title,
     title: validated.title,
     description: validated.summary || validated.description || '',
-    inviteCode: validated.inviteCode || crypto.randomUUID(),
+    inviteCode: validated.inviteCode || ulid(),
     createdAt: now,
     updatedAt: now,
   });
@@ -249,7 +250,7 @@ export async function addObjectToProjectSecure(
   }
 
   const { upsertWorkspaceObjectTurso } = await import('@/lib/actions/turso-ops');
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   await upsertWorkspaceObjectTurso({
@@ -303,7 +304,7 @@ export async function createFormSecure(data: any, jwt?: string) {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { upsertFormTurso } = await import('@/lib/actions/turso-ops');
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   await upsertFormTurso({
@@ -361,7 +362,7 @@ export async function createEventSecure(data: any, jwt?: string) {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { upsertEventTurso } = await import('@/lib/actions/turso-ops');
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   await upsertEventTurso({
@@ -417,7 +418,7 @@ export async function convertResponseToGoalSecure(submissionId: string, jwt?: st
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
-  const id = crypto.randomUUID();
+  const id = ulid();
   await upsertGoalTurso({
     id,
     userId: actor.$id,
@@ -453,7 +454,7 @@ export async function createGoalSecure(data: any, jwt?: string): Promise<any> {
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
-  const id = data?.$id || data?.id || crypto.randomUUID();
+  const id = data?.$id || data?.id || ulid();
 
   await upsertGoalTurso({
     id,
@@ -519,7 +520,7 @@ export async function rotateWorkspaceInviteCodeSecure(workspaceId: string, jwt?:
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
-  const newCode = explicitCode || crypto.randomUUID();
+  const newCode = explicitCode || ulid();
   await db
     .update(schema.projects)
     .set({ inviteCode: newCode, updatedAt: new Date().toISOString() })

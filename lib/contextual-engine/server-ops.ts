@@ -1,8 +1,9 @@
 'use server';
+import { ulid } from '@/lib/utils/ulid';
 
 import { systemTables } from '@/lib/data/system-tables';
 
-import { Query, Permission, Role, ID } from '@/lib/data';
+import { Query, Permission, Role } from '@/lib/data';
 
 import { APPWRITE_CONFIG } from '@/lib/data';
 import { getActor } from '@/lib/actions/secure-ops/shared';
@@ -18,7 +19,7 @@ export async function saveContextSecure(data: Partial<ContextObject>, jwt?: stri
   if (!actor || !actor.$id) throw new Error('Unauthorized: Session expired');
 
   const tables = systemTables();
-  const contextId = data.id || ID.unique();
+  const contextId = data.id || ulid();
   const now = new Date().toISOString();
 
   const payload: any = {
@@ -115,7 +116,7 @@ export async function syncGraphEdgeSecure(edge: KnowledgeGraphEdge, jwt?: string
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   const tables = systemTables();
-  const edgeId = edge.id || ID.unique();
+  const edgeId = edge.id || ulid();
   const now = new Date().toISOString();
 
   const payload: any = {
@@ -158,7 +159,7 @@ export async function syncPatternSecure(pattern: PatternMatch, jwt?: string): Pr
   if (!actor || !actor.$id) return null;
 
   const tables = systemTables();
-  const patternId = pattern.id || ID.unique();
+  const patternId = pattern.id || ulid();
   const now = new Date().toISOString();
 
   const payload: any = {

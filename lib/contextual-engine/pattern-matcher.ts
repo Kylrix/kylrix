@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { PatternMatch, ContextualNiche } from './types';
 
 const CONFIDENCE_THRESHOLD = 0.65;
@@ -103,7 +104,7 @@ export class PatternMatcher {
       } else {
         const baseConfidence = 0.65 * boost;
         this.patterns.set(key, {
-          id: `pat_${Math.random().toString(36).slice(2, 10)}`,
+          id: `pat_${ulid()}`,
           patternKey: key,
           patternType: 'autocomplete',
           ngram: prefix,

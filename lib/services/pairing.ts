@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { PatService } from '@/lib/services/pats';
 import { normalizeScopes } from '@/lib/api/scopes';
+import { ulid } from '@/lib/utils/ulid';
 
 const PAIRING_EXPIRY_SECONDS = 900;
 const POLLING_INTERVAL_SECONDS = 5;
@@ -58,7 +59,7 @@ export const PairingService = {
     input: any,
     baseUrl = 'https://www.kylrix.space'
   ) {
-    const requestId = crypto.randomUUID();
+    const requestId = ulid();
     const deviceCode = `dev_${randomBytes(24).toString('base64url')}`;
     const userCode = generateHumanUserCode();
     const now = new Date();

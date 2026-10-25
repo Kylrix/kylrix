@@ -1,6 +1,7 @@
 'use server';
 
-import { ID, Query } from '@/lib/data';
+import { Query } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 import { getActor } from '@/lib/actions/secure-ops';
 import { requireAdmin } from '@/lib/services/internal/admin';
 import { createAdminClient } from '@/lib/data';
@@ -70,7 +71,7 @@ export async function sendAdminEmailsAction(body: SendEmailBody, jwt?: string) {
     const targetUser = userList.users[0];
     if (!targetUser) throw new Error(`No Appwrite user found for ${recipient.email}`);
     const info = await messaging.createEmail({
-      messageId: ID.unique(),
+      messageId: ulid(),
       subject,
       content: html,
       users: [targetUser.$id],

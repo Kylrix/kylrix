@@ -1,4 +1,5 @@
-import { ID, Query } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
+import { Query } from '@/lib/data';
 import { appwriteSessionFetch } from './http';
 
 export type OauthApp = {
@@ -203,7 +204,7 @@ export async function createApp(params: {
   const created = await appwriteSessionFetch<OauthApp>('POST', '/apps', {
     encode: 'multipart',
     body: {
-      appId: ID.unique(),
+      appId: ulid(),
       name: params.name,
       redirectUris: params.redirectUris,
       type: params.type || 'confidential',

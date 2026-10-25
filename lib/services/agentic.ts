@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -43,7 +44,7 @@ export const AgenticService = {
     framework?: AgentFramework;
   }) {
     const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
-    const agentId = crypto.randomUUID();
+    const agentId = ulid();
     const now = new Date().toISOString();
 
     const config = JSON.stringify({

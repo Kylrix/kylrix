@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Localhost Live Log Streamer for Next.js Server & Autonomous Agents.
  * Active strictly in development mode to provide real-time runtime diagnostics.
@@ -54,7 +55,7 @@ class DevLogStreamer {
         const message = reason instanceof Error ? reason.message : String(reason);
         const stack = reason instanceof Error ? reason.stack : undefined;
         this.addEntry({
-          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          id: ulid(),
           timestamp: new Date().toISOString(),
           level: 'error',
           message: `UnhandledRejection: ${message}`,
@@ -65,7 +66,7 @@ class DevLogStreamer {
 
       process.on('uncaughtException', (err: Error) => {
         this.addEntry({
-          id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          id: ulid(),
           timestamp: new Date().toISOString(),
           level: 'error',
           message: `UncaughtException: ${err.message}`,
@@ -96,7 +97,7 @@ class DevLogStreamer {
       const firstErr = args.find((a) => a instanceof Error);
 
       this.addEntry({
-        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        id: ulid(),
         timestamp: new Date().toISOString(),
         level,
         message,

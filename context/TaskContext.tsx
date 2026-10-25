@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
@@ -298,7 +299,7 @@ const parseCommentEntry = (entry: any): Comment => {
       return parseCommentEntry(JSON.parse(entry));
     } catch (_e) {
       return {
-        id: crypto.randomUUID(),
+        id: ulid(),
         content: entry,
         authorId: 'system',
         authorName: 'System',
@@ -307,7 +308,7 @@ const parseCommentEntry = (entry: any): Comment => {
   }
 
   return {
-    id: crypto.randomUUID(),
+    id: ulid(),
     content: '',
     authorId: 'system',
     authorName: 'System',
@@ -1632,7 +1633,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     async (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'position'>) => {
       try {
         const userId = state.userId || 'guest';
-        const id = crypto.randomUUID();
+        const id = ulid();
         const inCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
         const mappedTask: Task = {
           id,
@@ -1962,7 +1963,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (!task) return;
 
     const comment: Comment = {
-      id: crypto.randomUUID(),
+      id: ulid(),
       content,
       authorId: state.userId || task.creatorId || 'user',
       authorName: 'You',
@@ -2089,7 +2090,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const addLabel = useCallback((label: Omit<Label, 'id'>) => {
     const newLabel: Label = {
       ...label,
-      id: crypto.randomUUID()};
+      id: ulid()};
     dispatch({ type: 'ADD_LABEL', payload: newLabel });
   }, []);
 

@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { PermissionChangeInput } from './shared';
+import { ulid } from '@/lib/utils/ulid';
 
 const { getActor } = shared;
 
@@ -14,7 +15,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     throw new Error('Unauthorized');
   }
 
-  const id = crypto.randomUUID();
+  const id = ulid();
   const now = new Date().toISOString();
 
   try {

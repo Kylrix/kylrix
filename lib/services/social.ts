@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -41,7 +42,7 @@ export const SocialService = {
   },
 
   async uploadMedia(_file: File) {
-    return crypto.randomUUID();
+    return ulid();
   },
 
   getMediaPreview(_fileId: string, _width: number = 800, _height: number = 600) {
@@ -62,7 +63,7 @@ export const SocialService = {
     _nostrId?: string | null,
     _attachmentsPayload?: any
   ) {
-    const id = crypto.randomUUID();
+    const id = ulid();
     const now = new Date().toISOString();
 
     return { $id: id, id, userId: creatorId, caption: content, createdAt: now };
@@ -85,7 +86,7 @@ export const SocialService = {
   },
 
   async followUser(followerId: string, followingId: string) {
-    const id = crypto.randomUUID();
+    const id = ulid();
     await db.insert(schema.follows).values({
       id,
       followerId,

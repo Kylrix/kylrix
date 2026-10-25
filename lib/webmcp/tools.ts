@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Official WebMCP Tool Suite for Kylrix
  * Exposes full 1:1 productivity, collaboration, and workspace capabilities to in-browser AI agents.
@@ -295,7 +296,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         content,
         tags,
       }).catch(async () => {
-        const fallbackId = `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const fallbackId = `note_${ulid()}`;
         const localDoc = {
           $id: fallbackId,
           id: fallbackId,
@@ -551,7 +552,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
           category: args.category || 'general',
         }
       ).catch(async () => {
-        const id = `goal_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const id = `goal_${ulid()}`;
         const localDoc = {
           $id: id,
           id,
@@ -694,7 +695,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         description: String(args.description || ''),
         isAgentic: Boolean(args.isAgentic),
       }).catch(async () => {
-        const id = `ws_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const id = `ws_${ulid()}`;
         const localWs = {
           $id: id,
           id,
@@ -824,7 +825,7 @@ export const KYLRIX_WEBMCP_TOOLS: WebMcpToolDefinition[] = [
         endAt,
         description: args.description || '',
       }).catch(async () => {
-        const id = `event_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const id = `event_${ulid()}`;
         const localDoc = {
           $id: id,
           id,

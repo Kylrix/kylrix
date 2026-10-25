@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
@@ -80,7 +81,7 @@ export class SponsorshipService {
         return { ...existing[0], awardedAt: now } as unknown as UserBadge;
       }
 
-      const id = crypto.randomUUID();
+      const id = ulid();
       const badgeData = {
         id,
         userId,
@@ -124,7 +125,7 @@ export class SponsorshipService {
   }): Promise<Sponsorship> {
     const now = new Date().toISOString();
     const resolvedTier = (data.tier || resolveBadgeForAmount(data.amount)?.tier || 'supporter') as BadgeTier;
-    const rowId = crypto.randomUUID();
+    const rowId = ulid();
 
     const rowData = {
       id: rowId,

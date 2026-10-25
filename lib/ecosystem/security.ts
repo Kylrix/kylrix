@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * Kylrix Ecosystem Security Protocol (WESP)
  * Centralized security and encryption logic for the entire ecosystem.
@@ -7,7 +8,7 @@
 import { MeshProtocol } from './mesh';
 import { tablesDB } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/data';
-import { Query, ID } from '@/lib/data';
+import { Query } from '@/lib/data';
 import { decodeBase64ToBytes, normalizeStoredSecretString } from '@/lib/crypto/public-key';
 
 const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
@@ -689,7 +690,7 @@ class EcosystemSecurity {
       return true;
     }
 
-    await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ID.unique(), {
+    await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ulid(), {
       userId,
       backupCodes: encryptedPayload});
     return true;
@@ -957,7 +958,7 @@ class EcosystemSecurity {
     const privBase64 = this.encodeBase64(new Uint8Array(privExport));
     const encryptedPriv = await this.encrypt(privBase64);
 
-    const created = await tablesDB.createRow(PW_DB, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, ID.unique(), {
+    const created = await tablesDB.createRow(PW_DB, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, ulid(), {
       userId,
       identityType: 'e2e_connect',
       label: 'Connect E2E Identity',
@@ -1262,7 +1263,7 @@ class EcosystemSecurity {
       await tablesDB.updateRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, existing.rows[0].$id, {
         passkey_reminder_at: reminderAt});
     } else {
-      await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ID.unique(), {
+      await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ulid(), {
         userId,
         passkey_reminder_at: reminderAt});
     }

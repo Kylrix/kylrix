@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { Query } from '@/lib/data';
 import { tablesDB } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/data';
@@ -52,7 +53,7 @@ export async function appendBookmarkIndex(
 ): Promise<BookmarkIndexEntry> {
   const row: BookmarkIndexEntry = {
     ...entry,
-    id: entry.id || `bm_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: entry.id || `bm_${ulid()}`,
     createdAt: new Date().toISOString(),
   };
   const existing = (await LocalEngine.cacheGet<BookmarkIndexEntry[]>(BOOKMARKS_INDEX_CACHE).catch(() => null)) || [];

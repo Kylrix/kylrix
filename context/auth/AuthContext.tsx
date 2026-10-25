@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -221,9 +222,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loginWithEmailOTP = useCallback(async (email: string) => {
     try {
       const res = await (authClient as any).emailOtp.sendVerificationOtp({ email, type: 'sign-in' });
-      return res?.data?.userId || crypto.randomUUID();
+      return res?.data?.userId || ulid();
     } catch {
-      return crypto.randomUUID();
+      return ulid();
     }
   }, []);
 

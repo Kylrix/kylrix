@@ -1,4 +1,5 @@
-import { ID, Models, Permission, Role, Query, tablesDB, realtime, APPWRITE_CONFIG } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
+import { Models, Permission, Role, Query, tablesDB, realtime, APPWRITE_CONFIG } from '@/lib/data';
 import { getEcosystemUrl } from './constants';
 import { Calendar, Task, Event, EventGuest } from '../types/kylrixflow';
 import type { CollaboratorPermission, TaskCollaborator } from '../types';
@@ -190,7 +191,7 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
             accepted: true,
             status: 'accepted'},
         nextPermissions,
-        ID.unique(),
+        ulid(),
         TASK_COLLABORATOR_DATABASE
     );
     return normalizeCollaborator(created);
@@ -228,7 +229,7 @@ async function createRow<T extends Models.Row>(
     tableId: string,
     data: TableCreateData<T>,
     permissions?: string[],
-    _rowId: string = ID.unique(),
+    _rowId: string = ulid(),
     dbId: string = FLOW_DATABASE_ID
 ): Promise<T> {
     let res: T;
@@ -330,7 +331,7 @@ export const tasks = {
                 ? String((data as any).$id).trim()
                 : typeof (data as any)?.id === 'string' && (data as any).id.trim()
                   ? String((data as any).id).trim()
-                  : ID.unique();
+                  : ulid();
         return createRow<Task>(TABLES.FLOW.TASKS, { ...(data as any), $id: reservedId }, permissions, reservedId);
     },
     get: (id: string) => getRow<Task>(TABLES.FLOW.TASKS, id),

@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -37,7 +38,7 @@ export function ContextIntelligenceProvider({ children }: { children: ReactNode 
       if (stored) {
         setActiveSessionId(stored);
       } else {
-        const newId = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const newId = `session_${ulid()}`;
         setActiveSessionId(newId);
         await LocalEngine.cacheSet(LOCAL_SESSION_KEY, newId);
       }

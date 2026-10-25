@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Paperclip, Mic, Square, Send, Loader2, X } from 'lucide-react';
@@ -108,10 +109,7 @@ export const ChatDraftInput = React.memo(function ChatDraftInput({
       try {
         const { AppwriteService } = await import('@/lib/data');
         const { encryptThreadData } = await import('@/lib/encryption/thread-crypto');
-        const threadSecret =
-          typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `${Date.now()}-send`;
+        const threadSecret = ulid();
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
         const titleEnc = await encryptThreadData('Secure Note');
         const contentEnc = await encryptThreadData(val, titleEnc.key);

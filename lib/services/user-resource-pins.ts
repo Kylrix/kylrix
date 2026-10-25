@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
@@ -53,7 +54,7 @@ export const UserResourcePinService = {
     const existing = await this.findPin(userId, resourceType, resourceId);
     if (existing) return existing;
 
-    const id = crypto.randomUUID();
+    const id = ulid();
     const now = new Date().toISOString();
 
     const row = {

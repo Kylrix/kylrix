@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
@@ -19,7 +20,7 @@ export const TelemetryService = {
     app: string;
     parentThreadId?: string | null;
   }): Promise<string> {
-    return crypto.randomUUID();
+    return ulid();
   },
 
   async completeThread(_threadId: string): Promise<void> {},
@@ -36,7 +37,7 @@ export const TelemetryService = {
   }): Promise<void> {
     try {
       await db.insert(schema.activityLog).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         userId: params.userId,
         action: params.action,
         metadata: params.metadata ? JSON.stringify(params.metadata) : null,
@@ -63,7 +64,7 @@ export const TelemetryService = {
   }): Promise<void> {
     try {
       await db.insert(schema.notifications).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         originatorId: params.originatorId,
         targets: JSON.stringify(params.targets),
         targetPointer: params.targetPointer ? JSON.stringify(params.targetPointer) : null,
@@ -122,7 +123,7 @@ export const TelemetryService = {
   },
 
   async saveSession(userId: string, context: string, chatHistory: string, seen = true, sessionId?: string): Promise<string | undefined> {
-    const targetSessionId = sessionId || crypto.randomUUID();
+    const targetSessionId = sessionId || ulid();
     const now = new Date().toISOString();
 
     try {
@@ -176,7 +177,7 @@ export const TelemetryService = {
   }): Promise<void> {
     try {
       await db.insert(schema.sessionObjects).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         userId: params.userId,
         sessionId: params.sessionId,
         objectId: params.objectId,
@@ -223,7 +224,7 @@ export const TelemetryService = {
     status?: string | null;
     resultSummary?: string | null;
   }): Promise<string | null> {
-    const id = crypto.randomUUID();
+    const id = ulid();
     try {
       await db.insert(schema.toolCalls).values({
         id,

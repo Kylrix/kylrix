@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { devLogStreamer, DevLogEntry } from '@/lib/dev/live-logs';
+import { ulid } from '@/lib/utils/ulid';
 import { canExposeLiveErrorsForEmail } from '@/lib/services/internal/engineer-guard';
 import { getActor } from '@/lib/actions/secure-ops/shared';
 
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest) {
   }
 
   const entry: DevLogEntry = {
-    id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: ulid(),
     timestamp: new Date().toISOString(),
     level: body.level === 'warn' ? 'warn' : body.level === 'info' ? 'info' : 'error',
     message,

@@ -1,5 +1,6 @@
 import { createCrossObjectMetadata, type CrossObjectOrigin } from '../orchestration';
 import { clampNoteTitle } from '@/constants/noteTitle';
+import { ulid } from '@/lib/utils/ulid';
 
 export interface NoteCreationContext<NoteRow = any> {
   databaseId: string;
@@ -51,7 +52,7 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
       }
 
       const now = new Date().toISOString();
-      const docId = deps.generateId ? deps.generateId() : Math.random().toString(36).slice(2);
+      const docId = deps.generateId ? deps.generateId() : ulid();
       const cleanData = deps.cleanRowData(data);
       const noteData = { ...cleanData } as Record<string, unknown>;
       if (noteData.title !== undefined) {

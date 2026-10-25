@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -398,7 +399,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
       }));
 
       setMessages(prev => [...prev, {
-        id: Math.random().toString(),
+        id: ulid(),
         role: 'assistant',
         content: `✅ Agent payment of ${pendingPayment.amount} ARB approved. On-chain Stream funded! Tx: ${result.txHash}`
       }]);
@@ -848,7 +849,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
     setMessages((prev) => [
       ...prev,
       {
-        id: opts?.id || `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        id: opts?.id || ulid(),
         role,
         content,
         blocks: opts?.blocks,
@@ -878,7 +879,7 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
         ? `${trimmed}\n\n[Attached: ${pendingObject.payload.label || 'Object'} (${pendingObject.payload.childKind || 'item'}) - ID: ${pendingObject.payload.childId}]`
         : trimmed;
 
-      const userMsgId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const userMsgId = `msg_u_${ulid()}`;
       appendMessage('user', promptWithAttachment, { syncStatus: 'pending', id: userMsgId });
       const draftSessionId = activeSessionId || `session_${Date.now()}`;
       if (user?.$id) {

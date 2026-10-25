@@ -1,4 +1,5 @@
 'use client';
+import { ulid } from '@/lib/utils/ulid';
 
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
@@ -89,7 +90,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
   }, [isRecording]);
 
   const addSuggestion = useCallback((suggestion: Omit<EphemeralSuggestion, 'id' | 'timestamp'>) => {
-    const id = Math.random().toString(36).substring(2, 9);
+    const id = ulid();
     const newSuggestion: EphemeralSuggestion = {
       ...suggestion,
       id,
@@ -411,7 +412,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
       return null;
     }
 
-    const workflowId = Math.random().toString(36).substring(2, 9);
+    const workflowId = ulid();
     const newWorkflow: WorkflowChain = {
       id: workflowId,
       name,

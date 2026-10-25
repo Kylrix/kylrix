@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
@@ -104,7 +105,7 @@ export const ThreadService = {
     }
 
     const now = new Date().toISOString();
-    const id = crypto.randomUUID();
+    const id = ulid();
     const title = params.title?.trim() || `${parentKind} ${channel === THREAD_CHANNEL_DISCUSS ? 'discussion' : 'thread'}`;
 
     await db.insert(schema.threads).values({
@@ -238,7 +239,7 @@ export const ThreadService = {
     const content = String(params.content || '').trim();
     if (!content) throw new Error('content required');
 
-    const id = crypto.randomUUID();
+    const id = ulid();
     const now = new Date().toISOString();
 
     await db.insert(schema.threadMessages).values({
@@ -263,7 +264,7 @@ export const ThreadService = {
   },
 
   async addReaction(params: { messageId: string; threadId: string; userId: string; emoji: string }) {
-    const id = crypto.randomUUID();
+    const id = ulid();
     await db.insert(schema.reactions).values({
       id,
       resourceId: params.messageId,

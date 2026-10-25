@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 import { NextRequest, NextResponse } from 'next/server';
 import { handleMcpRpc } from './handler';
 import {
@@ -61,7 +62,7 @@ export function createSseStream(req: NextRequest, endpointPrefix = MCP_SSE_ENDPO
     });
   }
 
-  const sessionId = `mcp_sess_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const sessionId = `mcp_sess_${ulid()}`;
 
   let streamTimeout: NodeJS.Timeout | null = null;
 

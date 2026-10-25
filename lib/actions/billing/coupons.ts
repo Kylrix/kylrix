@@ -1,6 +1,7 @@
 'use server';
 
-import { ID, Permission, Query, Role } from '@/lib/data';
+import { Permission, Query, Role } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 import { getActor } from '@/lib/actions/secure-ops';
 import { createAdminClient, createSystemClient } from '@/lib/data';
 import { APPWRITE_CONFIG } from '@/lib/data';
@@ -233,7 +234,7 @@ export async function createCouponAction(input: {
   const created: any[] = [];
   
   for (const targetUserId of targets) {
-    const couponId = ID.unique();
+    const couponId = ulid();
     const isLifetime = String(input.planId || '').toUpperCase().includes('LIFETIME');
     const couponData = {
       discountPercent: Number(input.discountPercent),

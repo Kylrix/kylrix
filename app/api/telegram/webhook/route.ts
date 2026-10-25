@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { APPWRITE_CONFIG } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 import { systemTables } from '@/lib/data/system-tables';
 import { ApiResources } from '@/lib/api/resources';
 import type { ApiActor } from '@/lib/api/guard';
@@ -1015,7 +1016,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
 
       try {
         const activeWs = getTelegramActiveWorkspace(chatId);
-        const ideaId = (await import('crypto')).randomUUID();
+        const ideaId = ulid();
         const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
 
         await upsertNoteTurso({
@@ -1074,7 +1075,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
       }
       try {
         const activeWs = getTelegramActiveWorkspace(chatId);
-        const goalId = (await import('crypto')).randomUUID();
+        const goalId = ulid();
         const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
 
         await upsertGoalTurso({
@@ -1165,7 +1166,7 @@ export async function handleTelegramUpdate(body: any): Promise<{
       const title = firstLine || 'Quick Thought';
       try {
         const activeWs = getTelegramActiveWorkspace(chatId);
-        const ideaId = (await import('crypto')).randomUUID();
+        const ideaId = ulid();
         const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
 
         await upsertNoteTurso({

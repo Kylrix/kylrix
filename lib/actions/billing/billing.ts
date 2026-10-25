@@ -1,6 +1,7 @@
 'use server';
 
-import { ID, Permission, Query, Role } from '@/lib/data';
+import { Permission, Query, Role } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 import { billingManager, resolveProviderAdapterId } from '@/lib/billing/provider-factory';
 import { PaymentMethod } from '@/lib/billing/types';
 import { registerPendingCheckoutWithAdapter } from '@/lib/billing/pending-checkout';
@@ -167,7 +168,7 @@ export async function createBillingCheckoutSessionAction(input: {
       const subscription = await databases.createRow(
         NOTE_DB_ID,
         SUBSCRIPTIONS_TABLE_ID,
-        ID.unique(),
+        ulid(),
         {
           userId: user.$id,
           plan: 'pro',
@@ -232,7 +233,7 @@ export async function createBillingCheckoutSessionAction(input: {
       await databases.createRow(
         NOTE_DB_ID,
         'billing_transactions',
-        ID.unique(),
+        ulid(),
         {
           paymentId: `coupon_${couponRow.$id}_${user.$id}_${Date.now()}`,
           userId: user.$id,
@@ -283,7 +284,7 @@ export async function createBillingCheckoutSessionAction(input: {
     await databases.createRow(
       NOTE_DB_ID,
       'billing_transactions',
-      ID.unique(),
+      ulid(),
       {
         paymentId: session.id,
         userId: user.$id,
@@ -525,7 +526,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   const subscription = await databases.createRow(
     NOTE_DB_ID,
     SUBSCRIPTIONS_TABLE_ID,
-    ID.unique(),
+    ulid(),
     {
       userId: user.$id,
       plan: isLifetime ? 'lifetime' : planTier.toLowerCase(),
@@ -613,7 +614,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   await databases.createRow(
     NOTE_DB_ID,
     'billing_transactions',
-    ID.unique(),
+    ulid(),
     {
       paymentId: `coupon_claim_${coupon.$id}_${user.$id}_${Date.now()}`,
       userId: user.$id,

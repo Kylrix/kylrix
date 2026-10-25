@@ -2,6 +2,7 @@
 
 import { systemTables } from '@/lib/data/system-tables';
 import * as shared from './shared';
+import { ulid } from '@/lib/utils/ulid';
 
 const { getActor } = shared;
 
@@ -24,7 +25,7 @@ export async function createPaymentIntentAction(input: PaymentIntentInput) {
     }
 
     const tablesDB = systemTables();
-    const intentId = crypto.randomUUID();
+    const intentId = ulid();
     const payloadStr = JSON.stringify(input.contextPayload || {});
 
     const newIntent: any = await tablesDB.createRow({

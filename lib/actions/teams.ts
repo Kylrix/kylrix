@@ -1,7 +1,8 @@
 'use server';
+import { ulid } from '@/lib/utils/ulid';
 
 import { createSystemClient } from '@/lib/data';
-import { ID, Query } from '@/lib/data';
+import { Query } from '@/lib/data';
 import { resolveEffectiveBillingTier } from '@/lib/entitlements/policy';
 import { getActor } from './secure-ops/shared';
 
@@ -46,7 +47,7 @@ export async function createNativeTeamSecure(name: string, roles?: string[], jwt
 
   const { teams } = createSystemClient();
   try {
-    const team = await teams.create(ID.unique(), name.trim(), roles && roles.length > 0 ? roles : undefined);
+    const team = await teams.create(ulid(), name.trim(), roles && roles.length > 0 ? roles : undefined);
     // Add creator as owner membership
     await teams.createMembership(team.$id, ['owner', 'admin'], undefined, undefined, actor.$id).catch(() => null);
     return { success: true, team };

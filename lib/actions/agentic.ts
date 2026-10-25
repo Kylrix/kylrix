@@ -2,7 +2,8 @@
 
 import { systemTables } from '@/lib/data/system-tables';
 
-import { ID, Query } from '@/lib/data';
+import { Query } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 
 import { createSystemClient } from '@/lib/data';
 import { createServerClient } from '@/lib/data';
@@ -42,7 +43,7 @@ async function checkComputeBalance(userId: string) {
     balanceRow = await databases.createRow(
       'passwordManagerDb',
       'compute_balances',
-      ID.unique(),
+      ulid(),
       {
         userId,
         tier: 'pro',
@@ -78,7 +79,7 @@ async function debitComputeBalance(userId: string, balanceRow: any, promptText: 
   await databases.createRow(
     'passwordManagerDb',
     'compute_ledger',
-    ID.unique(),
+    ulid(),
     {
       userId,
       tokensConsumed: totalTokens,
@@ -420,8 +421,8 @@ If the target is ambiguous, ask the user to clarify or list the available titles
   })();
   if (explicitTool) {
     const userVisibleMessage = String(prompt || '').trim().slice(0, 500);
-    const userMessageId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const conversationId = `msg_a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const userMessageId = `msg_u_${ulid()}`;
+    const conversationId = `msg_a_${ulid()}`;
     // Persist explicit user intent as history before returning toolCall
     try {
       if (historyEnabled) {
@@ -612,8 +613,8 @@ ${lifetimeMemoryContext}
   const userVisibleMessage = extractVisibleUserMessage(
     prompt,
     options?.userMessage || pageContext?.userMessage);
-  const userMessageId = `msg_u_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const conversationId = `msg_a_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const userMessageId = `msg_u_${ulid()}`;
+  const conversationId = `msg_a_${ulid()}`;
 
   // 3. Compact and update session data
   if (historyEnabled) {

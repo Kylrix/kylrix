@@ -1,3 +1,4 @@
+import { ulid } from '@/lib/utils/ulid';
 /**
  * WebMCP Central Registry & Dispatch Engine for Kylrix
  */
@@ -76,7 +77,7 @@ class WebMcpRegistry {
   ): Promise<WebMcpToolExecutionResult> {
     const tool = this.tools.get(name);
     const start = performance.now();
-    const eventId = 'exec_' + Math.random().toString(36).slice(2, 10);
+    const eventId = 'exec_' + ulid();
 
     if (!tool) {
       const errRes: WebMcpToolExecutionResult = {

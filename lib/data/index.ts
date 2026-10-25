@@ -108,8 +108,10 @@ export const APPWRITE_CONFIG = {
   },
 };
 
+import { ulid } from '@/lib/utils/ulid';
+
 export const ID = {
-  unique: () => `id_${Math.random().toString(36).substring(2, 11)}_${Date.now()}`,
+  unique: () => ulid().toLowerCase(),
   custom: (id: string) => id,
 };
 
@@ -419,7 +421,7 @@ export async function createTag(arg1: any, arg2?: any): Promise<any> {
   const color = typeof arg1 === 'string' ? arg2 : arg1?.color;
   const userId = typeof arg1 === 'object' ? arg1?.userId || 'system' : 'system';
   const { upsertLocalTag } = await import('./local/tags');
-  return upsertLocalTag(userId, { id: `tag_${Date.now()}`, name, color: color || '#6366f1' });
+  return upsertLocalTag(userId, { id: `tag_${ulid()}`, name, color: color || '#6366f1' });
 }
 
 export async function updateTag(tagId: string, data: any): Promise<any> {
@@ -456,7 +458,7 @@ export async function listTags(): Promise<any[]> {
 }
 
 export async function createTotpSecret(data: any, opts?: { skipPending?: boolean }): Promise<any> {
-  const id = data?.id || data?.$id || `totp_${Date.now()}`;
+  const id = data?.id || data?.$id || `totp_${ulid()}`;
   const payload = { ...data, id, $id: id };
   if (!opts?.skipPending) {
     try {
@@ -509,7 +511,7 @@ export async function listTotpSecrets(_userId?: string): Promise<any> {
 }
 
 export async function createCredential(data: any, opts?: { skipPending?: boolean }): Promise<any> {
-  const id = data?.id || data?.$id || `cred_${Date.now()}`;
+  const id = data?.id || data?.$id || `cred_${ulid()}`;
   const payload = { ...data, id, $id: id };
   if (!opts?.skipPending) {
     try {
@@ -571,7 +573,7 @@ export async function validatePublicNoteAccess(noteId: string): Promise<any> {
 
 export async function createComment(noteId: string, content: string): Promise<any> {
   const { systemTables } = await import('./system-tables');
-  const id = `comment_${Date.now()}`;
+  const id = `comment_${ulid()}`;
   return systemTables().createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
     tableId: APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,

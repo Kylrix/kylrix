@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
+import { ulid } from '@/lib/utils/ulid';
 import { eq } from 'drizzle-orm';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { calculateStackedSubscriptionCredit } from '@/lib/billing/subscription-stack';
@@ -56,7 +57,7 @@ async function recordCompletedTransactionLedger(params: {
         .where(eq(schema.billingTransactions.id, existingTx[0].id));
     } else {
       await db.insert(schema.billingTransactions).values({
-        id: crypto.randomUUID(),
+        id: ulid(),
         ...txPayload,
         createdAt: new Date().toISOString(),
       });
@@ -77,7 +78,7 @@ async function logBillingWebhookCall(params: {
 }) {
   try {
     await db.insert(schema.billingWebhookLogs).values({
-      id: crypto.randomUUID(),
+      id: ulid(),
       paymentId: params.paymentId || null,
       provider: params.provider,
       payload: params.payload.slice(0, 65530),
@@ -295,7 +296,7 @@ export async function POST(req: Request) {
     const users = await db.select().from(schema.user).where(eq(schema.user.id, meta.payerUserId)).limit(1);
     const payerName = users[0]?.name || meta.payerUserId;
 
-    const subId = crypto.randomUUID();
+    const subId = ulid();
     const now = new Date().toISOString();
 
     await db.insert(schema.subscriptions).values({

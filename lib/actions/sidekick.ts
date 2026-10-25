@@ -1,6 +1,7 @@
 'use server';
 
-import { Query, ID } from '@/lib/data';
+import { Query } from '@/lib/data';
+import { ulid } from '@/lib/utils/ulid';
 import { createSystemClient } from '@/lib/data';
 import { buildSidekickSystemInstruction, buildSidekickUserPrompt } from '@/lib/agentic/prompts/sidekick';
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
@@ -101,7 +102,7 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
     }
 
     // Persist to agentic session with targetType/targetId — spins up agentic session for this exact target
-    const sessionId = existing?.$id || ID.unique();
+    const sessionId = existing?.$id || ulid();
     const history = existing?.chatHistory ? JSON.parse(existing.chatHistory) : [];
     const userMsg = { role: 'user', content: `Summarize ${target.type} ${target.id}: ${target.title || ''}`.slice(0, 500), at: new Date().toISOString() };
     const assistantMsg = { role: 'assistant', content: JSON.stringify(parsed), at: new Date().toISOString() };
@@ -197,7 +198,7 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
       } catch {}
     }
     if (!session) {
-      const sid = opts.sessionId || (opts.target.id.startsWith('search-') || opts.target.id.startsWith('wallet-') ? opts.target.id : ID.unique());
+      const sid = opts.sessionId || (opts.target.id.startsWith('search-') || opts.target.id.startsWith('wallet-') ? opts.target.id : ulid());
       const pid = (opts.target as any).projectId;
       const isCustomWs = Boolean(
         (opts.target as any).isWorkspace ||
