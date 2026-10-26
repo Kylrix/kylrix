@@ -19,7 +19,13 @@ import {
   Crown,
   GitCommit,
   GitPullRequest,
-  Github
+  Github,
+  MapPin,
+  Wallet,
+  Globe,
+  Twitter,
+  Send,
+  Linkedin
 } from 'lucide-react';
 import { getUserSubscriptionTier } from '@/lib/utils';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
@@ -31,12 +37,30 @@ import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
 import { BadgeChip } from '@/components/sponsor/SponsorBadges';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { Identicon } from '@/components/Identicon';
+import { extractNormalizedProfile, NormalizedProfileLink } from '@/lib/profile-utils';
 import toast from 'react-hot-toast';
 
 function isCleanUsername(val?: string | null): boolean {
   if (!val || typeof val !== 'string') return false;
   const trimmed = val.trim();
   return trimmed.length > 0 && !/\s/.test(trimmed);
+}
+
+export function renderProfileLinkIcon(type?: string) {
+  switch (type) {
+    case 'github':
+      return <Github size={13} className="text-white/80 shrink-0" />;
+    case 'twitter':
+      return <Twitter size={13} className="text-[#1DA1F2] shrink-0" />;
+    case 'telegram':
+      return <Send size={13} className="text-[#0088cc] shrink-0" />;
+    case 'linkedin':
+      return <Linkedin size={13} className="text-[#0A66C2] shrink-0" />;
+    case 'website':
+      return <Globe size={13} className="text-[#6366F1] shrink-0" />;
+    default:
+      return <LinkIcon size={13} className="text-[#6366F1] shrink-0" />;
+  }
 }
 
 export interface UnifiedProfileViewProps {
@@ -349,25 +373,7 @@ export function UnifiedProfileView({
     ? username.trim().replace(/^@/, '')
     : (typeof initialProfile?.username === 'string' && isCleanUsername(initialProfile.username) ? initialProfile.username.trim().replace(/^@/, '') : undefined);
 
-  const [resolvedProfile, setResolvedProfile] = useState<{ 
-    name?: string; 
-    username?: string; 
-    avatar?: string; 
-    bio?: string;
-    links?: Array<{ title?: string; url: string }>;
-    tags?: string[];
-    socials?: { twitter?: string; github?: string; website?: string; telegram?: string; lightning?: string };
-    createdAt?: string;
-  }>({
-    name: name || initialProfile?.displayName || initialProfile?.name,
-    username: initialCleanUsername,
-    avatar: avatar || initialProfile?.avatar || initialProfile?.avatarUrl,
-    bio: bio || initialProfile?.bio,
-    links: Array.isArray(initialProfile?.preferences?.links) ? initialProfile.preferences.links : (Array.isArray(initialProfile?.links) ? initialProfile.links : []),
-    tags: Array.isArray(initialProfile?.preferences?.tags) ? initialProfile.preferences.tags : (Array.isArray(initialProfile?.tags) ? initialProfile.tags : []),
-    socials: initialProfile?.socials || {},
-    createdAt: initialProfile?.$createdAt || initialProfile?.createdAt,
-  });
+  const [rawProfileData, setRawProfileData] = useState<any>(initialProfile || null);
 
   const [resolvedAvatarUrl, setResolvedAvatarUrl] = useState<string | null>(null);
   const [kylrixFollowersCount, setKylrixFollowersCount] = useState<number>(0);
@@ -376,6 +382,15 @@ export function UnifiedProfileView({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [contributorData, setContributorData] = useState<ContributorActivityData | null>(null);
+
+  // Compute normalized profile from raw data
+  const normalizedProfile = extractNormalizedProfile({
+    ...rawProfileData,
+    displayName: name || rawProfileData?.displayName || rawProfileData?.name,
+    username: initialCleanUsername || rawProfileData?.username,
+    avatar: avatar || rawProfileData?.avatar || rawProfileData?.avatarUrl,
+    bio: bio || rawProfileData?.bio,
+  });
 
   // Instant 0ms LocalEngine hydration & lookup profile info + contributor status
   useEffect(() => {
@@ -391,20 +406,11 @@ export function UnifiedProfileView({
         if (profileCacheKey) {
           const cachedProfile = await LocalEngine.cacheGet<any>(profileCacheKey).catch(() => null);
           if (cachedProfile && !cancelled) {
-            let prefsObj: any = {};
+            setRawProfileData(cachedProfile);
             try {
-              prefsObj = typeof cachedProfile.preferences === 'string' ? JSON.parse(cachedProfile.preferences) : cachedProfile.preferences || {};
+              const prefsObj = typeof cachedProfile.preferences === 'string' ? JSON.parse(cachedProfile.preferences) : cachedProfile.preferences || {};
               if (typeof prefsObj.tipEnabled === 'boolean') setTipEnabled(prefsObj.tipEnabled);
             } catch {}
-            setResolvedProfile(prev => ({
-              name: prev.name || cachedProfile.displayName || cachedProfile.name,
-              username: typeof cachedProfile.username === 'string' && isCleanUsername(cachedProfile.username) ? cachedProfile.username.trim().replace(/^@/, '') : (isCleanUsername(prev.username) ? prev.username : undefined),
-              avatar: prev.avatar || cachedProfile.avatar || cachedProfile.avatarUrl,
-              bio: prev.bio || cachedProfile.bio,
-              links: prev.links?.length ? prev.links : (Array.isArray(prefsObj.links) ? prefsObj.links : (Array.isArray(cachedProfile.links) ? cachedProfile.links : [])),
-              tags: prev.tags?.length ? prev.tags : (Array.isArray(prefsObj.tags) ? prefsObj.tags : (Array.isArray(cachedProfile.tags) ? cachedProfile.tags : [])),
-              createdAt: prev.createdAt || cachedProfile.$createdAt || cachedProfile.createdAt,
-            }));
           }
         }
 
@@ -423,9 +429,8 @@ export function UnifiedProfileView({
             handleForContributor = prof.username.trim().replace(/^@/, '');
           }
 
-          let prefs: any = {};
           try {
-            prefs = typeof (prof as any).preferences === 'string'
+            const prefs = typeof (prof as any).preferences === 'string'
               ? JSON.parse((prof as any).preferences)
               : (prof as any).preferences || {};
             if (typeof prefs.tipEnabled === 'boolean') {
@@ -433,17 +438,7 @@ export function UnifiedProfileView({
             }
           } catch {}
 
-          const newProfile = {
-            name: prof.displayName || (prof as any).name || resolvedProfile.name,
-            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : resolvedProfile.username,
-            avatar: prof.avatar || prof.avatarUrl || resolvedProfile.avatar,
-            bio: prof.bio ?? resolvedProfile.bio,
-            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (resolvedProfile.links || [])),
-            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (resolvedProfile.tags || [])),
-            createdAt: (prof as any).$createdAt || resolvedProfile.createdAt,
-          };
-
-          setResolvedProfile(prev => ({ ...prev, ...newProfile }));
+          setRawProfileData(prof);
           if (profileCacheKey) {
             void LocalEngine.cacheSet(profileCacheKey, prof);
           }
@@ -455,9 +450,8 @@ export function UnifiedProfileView({
             handleForContributor = prof.username.trim().replace(/^@/, '');
           }
 
-          let prefs: any = {};
           try {
-            prefs = typeof (prof as any).preferences === 'string'
+            const prefs = typeof (prof as any).preferences === 'string'
               ? JSON.parse((prof as any).preferences)
               : (prof as any).preferences || {};
             if (typeof prefs.tipEnabled === 'boolean') {
@@ -465,17 +459,7 @@ export function UnifiedProfileView({
             }
           } catch {}
 
-          const newProfile = {
-            name: prof.displayName || prof.name || resolvedProfile.name,
-            username: typeof prof.username === 'string' && isCleanUsername(prof.username) ? prof.username.trim().replace(/^@/, '') : resolvedProfile.username,
-            avatar: prof.avatar || prof.avatarUrl || resolvedProfile.avatar,
-            bio: prof.bio ?? resolvedProfile.bio,
-            links: Array.isArray(prefs.links) ? prefs.links : (Array.isArray((prof as any).links) ? (prof as any).links : (resolvedProfile.links || [])),
-            tags: Array.isArray(prefs.tags) ? prefs.tags : (Array.isArray((prof as any).tags) ? (prof as any).tags : (resolvedProfile.tags || [])),
-            createdAt: (prof as any).$createdAt || resolvedProfile.createdAt,
-          };
-
-          setResolvedProfile(prev => ({ ...prev, ...newProfile }));
+          setRawProfileData(prof);
           if (profileCacheKey) {
             void LocalEngine.cacheSet(profileCacheKey, prof);
           }
@@ -503,7 +487,7 @@ export function UnifiedProfileView({
   useEffect(() => {
     let cancelled = false;
     const resolveAvatar = async () => {
-      const raw = resolvedProfile.avatar || (isOwnProfile ? (user?.prefs?.avatar || user?.prefs?.profilePicId) : null);
+      const raw = normalizedProfile.avatarUrl || (isOwnProfile ? (user?.prefs?.avatar || user?.prefs?.profilePicId) : null);
       if (!raw) {
         if (targetUid) {
           const cachedPreview = getCachedProfilePreview(targetUid);
@@ -538,7 +522,7 @@ export function UnifiedProfileView({
     };
     void resolveAvatar();
     return () => { cancelled = true; };
-  }, [resolvedProfile.avatar, isOwnProfile, user, targetUid]);
+  }, [normalizedProfile.avatarUrl, isOwnProfile, user, targetUid]);
 
   // Fetch Badges
   useEffect(() => {
@@ -585,10 +569,10 @@ export function UnifiedProfileView({
     });
   }, [targetUid]);
 
-  const activeDisplayName = resolvedProfile.name || name || username || 'Kylrix User';
+  const activeDisplayName = normalizedProfile.displayName || name || username || 'Kylrix User';
 
-  const rawUsername = typeof resolvedProfile.username === 'string' && isCleanUsername(resolvedProfile.username)
-    ? resolvedProfile.username
+  const rawUsername = typeof normalizedProfile.username === 'string' && isCleanUsername(normalizedProfile.username)
+    ? normalizedProfile.username
     : (typeof username === 'string' && isCleanUsername(username)
         ? username
         : (isOwnProfile
@@ -597,7 +581,7 @@ export function UnifiedProfileView({
 
   const cleanUsername = typeof rawUsername === 'string' ? rawUsername.trim().replace(/^@/, '') : null;
   const activeHandle = cleanUsername ? `@${cleanUsername}` : '';
-  const activeBio = resolvedProfile.bio || bio || '';
+  const activeBio = normalizedProfile.bio || bio || '';
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -847,9 +831,9 @@ export function UnifiedProfileView({
                   </p>
                 )}
 
-                {resolvedProfile.createdAt && !isNaN(new Date(resolvedProfile.createdAt).getTime()) && (
+                {normalizedProfile.createdAt && !isNaN(new Date(normalizedProfile.createdAt).getTime()) && (
                   <p className="text-[11px] font-mono text-white/40 truncate m-0 pt-0.5">
-                    Member since {new Date(resolvedProfile.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                    Member since {new Date(normalizedProfile.createdAt).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
                   </p>
                 )}
               </div>
@@ -910,13 +894,37 @@ export function UnifiedProfileView({
               </p>
             )}
 
+            {/* Location & Wallet Pill strip */}
+            {(normalizedProfile.location || normalizedProfile.walletAddress) && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {normalizedProfile.location && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#161412] border border-white/20 text-xs font-medium text-white/80">
+                    <MapPin size={12} className="text-rose-400 shrink-0" />
+                    <span>{normalizedProfile.location}</span>
+                  </span>
+                )}
+                {normalizedProfile.walletAddress && (
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(normalizedProfile.walletAddress!, 'Wallet Address')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#161412] border border-white/20 hover:border-white/40 text-xs font-mono text-emerald-400 transition-colors cursor-pointer"
+                    title="Copy Wallet Address"
+                  >
+                    <Wallet size={12} className="shrink-0" />
+                    <span>{normalizedProfile.walletAddress.slice(0, 6)}…{normalizedProfile.walletAddress.slice(-4)}</span>
+                    {copiedKey === 'Wallet Address' ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} className="text-white/40" />}
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Badges & Tags */}
-            {(badges.length > 0 || (resolvedProfile.tags && resolvedProfile.tags.length > 0)) && (
+            {(badges.length > 0 || (normalizedProfile.tags && normalizedProfile.tags.length > 0)) && (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
                 {badges.map((b) => (
                   <BadgeChip key={b.$id || b.id} badge={b} size="sm" />
                 ))}
-                {resolvedProfile.tags?.map((t) => (
+                {normalizedProfile.tags?.map((t) => (
                   <span
                     key={t}
                     className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#161412] border border-white/10 text-xs font-mono text-zinc-300"
@@ -928,19 +936,19 @@ export function UnifiedProfileView({
             )}
 
             {/* Socials & Custom Links */}
-            {resolvedProfile.links && resolvedProfile.links.length > 0 && (
+            {normalizedProfile.links && normalizedProfile.links.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {resolvedProfile.links.map((link, idx) => (
+                {normalizedProfile.links.map((link: NormalizedProfileLink, idx: number) => (
                   <a
                     key={idx}
-                    href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                    href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/20 hover:border-white/40 text-xs font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
                   >
-                    <LinkIcon size={12} className="text-[#6366F1]" />
-                    <span className="truncate max-w-[160px]">{link.title || link.url.replace(/^https?:\/\//, '')}</span>
-                    <ExternalLink size={11} className="text-white/40" />
+                    {renderProfileLinkIcon(link.type)}
+                    <span className="truncate max-w-[160px]">{link.title}</span>
+                    <ExternalLink size={11} className="text-white/40 shrink-0" />
                   </a>
                 ))}
               </div>
@@ -976,6 +984,7 @@ export function UnifiedProfileView({
       {isEditModalOpen && (
         <EditProfileModal
           open={isEditModalOpen}
+          profile={rawProfileData}
           onClose={() => setIsEditModalOpen(false)}
           onUpdate={() => {
             setIsEditModalOpen(false);

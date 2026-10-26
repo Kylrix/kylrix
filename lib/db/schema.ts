@@ -777,6 +777,11 @@ export const profiles = sqliteTable('profiles', {
   isOnlineVisible: integer('is_online_visible', { mode: 'boolean' }).default(true),
   createdAt: text('created_at'),
   updatedAt: text('updated_at'),
+  avatarUrl: text('avatar_url'),
+  bannerUrl: text('banner_url'),
+  website: text('website'),
+  socialLinks: text('social_links'),
+  metadata: text('metadata'),
 });
 
 export const userBadges = sqliteTable('user_badges', {
