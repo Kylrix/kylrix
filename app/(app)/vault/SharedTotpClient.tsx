@@ -276,6 +276,12 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
             return;
           }
 
+          if (payload && (payload.secretKey || payload.encryptedSecret || payload.account || payload.accountName)) {
+            try {
+              await processAndSetTotp(payload);
+            } catch {}
+          }
+
           try {
             const { ApiResources } = await import('@/lib/api/resources');
             const actor = { userId: 'guest', scopes: ['vault:read'] } as any;
