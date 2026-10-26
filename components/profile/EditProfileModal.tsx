@@ -113,6 +113,8 @@ export function EditProfileModal({
   const [username, setUsername] = useState(initialProfile?.username || '');
   const [bio, setBio] = useState(initialProfile?.bio || '');
   const [displayName, setDisplayName] = useState(initialProfile?.displayName || '');
+  const [website, setWebsite] = useState(initialProfile?.website || '');
+  const [location, setLocation] = useState('');
   const [isPublic, setIsPublic] = useState<boolean>(initialProfile?.isPublic ?? true);
   const [isGuest, setIsGuest] = useState<boolean>(initialProfile?.isGuest ?? true);
   const [isAvatar, setIsAvatar] = useState<boolean>(initialProfile?.isAvatar ?? true);
@@ -182,6 +184,7 @@ export function EditProfileModal({
       setUsername(profile.username || '');
       setBio(profile.bio || '');
       setDisplayName(profile.displayName || '');
+      setWebsite(profile.website || '');
       setIsPublic(profile.isPublic ?? true);
       setIsGuest(profile.isGuest ?? true);
       setIsAvatar(profile.isAvatar ?? true);
@@ -197,11 +200,14 @@ export function EditProfileModal({
           : profile.preferences || {};
         setLinks(prefsObj.links || []);
         setTags(prefsObj.tags || []);
+        setLocation(prefsObj.location || profile.location || '');
+        if (prefsObj.website && !profile.website) setWebsite(prefsObj.website);
         setTipEnabled(prefsObj.tipEnabled ?? false);
         setHideSensitiveInfo(prefsObj.hideSensitiveInfo ?? false);
       } catch (_e) {
         setLinks([]);
         setTags([]);
+        setLocation('');
         setTipEnabled(false);
         setHideSensitiveInfo(false);
       }
@@ -276,7 +282,7 @@ export function EditProfileModal({
   };
 
   const handleAddLink = () => {
-    if (links.length >= 3) return;
+    if (links.length >= 5) return;
     setLinks([...links, { title: '', url: '' }]);
   };
 
@@ -351,6 +357,8 @@ export function EditProfileModal({
 
       const serializedPreferences = JSON.stringify({
         ...currentPrefsObj,
+        website: website.trim(),
+        location: location.trim(),
         links: links.filter(l => l.url.trim() !== ''),
         tags,
         tipEnabled: tipEnabled,
@@ -361,6 +369,7 @@ export function EditProfileModal({
         username: cleanUsername,
         bio,
         displayName,
+        website: website.trim(),
         avatar: avatarVal,
         publicKey,
         isPublic,
@@ -369,6 +378,13 @@ export function EditProfileModal({
         isContact,
         preferences: serializedPreferences
       });
+
+      // Purge local cached profile to instantly reflect edits
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        await LocalEngine.cacheDelete(`profile_${userId}`);
+        if (cleanUsername) await LocalEngine.cacheDelete(`profile_${cleanUsername}`);
+      } catch {}
 
       try {
         if (displayName || cleanUsername) {
@@ -610,6 +626,30 @@ export function EditProfileModal({
                     placeholder="Short bio for your public workspace profile..."
                   />
                 </div>
+
+                {/* Website & Location */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider font-mono">Website</label>
+                    <input
+                      type="text"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className="w-full h-9 bg-[#161412] border border-white/[0.08] focus:border-[#6366F1] rounded-xl px-3 text-xs text-white focus:outline-none transition-colors"
+                      placeholder="https://yourdomain.com"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold text-white/60 uppercase tracking-wider font-mono">Location</label>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full h-9 bg-[#161412] border border-white/[0.08] focus:border-[#6366F1] rounded-xl px-3 text-xs text-white focus:outline-none transition-colors"
+                      placeholder="San Francisco, CA"
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Account Email Box (Centralized Relay) */}
@@ -644,9 +684,9 @@ export function EditProfileModal({
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono m-0 flex items-center gap-1.5">
                     <LinkIcon size={13} className="text-[#6366F1]" />
-                    <span>Public Links (Max 3)</span>
+                    <span>Public Links (Max 5)</span>
                   </h4>
-                  {links.length < 3 && (
+                  {links.length < 5 && (
                     <button
                       type="button"
                       onClick={handleAddLink}

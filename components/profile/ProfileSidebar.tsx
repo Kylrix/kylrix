@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronUp, Copy, Crown, MessageSquare, X } from 'lucide-react';
+import { ChevronUp, Copy, Crown, MessageSquare, X, ExternalLink, MapPin, Wallet, Check } from 'lucide-react';
 import { getUserSubscriptionTier } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { UsersService } from '@/lib/services/users';
@@ -12,7 +12,8 @@ import { useAuth } from '@/lib/auth';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getUserBadgesAction } from '@/lib/actions/sponsor-actions';
 import { BadgeChip } from '@/components/sponsor/SponsorBadges';
-import { ProfilePublishedTabs } from './UnifiedProfileView';
+import { ProfilePublishedTabs, renderProfileLinkIcon } from './UnifiedProfileView';
+import { extractNormalizedProfile, NormalizedProfileLink } from '@/lib/profile-utils';
 
 import toast from 'react-hot-toast';
 
@@ -48,10 +49,19 @@ export function ProfileSidebar({
     seed?.avatar?.startsWith?.('http') ? seed.avatar : null,
   );
   const [groupTab, setGroupTab] = useState<'overview' | 'members' | 'media'>('overview');
+  const [copiedWallet, setCopiedWallet] = useState(false);
 
   const isGroup = Boolean(conversation?.type === 'group' || conversation?.type === 'channel');
   const uid = profile?.userId || profile?.$id || userId;
   const [badges, setBadges] = useState<any[]>([]);
+
+  const normalized = isGroup ? null : extractNormalizedProfile({
+    ...profile,
+    displayName: seed?.displayName || profile?.displayName || profile?.name,
+    username: seed?.username || profile?.username || username,
+    bio: seed?.bio || profile?.bio,
+    avatar: seed?.avatar || profile?.avatar,
+  });
 
   useEffect(() => {
     if (!uid || isGroup) return;
@@ -105,9 +115,9 @@ export function ProfileSidebar({
 
   const name = isGroup
     ? conversation?.name || 'Group Hangout'
-    : profile?.displayName || seed?.displayName || profile?.username || username || 'User';
-  const handle = isGroup ? null : profile?.username || username || '';
-  const bio = isGroup ? (conversation?.description || 'Group hangout channel').trim() : (profile?.bio || seed?.bio || '').trim();
+    : normalized?.displayName || 'User';
+  const handle = isGroup ? null : normalized?.username || username || '';
+  const bio = isGroup ? (conversation?.description || 'Group hangout channel').trim() : (normalized?.bio || '').trim();
   const shortBio = bio.length > 140 ? `${bio.slice(0, 139).trim()}…` : bio;
   const isOwn = Boolean(!isGroup && user?.$id && uid && user.$id === uid);
   const currentUserTier = isOwn ? getUserSubscriptionTier(user) : null;
@@ -226,11 +236,67 @@ export function ProfileSidebar({
             </p>
           )}
 
-          {/* User Badges */}
-          {!isGroup && badges.length > 0 && (
+          {/* Location & Wallet Pill strip */}
+          {!isGroup && normalized && (normalized.location || normalized.walletAddress) && (
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {normalized.location && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#161412] border border-white/15 text-[11px] font-medium text-white/80">
+                  <MapPin size={11} className="text-rose-400 shrink-0" />
+                  <span>{normalized.location}</span>
+                </span>
+              )}
+              {normalized.walletAddress && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(normalized.walletAddress!);
+                    setCopiedWallet(true);
+                    toast.success('Wallet address copied');
+                    setTimeout(() => setCopiedWallet(false), 1500);
+                  }}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#161412] border border-white/15 hover:border-white/30 text-[11px] font-mono text-emerald-400 transition-colors cursor-pointer"
+                  title="Copy Wallet Address"
+                >
+                  <Wallet size={11} className="shrink-0" />
+                  <span>{normalized.walletAddress.slice(0, 6)}…{normalized.walletAddress.slice(-4)}</span>
+                  {copiedWallet ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} className="text-white/40" />}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* User Badges & Tags */}
+          {!isGroup && (badges.length > 0 || (normalized?.tags && normalized.tags.length > 0)) && (
             <div className="flex flex-wrap gap-1.5 pt-1">
               {badges.map((b) => (
                 <BadgeChip key={b.$id} badge={b} size="sm" />
+              ))}
+              {normalized?.tags?.map((t) => (
+                <span
+                  key={t}
+                  className="inline-flex items-center px-2 py-0.5 rounded-md bg-[#161412] border border-white/10 text-[11px] font-mono text-zinc-300"
+                >
+                  #{t}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Socials & Custom Links */}
+          {!isGroup && normalized?.links && normalized.links.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {normalized.links.map((link: NormalizedProfileLink, idx: number) => (
+                <a
+                  key={idx}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#161412] border border-white/15 hover:border-white/30 text-[11px] font-bold text-white/80 hover:text-white transition-colors cursor-pointer"
+                >
+                  {renderProfileLinkIcon(link.type)}
+                  <span className="truncate max-w-[120px]">{link.title}</span>
+                  <ExternalLink size={10} className="text-white/40 shrink-0" />
+                </a>
               ))}
             </div>
           )}
