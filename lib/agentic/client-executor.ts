@@ -374,7 +374,7 @@ async function executeAgenticToolCall(
       return { success: true, summary: `Updated goal: ${gid}` };
     }
 
-    // ── Projects ────────────────────────────────────────────────
+    // ── Projects / Workspaces ───────────────────────────────────
     if (key === 'create_project' || key === 'objects.workspace.create') {
       const { ProjectsService } = await import('@/lib/data');
       const project = await ProjectsService.createProject({
@@ -393,6 +393,26 @@ async function executeAgenticToolCall(
         summary: `Created project: ${args.title || project?.title || 'Untitled Project'}`};
     }
 
+    if ((key === 'update_project' || key === 'objects.workspace.update') && (call.specifier || (args as any).id || args.projectId)) {
+      const projectId = String(call.specifier || (args as any).id || args.projectId);
+      const { updateProject } = await import('@/lib/actions/client-ops');
+      await updateProject(projectId, {
+        title: args.title as string | undefined,
+        summary: args.summary as string | undefined,
+      });
+      return { success: true, summary: `Updated project: ${args.title || projectId}` };
+    }
+
+    if ((key === 'get_project' || key === 'objects.workspace.read') && (call.specifier || (args as any).id || args.projectId)) {
+      const projectId = String(call.specifier || (args as any).id || args.projectId);
+      const { ProjectsService } = await import('@/lib/data');
+      const project = await ProjectsService.getProject(projectId);
+      const title = project?.title || 'Project';
+      const body = `### Workspace: ${title}\n- **Summary**: ${project?.summary || 'No description provided'}`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Loaded project: "${title}"`, skipToast: true, messageBlocks: [{ type: 'markdown', content: body }] };
+    }
+
     if (key === 'link_to_project' && call.specifier) {
       const objectType = String(args.objectType || 'note');
       const objectId = String(args.objectId || '').trim();
@@ -409,14 +429,52 @@ async function executeAgenticToolCall(
     }
 
     // ── Forms ───────────────────────────────────────────────────
-    if (key === 'objects.form.read' && (call.specifier || args.formId)) {
-      const formId = String(call.specifier || args.formId);
+    if (key === 'create_form' || key === 'objects.form.create') {
+      const title = String(args.title || 'Untitled Form');
+      const description = String(args.description || '');
+      const schemaFields = Array.isArray(args.fields) ? args.fields : [
+        { id: 'f1', type: 'text', label: 'Response / Feedback', required: true },
+        { id: 'f2', type: 'email', label: 'Contact Email', required: false },
+      ];
+      const { createForm } = await import('@/lib/actions/client-ops');
+      const form = await createForm({
+        title,
+        description,
+        schema: JSON.stringify(schemaFields),
+        status: 'draft',
+      });
+      if (form?.$id) {
+        await ctx.recordSessionObject?.({
+          objectId: form.$id,
+          objectType: 'form',
+          title: form.title || title,
+          toolKey: key,
+        });
+      }
+      return { success: true, summary: `Created form: ${form.title || title}` };
+    }
+
+    if ((key === 'update_form' || key === 'objects.form.update') && (call.specifier || (args as any).id || args.formId)) {
+      const formId = String(call.specifier || (args as any).id || args.formId);
+      const { updateForm } = await import('@/lib/actions/client-ops');
+      const schemaStr = Array.isArray(args.fields) ? JSON.stringify(args.fields) : undefined;
+      const form = await updateForm(formId, {
+        title: args.title as string | undefined,
+        description: args.description as string | undefined,
+        schema: schemaStr,
+        status: args.status as string | undefined,
+      });
+      return { success: true, summary: `Updated form: ${form.title || formId}` };
+    }
+
+    if ((key === 'get_form' || key === 'objects.form.read') && (call.specifier || (args as any).id || args.formId)) {
+      const formId = String(call.specifier || (args as any).id || args.formId);
       const { FormsService } = await import('@/lib/services/forms');
       const form = await FormsService.getForm(formId);
-      ctx.appendMessage?.(
-        'assistant',
-        `### Form: ${form.title}\nSchema fields: ${JSON.parse(form.schema || '[]').length}`);
-      return { success: true, summary: `Loaded form ${form.title}`, skipToast: true };
+      const fields = (() => { try { return JSON.parse(form.schema || '[]'); } catch { return []; } })();
+      const body = `### Form: ${form.title}\n- **Description**: ${form.description || 'N/A'}\n- **Fields**: ${fields.length} dynamic fields`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Loaded form ${form.title}`, skipToast: true, messageBlocks: [{ type: 'markdown', content: body }] };
     }
 
     if (key === 'objects.form.submit' || key === 'submit_form_response') {
@@ -432,6 +490,95 @@ async function executeAgenticToolCall(
         kind: 'form_submit',
         title: 'Review form submission'});
       return { success: true, summary: 'Form submission preview ready' };
+    }
+
+    // ── Events ──────────────────────────────────────────────────
+    if (key === 'create_event' || key === 'objects.event.create') {
+      const title = String(args.title || 'Untitled Event');
+      const description = String(args.description || '');
+      const location = String(args.location || '');
+      const startTime = args.startTime ? String(args.startTime) : new Date().toISOString();
+      const endTime = args.endTime ? String(args.endTime) : new Date(Date.now() + 3600000).toISOString();
+      const { createEvent } = await import('@/lib/actions/client-ops');
+      const evt = await createEvent({
+        title,
+        description,
+        location,
+        startTime,
+        endTime,
+      });
+      if (evt?.$id || evt?.id) {
+        const id = evt.$id || evt.id;
+        await ctx.recordSessionObject?.({
+          objectId: id,
+          objectType: 'event',
+          title,
+          toolKey: key,
+        });
+      }
+      return { success: true, summary: `Created event: ${title}` };
+    }
+
+    if ((key === 'update_event' || key === 'objects.event.update') && (call.specifier || (args as any).id || args.eventId)) {
+      const eventId = String(call.specifier || (args as any).id || args.eventId);
+      const { updateEvent } = await import('@/lib/actions/client-ops');
+      const updated = await updateEvent(eventId, {
+        title: args.title as string | undefined,
+        description: args.description as string | undefined,
+        location: args.location as string | undefined,
+        startTime: args.startTime as string | undefined,
+        endTime: args.endTime as string | undefined,
+      });
+      return { success: true, summary: `Updated event: ${updated.title || eventId}` };
+    }
+
+    if ((key === 'get_event' || key === 'objects.event.read') && (call.specifier || (args as any).id || args.eventId)) {
+      const eventId = String(call.specifier || (args as any).id || args.eventId);
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const events = (await LocalEngine.cacheGet<any[]>('f_events_list').catch(() => null)) || [];
+      const evt = events.find((e) => e.id === eventId || e.$id === eventId);
+      const title = evt?.title || 'Event';
+      const body = `### Event: ${title}\n- **Location**: ${evt?.location || 'N/A'}\n- **Start Time**: ${evt?.startTime || 'N/A'}`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Loaded event: "${title}"`, skipToast: true, messageBlocks: [{ type: 'markdown', content: body }] };
+    }
+
+    // ── Workflows / Flows ────────────────────────────────────────
+    if (key === 'create_flow' || key === 'objects.flow.create') {
+      const title = String(args.title || 'Untitled Workflow');
+      const trigger = String(args.trigger || 'manual');
+      const actions = Array.isArray(args.actions) ? args.actions : [];
+      const { createRow } = await import('@/lib/actions/client-ops');
+      const flowId = ulid();
+      await createRow('passwordManagerDb', 'workflows', {
+        id: flowId,
+        userId: ctx.user?.$id || 'guest',
+        name: title,
+        trigger,
+        actions: JSON.stringify(actions),
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      await ctx.recordSessionObject?.({
+        objectId: flowId,
+        objectType: 'flow',
+        title,
+        toolKey: key,
+      });
+      return { success: true, summary: `Created workflow: ${title}` };
+    }
+
+    if ((key === 'update_flow' || key === 'objects.flow.update') && (call.specifier || (args as any).id || args.flowId)) {
+      const flowId = String(call.specifier || (args as any).id || args.flowId);
+      const { updateRow } = await import('@/lib/actions/client-ops');
+      await updateRow('passwordManagerDb', 'workflows', flowId, {
+        name: args.title as string | undefined,
+        trigger: args.trigger as string | undefined,
+        status: args.status as string | undefined,
+        updatedAt: new Date().toISOString(),
+      });
+      return { success: true, summary: `Updated workflow: ${args.title || flowId}` };
     }
 
     // ── Visibility ──────────────────────────────────────────────
@@ -503,6 +650,15 @@ async function executeAgenticToolCall(
       } else if (type === 'project') {
         const { deleteProject } = await import('@/lib/actions/client-ops');
         await deleteProject(delId);
+      } else if (type === 'form') {
+        const { deleteForm } = await import('@/lib/actions/client-ops');
+        await deleteForm(delId);
+      } else if (type === 'event') {
+        const { deleteEvent } = await import('@/lib/actions/client-ops');
+        await deleteEvent(delId);
+      } else if (type === 'flow') {
+        const { deleteRow } = await import('@/lib/actions/client-ops');
+        await deleteRow('passwordManagerDb', 'workflows', delId);
       }
       return { success: true, summary: `Deleted ${type}: ${delId}` };
     }
