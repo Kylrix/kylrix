@@ -40,7 +40,11 @@ function parseSentryDsn(dsn: string): ParsedSentryDsn | null {
  * Helper to generate a 32-character hex ID for Sentry event IDs
  */
 function generateEventId(): string {
-  return ulid().toLowerCase();
+  // Sentry event_id is a 32-character hex string (UUID v4 style without hyphens or 32 hex chars)
+  const hexPart = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().replace(/-/g, '')
+    : (ulid().toLowerCase() + '000006').slice(0, 32);
+  return hexPart;
 }
 
 export class SecureLogger {
