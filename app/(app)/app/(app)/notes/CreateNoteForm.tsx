@@ -17,6 +17,7 @@ import {
   Clipboard,
   CheckSquare,
   Copy,
+  RotateCcw,
 } from 'lucide-react';
 import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { StorageService } from '@/lib/services/storage';
@@ -1099,6 +1100,26 @@ export default function CreateNoteForm({
     }
   }, [flushLiveNoteDraft, saveComposerNote, setActiveDetail, closeOverlay, onClose, resolvedNoteId]);
 
+  const handleClearAll = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    const draftId = liveDraftIdRef.current || resolvedNoteId;
+    if (draftId && isUnpersistedComposeDraft(draftId)) {
+      removeNote(draftId);
+      unregisterComposeSession(draftId);
+      autonomicSyncEngine.ack(draftId);
+    }
+    liveDraftIdRef.current = undefined;
+    setResolvedNoteId(undefined);
+    setContent('');
+    setTitle('');
+    setIsTitleManuallyEdited(false);
+    setTags([]);
+    setLastSavedSnapshot('');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kylrix:draft:note');
+    }
+  }, [removeNote, resolvedNoteId]);
+
   const handleClose = useCallback(() => {
     composeCloseHandledRef.current = true;
     const finalDraft = flushLiveNoteDraft();
@@ -1188,6 +1209,15 @@ export default function CreateNoteForm({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="px-2 py-1 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-white/5 rounded-lg border border-red-500/20 transition-all flex items-center gap-1 shrink-0"
+              title="Clear all fields and draft"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
             {(content.trim().length > 0 || title.trim().length > 0) && (
               <button 
                 type="button"
