@@ -322,33 +322,33 @@ export async function exportVaultPlaintext(userId: string): Promise<{
   if (Array.isArray(remoteCreds) && remoteCreds.length) creds = remoteCreds;
   if (Array.isArray(remoteTotps) && remoteTotps.length) totps = remoteTotps;
 
-  // Local mirror may still be ciphertext — decrypt via get* when needed
+  // Local mirror may still be ciphertext — decrypt concurrently via get* when needed
   if (creds.some((c) => looksEncrypted(c?.password) || looksEncrypted(c?.name) || looksEncrypted(c?.secretKey))) {
-    const decrypted: any[] = [];
-    for (const row of creds) {
-      const id = row?.$id || row?.id;
-      if (!id) continue;
-      try {
-        decrypted.push(await ApiResources.getVaultItem(actor, String(id)));
-      } catch {
-        decrypted.push(row);
-      }
-    }
-    creds = decrypted;
+    creds = await Promise.all(
+      creds.map(async (row) => {
+        const id = row?.$id || row?.id;
+        if (!id) return row;
+        try {
+          return await ApiResources.getVaultItem(actor, String(id));
+        } catch {
+          return row;
+        }
+      }),
+    );
   }
 
   if (totps.some((t) => looksEncrypted(t?.secretKey) || looksEncrypted(t?.issuer))) {
-    const decrypted: any[] = [];
-    for (const row of totps) {
-      const id = row?.$id || row?.id;
-      if (!id) continue;
-      try {
-        decrypted.push(await ApiResources.getTotpSecret(actor, String(id)));
-      } catch {
-        decrypted.push(row);
-      }
-    }
-    totps = decrypted;
+    totps = await Promise.all(
+      totps.map(async (row) => {
+        const id = row?.$id || row?.id;
+        if (!id) return row;
+        try {
+          return await ApiResources.getTotpSecret(actor, String(id));
+        } catch {
+          return row;
+        }
+      }),
+    );
   }
 
   return {
