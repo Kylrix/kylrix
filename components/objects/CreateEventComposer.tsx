@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Calendar, Check, ChevronDown, ChevronUp, MapPin, Video } from 'lucide-react';
+import { Calendar, Check, ChevronDown, ChevronUp, MapPin, RotateCcw, Video } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useAuth } from '@/lib/auth';
 import { SyncStatusDot, SyncStatusLabel } from '@/components/ui/SyncStatusDot';
@@ -272,6 +272,38 @@ export function CreateEventComposer({
     content,
   ]);
 
+  const handleClearAll = useCallback(() => {
+    const id = liveIdRef.current || resolvedId;
+    try {
+      localStorage.removeItem('kylrix:draft:event');
+      void LocalEngine.cacheSet(`f_draft_event_${ownerId}`, null);
+    } catch {
+      /* quiet */
+    }
+    if (id) {
+      autonomicSyncEngine.ack(`event:${id}`);
+      void (async () => {
+        try {
+          const current = (await LocalEngine.cacheGet<any[]>(cacheKey)) || [];
+          await LocalEngine.cacheSet(
+            cacheKey,
+            current.filter((e: any) => (e.id || e.$id) !== id),
+          );
+        } catch {
+          /* optional */
+        }
+      })();
+    }
+    setContent('');
+    setTitle('');
+    setIsTitleManuallyEdited(false);
+    setLocation('');
+    setVisibility('private');
+    setAutoCreateCall(false);
+    setResolvedId(undefined);
+    liveIdRef.current = undefined;
+  }, [cacheKey, ownerId, resolvedId]);
+
   const handleClose = useCallback(() => {
     const id = liveIdRef.current || resolvedId;
     const hasContent = Boolean(content.trim() || title.trim());
@@ -344,6 +376,15 @@ export function CreateEventComposer({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="px-2.5 py-1 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-white/5 rounded-lg border border-red-500/20 transition-all flex items-center gap-1.5 shrink-0"
+            title="Clear all fields and draft"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Clear</span>
+          </button>
           {isMobile ? (
             <button
               type="button"

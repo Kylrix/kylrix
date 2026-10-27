@@ -5,7 +5,7 @@ import { useAppwriteVault } from '@/context/appwrite-context';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Drawer, Box, IconButton } from '@/lib/openbricks/primitives';
-import { X, Shield } from 'lucide-react';
+import { X, Shield, RotateCcw } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useSudo } from '@/context/SudoContext';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
@@ -156,6 +156,22 @@ export default function NewTotpDialog({
     onClose();
   }, [onClose, setIsDrawerOpen]);
 
+  const handleClearAll = useCallback(async () => {
+    setForm({
+      issuer: "",
+      accountName: "",
+      secretKey: "",
+      folderId: "",
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+    });
+    setShowAdvanced(false);
+    if (user?.$id) {
+      await clearSealedVaultDraft(user.$id, 'totp');
+    }
+  }, [user?.$id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -222,9 +238,22 @@ export default function NewTotpDialog({
               <p className="text-xs font-semibold text-white/40">Secure multi-factor authenticator</p>
             </div>
           </div>
-          <IconButton onClick={handleClose} sx={{ color: '#9B9691' }}>
-            <X size={20} />
-          </IconButton>
+          <div className="flex items-center gap-1">
+            {!initialData?.$id && (
+              <button
+                type="button"
+                onClick={handleClearAll}
+                className="px-2.5 py-1 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-white/5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5 mr-1"
+                title="Clear all fields and draft"
+              >
+                <RotateCcw size={14} />
+                <span>Clear</span>
+              </button>
+            )}
+            <IconButton onClick={handleClose} sx={{ color: '#9B9691' }}>
+              <X size={20} />
+            </IconButton>
+          </div>
         </div>
 
         {/* Content */}

@@ -22,6 +22,7 @@ import {
   Globe,
   Lock,
   Plus,
+  RotateCcw,
   RotateCw,
   Save,
   Tag,
@@ -580,6 +581,32 @@ export default function CredentialDialog({
     }
   };
 
+  const handleClearAll = useCallback(async () => {
+    setForm({
+      name: '',
+      username: '',
+      password: '',
+      url: '',
+      notes: '',
+      tags: '',
+      cardNumber: '',
+      cardholderName: '',
+      cardExpiry: '',
+      cardCVV: '',
+      cardPIN: '',
+      cardType: '',
+    });
+    setCustomFields([]);
+    setIsEnvMode(false);
+    setIsNameManuallyEdited(false);
+    setAttachments([]);
+    setEnvHint(null);
+    setError(null);
+    if (user?.$id) {
+      await clearSealedVaultDraft(user.$id, 'secret');
+    }
+  }, [user?.$id]);
+
   const currentType = initial?.itemType || defaultType;
   const showLoginFields = currentType === 'login' && !isEnvMode;
 
@@ -594,6 +621,17 @@ export default function CredentialDialog({
           </span>
         </div>
         <div className="flex items-center gap-0.5">
+          {!initial && (
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="px-2.5 py-1 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-white/5 rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5 mr-1"
+              title="Clear all fields and draft"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Clear</span>
+            </button>
+          )}
           {resolveSecretName().length > 0 && (
             <button
               type="button"

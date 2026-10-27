@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Plus, Tag, Target, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Check, ChevronDown, ChevronUp, Plus, RotateCcw, Tag, Target, X } from 'lucide-react';
 import { buildAutoTitleFromContent, resolveNoteCardTitle } from '@/constants/noteTitle';
 import { useTask } from '@/context/TaskContext';
 import { useAuth } from '@/lib/auth';
@@ -373,6 +373,28 @@ export function CreateGoalComposer({
     content,
   ]);
 
+  const resetFormState = useCallback(() => {
+    setContent('');
+    setTitle('');
+    setIsTitleManuallyEdited(false);
+    setPriority('medium');
+    setDueDate('');
+    setTags([]);
+    setResolvedId(undefined);
+    liveIdRef.current = undefined;
+    setCachedData(draftKey, null);
+  }, [draftKey, setCachedData]);
+
+  const handleClearAll = useCallback(() => {
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    const id = liveIdRef.current || resolvedId;
+    if (id && typeof deleteTask === 'function') {
+      void deleteTask(id);
+      autonomicSyncEngine.ack(goalPendingKey(id));
+    }
+    resetFormState();
+  }, [deleteTask, resetFormState, resolvedId]);
+
   const handleClose = useCallback(() => {
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     const id = liveIdRef.current || resolvedId;
@@ -395,11 +417,12 @@ export function CreateGoalComposer({
         onGoalCreated?.(task);
       }
     }
+    resetFormState();
     if (typeof onClose === 'function') {
       onClose();
     }
     closeSidebar();
-  }, [activeWorkspace, attachEntityToActiveWorkspace, buildLive, closeSidebar, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resolvedId, setCachedData, title]);
+  }, [activeWorkspace, attachEntityToActiveWorkspace, buildLive, closeSidebar, content, deleteTask, draftKey, dueDate, onClose, onGoalCreated, priority, pushLiveGoal, resetFormState, resolvedId, setCachedData, title]);
 
   useEffect(() => {
     return () => {
@@ -449,6 +472,15 @@ export function CreateGoalComposer({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleClearAll}
+            className="px-2.5 py-1 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-white/5 rounded-xl border border-red-500/20 transition-all flex items-center gap-1.5 shrink-0"
+            title="Clear all fields and draft"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Clear</span>
+          </button>
           {isMobile ? (
             <button
               type="button"
