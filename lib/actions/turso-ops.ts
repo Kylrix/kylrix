@@ -364,7 +364,7 @@ export async function normalizeKeychainRow(row: any): Promise<any> {
  * Resolves canonical user IDs for a user using indexed lookups (id PK, email index, account userId)
  * to bridge fragmented user accounts across OAuth providers and legacy Appwrite migrations.
  */
-async function resolveAllUserIds(userId: string): Promise<string[]> {
+export async function resolveAllUserIds(userId: string): Promise<string[]> {
   const cleanId = String(userId || '').trim();
   if (!cleanId) return [];
 
@@ -376,18 +376,7 @@ async function resolveAllUserIds(userId: string): Promise<string[]> {
   }
 
   try {
-    // 1. Look up account table entries directly linked to cleanId
-    const accountRows = await db
-      .select({ userId: schema.account.userId })
-      .from(schema.account)
-      .where(eq(schema.account.userId, cleanId))
-      .limit(20);
-
-    for (const acc of accountRows) {
-      if (acc.userId) allUserIds.add(acc.userId);
-    }
-
-    // 2. Query user records by id or appwriteAccountId or email
+    // 1. Query user record directly by id, appwriteAccountId, or email
     const userConditions = [
       eq(schema.user.id, cleanId),
       eq(schema.user.appwriteAccountId, cleanId),
@@ -404,7 +393,7 @@ async function resolveAllUserIds(userId: string): Promise<string[]> {
       })
       .from(schema.user)
       .where(or(...userConditions))
-      .limit(10);
+      .limit(20);
 
     for (const u of matchedUsers) {
       if (u.id) allUserIds.add(u.id);
@@ -412,8 +401,26 @@ async function resolveAllUserIds(userId: string): Promise<string[]> {
       if (u.email) emailsToQuery.add(u.email.trim().toLowerCase());
     }
 
-    // 3. Cross-reference all matching email addresses to find shared user records & account entries
+    // 2. Query schema.account for all userId and accountId matches linked to any resolved cleanId or accountId
+    const accountRows = await db
+      .select({ userId: schema.account.userId, accountId: schema.account.accountId })
+      .from(schema.account)
+      .where(
+        or(
+          eq(schema.account.userId, cleanId),
+          eq(schema.account.accountId, cleanId)
+        )
+      )
+      .limit(50);
+
+    for (const acc of accountRows) {
+      if (acc.userId) allUserIds.add(acc.userId);
+      if (acc.accountId) allUserIds.add(acc.accountId);
+    }
+
+    // 3. Cross-reference all matching email addresses in schema.user (LOWER(email))
     if (emailsToQuery.size > 0) {
+      const { sql } = await import('drizzle-orm');
       for (const email of emailsToQuery) {
         const sharedEmailUsers = await db
           .select({
@@ -421,8 +428,8 @@ async function resolveAllUserIds(userId: string): Promise<string[]> {
             appwriteAccountId: schema.user.appwriteAccountId,
           })
           .from(schema.user)
-          .where(eq(schema.user.email, email))
-          .limit(20);
+          .where(sql`LOWER(${schema.user.email}) = ${email.toLowerCase()}`)
+          .limit(50);
 
         for (const sharedU of sharedEmailUsers) {
           if (sharedU.id) allUserIds.add(sharedU.id);
@@ -431,17 +438,44 @@ async function resolveAllUserIds(userId: string): Promise<string[]> {
       }
     }
 
-    // 4. Query accounts linked to any resolved user IDs in case additional accounts exist
+    // 4. Query accounts and memberships linked to any resolved user IDs
     const currentResolved = Array.from(allUserIds).filter(Boolean);
     if (currentResolved.length > 0) {
       const extraAccountRows = await db
-        .select({ userId: schema.account.userId })
+        .select({ userId: schema.account.userId, accountId: schema.account.accountId })
         .from(schema.account)
-        .where(inArray(schema.account.userId, currentResolved))
+        .where(
+          or(
+            inArray(schema.account.userId, currentResolved),
+            inArray(schema.account.accountId, currentResolved)
+          )
+        )
         .limit(50);
 
       for (const acc of extraAccountRows) {
         if (acc.userId) allUserIds.add(acc.userId);
+        if (acc.accountId) allUserIds.add(acc.accountId);
+      }
+
+      // Check workspaceMembers and collaborators for any user_id linked to variants
+      const [memberUsers, collabUsers] = await Promise.all([
+        db
+          .select({ userId: schema.workspaceMembers.userId })
+          .from(schema.workspaceMembers)
+          .where(inArray(schema.workspaceMembers.userId, currentResolved))
+          .limit(50),
+        db
+          .select({ userId: schema.collaborators.userId })
+          .from(schema.collaborators)
+          .where(inArray(schema.collaborators.userId, currentResolved))
+          .limit(50),
+      ]);
+
+      for (const m of memberUsers) {
+        if (m.userId) allUserIds.add(m.userId);
+      }
+      for (const c of collabUsers) {
+        if (c.userId) allUserIds.add(c.userId);
       }
     }
   } catch (err) {
@@ -829,35 +863,49 @@ export async function listWorkspacesTurso(userId: string) {
   try {
     const allUserIds = await resolveAllUserIds(userId);
 
-    const ownedRows = await db
-      .select()
-      .from(schema.projects)
-      .where(
-        or(
-          inArray(schema.projects.creatorId, allUserIds),
-          inArray(schema.projects.ownerId, allUserIds)
-        )
-      );
-
-    const projectObjMemberships = await db
-      .select({ workspaceId: schema.projectObjects.workspaceId })
-      .from(schema.projectObjects)
-      .where(inArray(schema.projectObjects.userId, allUserIds));
-
-    const wsMemberships = await db
-      .select({ workspaceId: schema.workspaceMembers.workspaceId })
-      .from(schema.workspaceMembers)
-      .where(inArray(schema.workspaceMembers.userId, allUserIds));
-
-    const collabMemberships = await db
-      .select({ resourceId: schema.collaborators.resourceId })
-      .from(schema.collaborators)
-      .where(
-        and(
-          inArray(schema.collaborators.userId, allUserIds),
-          eq(schema.collaborators.resourceType, 'project')
-        )
-      );
+    const [ownedRows, projectObjMemberships, wsMemberships, collabMemberships, publicAgenticRows] = await Promise.all([
+      db
+        .select()
+        .from(schema.projects)
+        .where(
+          or(
+            inArray(schema.projects.creatorId, allUserIds),
+            inArray(schema.projects.ownerId, allUserIds)
+          )
+        ),
+      db
+        .select({ workspaceId: schema.projectObjects.workspaceId })
+        .from(schema.projectObjects)
+        .where(inArray(schema.projectObjects.userId, allUserIds)),
+      db
+        .select({ workspaceId: schema.workspaceMembers.workspaceId })
+        .from(schema.workspaceMembers)
+        .where(inArray(schema.workspaceMembers.userId, allUserIds)),
+      db
+        .select({ resourceId: schema.collaborators.resourceId })
+        .from(schema.collaborators)
+        .where(
+          and(
+            inArray(schema.collaborators.userId, allUserIds),
+            eq(schema.collaborators.resourceType, 'project')
+          )
+        ),
+      db
+        .select()
+        .from(schema.projects)
+        .where(
+          and(
+            or(
+              eq(schema.projects.isAgentic, true),
+              eq(schema.projects.isPublic, true)
+            ),
+            or(
+              inArray(schema.projects.creatorId, allUserIds),
+              inArray(schema.projects.ownerId, allUserIds)
+            )
+          )
+        ),
+    ]);
 
     const memberIds = Array.from(new Set([
       ...projectObjMemberships.map((r) => r.workspaceId),
@@ -870,7 +918,7 @@ export async function listWorkspacesTurso(userId: string) {
       : [];
 
     const combinedMap = new Map<string, any>();
-    for (const r of [...ownedRows, ...sharedRows]) {
+    for (const r of [...ownedRows, ...sharedRows, ...publicAgenticRows]) {
       const nameVal = r.name || r.title || 'Workspace';
       const titleVal = r.title || r.name || nameVal;
       const ownerVal = r.ownerId || r.creatorId || userId;
