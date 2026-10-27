@@ -2593,16 +2593,18 @@ export default function ConnectTopbar({
                           handleCloseAll();
                           const wsId = activeWorkspace?.id || 'personal';
                           const wsTitle = activeWorkspace?.title || 'Workspace Assistant';
+                          const targetPayload = {
+                            type: 'workspace',
+                            id: wsId,
+                            title: wsTitle,
+                            content: `Workspace: ${wsTitle}. Active App: ${activeApp}. Notes: ${notes.length}, Tasks: ${tasks.length}`,
+                          };
                           window.dispatchEvent(
                             new CustomEvent('kylrix:open-sidekick', {
-                              detail: {
-                                type: 'workspace',
-                                id: wsId,
-                                title: wsTitle,
-                                content: `Workspace: ${wsTitle}. Active App: ${activeApp}. Notes: ${notes.length}, Tasks: ${tasks.length}`,
-                              },
+                              detail: targetPayload,
                             })
                           );
+                          openUnified('sidekick', { target: targetPayload });
                         }}
                         sx={{
                           color: '#A855F7',

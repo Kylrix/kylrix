@@ -782,6 +782,120 @@ async function executeAgenticToolCall(
       };
     }
 
+    // ── Agent Provisioning Keys & CLI Skills ─────────────────────
+    if (key === 'create_apk' || key === 'create_agent_key' || key === 'provision_apk') {
+      const name = String(args.name || 'Agent Provisioning Key').trim();
+      const { PatService } = await import('@/lib/services/pats');
+      const userId = ctx.user?.$id || 'guest';
+      const pat = await PatService.create({
+        userId,
+        name,
+        scopes: ['agents:provision'],
+        keyCategory: 'agent_provisioning_key',
+      });
+      const body = `### Created Agent Provisioning Key\n- **Name**: ${pat.pat.name}\n- **APK Key**: \`${pat.token}\`\n- **Category**: \`agent_provisioning_key\`\n- **Scopes**: \`agents:provision\`\n\nSave this key securely. It can be used to provision autonomous agents.`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Created Agent Provisioning Key: ${pat.token}`, messageBlocks: [{ type: 'markdown', content: body }] };
+    }
+
+    if (key === 'install_skill' || key === 'install_cli_skill') {
+      const skill = String(args.skill || args.name || call.specifier || 'default-skill').trim();
+      const { LocalEngine } = await import('@/lib/services/LocalEngine');
+      const installed = (await LocalEngine.cacheGet<string[]>('installed_cli_skills').catch(() => [])) || [];
+      if (!installed.includes(skill)) {
+        installed.push(skill);
+        await LocalEngine.cacheSet('installed_cli_skills', installed).catch(() => {});
+      }
+      const body = `### Installed CLI Skill\n- **Skill**: \`${skill}\`\n- **Status**: Installed & Ready in Sidekick Workspace.`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Installed skill: ${skill}`, messageBlocks: [{ type: 'markdown', content: body }] };
+    }
+
+    // ── Collaboration & Attachments ─────────────────────────────
+    if (key === 'add_collaborator' || key === 'add_workspace_collaborator') {
+      const workspaceId = String(args.workspaceId || args.projectId || call.specifier || '').trim();
+      const targetUser = String(args.userId || args.username || args.collaborator || '').trim();
+      if (!workspaceId || !targetUser) {
+        return { success: false, summary: '', error: 'workspaceId and target user required' };
+      }
+      const { addProjectCollaborator } = await import('@/lib/actions/client-ops');
+      await addProjectCollaborator(workspaceId, targetUser, (args.permission as string) || 'write');
+      return { success: true, summary: `Added collaborator ${targetUser} to workspace` };
+    }
+
+    if (key === 'attach_object_to_workspace' || key === 'attach_object_workspace') {
+      const workspaceId = String(args.workspaceId || args.projectId || call.specifier || '').trim();
+      const entityKind = String(args.entityKind || args.kind || 'note').trim();
+      const entityId = String(args.entityId || args.id || '').trim();
+      if (!workspaceId || !entityId) {
+        return { success: false, summary: '', error: 'workspaceId and entityId required' };
+      }
+      const { addObjectToProject } = await import('@/lib/actions/client-ops');
+      await addObjectToProject(workspaceId, entityKind === 'goal' ? 'task' : entityKind, entityId);
+      return { success: true, summary: `Attached ${entityKind} ${entityId} to workspace` };
+    }
+
+    // ── Vault & TOTP Secrets ─────────────────────────────────────
+    if (key === 'create_vault_item' || key === 'create_secret') {
+      const title = String(args.name || args.title || 'Untitled Secret').trim();
+      const secret = String(args.secret || args.password || '');
+      const { upsertVaultItemTurso } = await import('@/lib/actions/turso-ops');
+      const now = new Date().toISOString();
+      const itemId = ulid();
+      await upsertVaultItemTurso({
+        id: itemId,
+        userId: ctx.user?.$id || 'guest',
+        title,
+        encryptedData: secret,
+        itemType: (args.itemType as string) || 'login',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.recordSessionObject?.({
+        objectId: itemId,
+        objectType: 'vault',
+        title,
+        toolKey: key,
+      });
+      return { success: true, summary: `Created vault secret: ${title}` };
+    }
+
+    if (key === 'create_totp_secret') {
+      const issuer = String(args.issuer || args.name || 'App').trim();
+      const secretKey = String(args.secretKey || args.secret || '').trim();
+      const { upsertTotpSecretTurso } = await import('@/lib/actions/turso-ops');
+      const now = new Date().toISOString();
+      const itemId = ulid();
+      await upsertTotpSecretTurso({
+        id: itemId,
+        userId: ctx.user?.$id || 'guest',
+        accountName: issuer,
+        encryptedSecret: secretKey,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.recordSessionObject?.({
+        objectId: itemId,
+        objectType: 'totp',
+        title: issuer,
+        toolKey: key,
+      });
+      return { success: true, summary: `Created TOTP secret for ${issuer}` };
+    }
+
+    if (key === 'token_me' || key === 'token_update_scopes') {
+      const { PatService } = await import('@/lib/services/pats');
+      const userId = ctx.user?.$id || 'guest';
+      if (key === 'token_update_scopes' && call.specifier) {
+        const scopes = Array.isArray(args.scopes) ? args.scopes : [args.scopes];
+        await PatService.updateScopes({ patId: call.specifier, userId, scopes: scopes as any, mode: 'grant' });
+        return { success: true, summary: `Updated scopes for PAT ${call.specifier}` };
+      }
+      const pats = await PatService.listForUser(userId);
+      const body = `### Token Status\n- **Active PATs**: ${pats.length}`;
+      ctx.appendMessage?.('assistant', body, { blocks: [{ type: 'markdown', content: body }] });
+      return { success: true, summary: `Checked PAT status (${pats.length} active)`, skipToast: true, messageBlocks: [{ type: 'markdown', content: body }] };
+    }
 
     return { success: false, summary: '', error: `Unhandled tool: ${key}` };
   } catch (err: unknown) {

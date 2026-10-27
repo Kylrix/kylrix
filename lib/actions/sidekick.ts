@@ -34,18 +34,36 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
     // Lookup existing session for this targetType/targetId or workspaceId/projectId
     let existing: any = null;
     try {
-      const targetWsId = (target as any).workspaceId || (target as any).projectId;
-      const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
-        Query.equal('userId', actor.$id),
-        Query.equal('targetType', target.type),
-        Query.equal('targetId', target.id),
-        Query.limit(10),
-      ]);
-      if (res.rows.length) {
-        if (targetWsId) {
-          existing = res.rows.find((r: any) => r.workspaceId === targetWsId || r.projectId === targetWsId) || res.rows[0];
-        } else {
-          existing = res.rows[0];
+      const targetWsId = target.id || (target as any).workspaceId || (target as any).projectId;
+      if (target.type === 'workspace') {
+        const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
+          Query.equal('userId', actor.$id),
+          Query.equal('targetType', 'workspace'),
+          Query.limit(20),
+        ]);
+        if (res.rows.length) {
+          existing = res.rows.find(
+            (r: any) =>
+              r.targetId === targetWsId ||
+              r.workspaceId === targetWsId ||
+              r.projectId === targetWsId ||
+              r.$id === targetWsId
+          ) || res.rows[0];
+        }
+      } else {
+        const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
+          Query.equal('userId', actor.$id),
+          Query.equal('targetType', target.type),
+          Query.equal('targetId', target.id),
+          Query.limit(10),
+        ]);
+        if (res.rows.length) {
+          const wsId = (target as any).workspaceId || (target as any).projectId;
+          if (wsId) {
+            existing = res.rows.find((r: any) => r.workspaceId === wsId || r.projectId === wsId) || res.rows[0];
+          } else {
+            existing = res.rows[0];
+          }
         }
       }
     } catch {}
@@ -181,18 +199,36 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
     }
     if (!session) {
       try {
-        const targetWsId = (opts.target as any).workspaceId || (opts.target as any).projectId;
-        const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
-          Query.equal('userId', actor.$id),
-          Query.equal('targetType', opts.target.type),
-          Query.equal('targetId', opts.target.id),
-          Query.limit(10),
-        ]);
-        if (res.rows.length) {
-          if (targetWsId) {
-            session = res.rows.find((r: any) => r.workspaceId === targetWsId || r.projectId === targetWsId) || res.rows[0];
-          } else {
-            session = res.rows[0];
+        const targetWsId = opts.target.id || (opts.target as any).workspaceId || (opts.target as any).projectId;
+        if (opts.target.type === 'workspace') {
+          const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
+            Query.equal('userId', actor.$id),
+            Query.equal('targetType', 'workspace'),
+            Query.limit(20),
+          ]);
+          if (res.rows.length) {
+            session = res.rows.find(
+              (r: any) =>
+                r.targetId === targetWsId ||
+                r.workspaceId === targetWsId ||
+                r.projectId === targetWsId ||
+                r.$id === targetWsId
+            ) || res.rows[0];
+          }
+        } else {
+          const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
+            Query.equal('userId', actor.$id),
+            Query.equal('targetType', opts.target.type),
+            Query.equal('targetId', opts.target.id),
+            Query.limit(10),
+          ]);
+          if (res.rows.length) {
+            const wsId = (opts.target as any).workspaceId || (opts.target as any).projectId;
+            if (wsId) {
+              session = res.rows.find((r: any) => r.workspaceId === wsId || r.projectId === wsId) || res.rows[0];
+            } else {
+              session = res.rows[0];
+            }
           }
         }
       } catch {}
@@ -241,8 +277,25 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
     const history: any[] = (() => { try { return JSON.parse((session as any).chatHistory || '[]'); } catch { return []; } })();
 
     // Use sidekick system instruction focused on object itself + chat history
-    const { buildSidekickSystemInstruction } = await import('@/lib/agentic/prompts/sidekick');
-    const systemInstruction = buildSidekickSystemInstruction({ id: opts.target.id, type: opts.target.type as any, title: opts.target.title, content: opts.target.content });
+    let systemInstruction = '';
+    if (opts.target.type === 'workspace') {
+      systemInstruction = `You are Sidekick, the full 1:1 workspace autonomous agent for workspace "${opts.target.title || opts.target.id}".
+You are equipped with complete capabilities across Notes/Ideas, Goals/Tasks, Vault Credentials, TOTP Secrets, Forms, Events, Workspaces, Ecosystem Search, Collaboration, APK Provisioning Keys (kyl_apk_...), and CLI Skills.
+Answer the user's requests directly in formatted markdown.
+When taking action (such as creating/updating notes, goals, secrets, forms, events, APK keys, or installing skills), return a JSON block with:
+\`\`\`json
+{
+  "toolCall": {
+    "toolKey": "create_note | update_note | create_goal | update_goal | create_vault_item | create_totp_secret | create_form | create_event | search_ecosystem | attach_object_to_workspace | add_collaborator | create_apk | install_skill | ui.navigate",
+    "specifier": "optional id",
+    "args": { ... }
+  }
+}
+\`\`\``;
+    } else {
+      const { buildSidekickSystemInstruction } = await import('@/lib/agentic/prompts/sidekick');
+      systemInstruction = buildSidekickSystemInstruction({ id: opts.target.id, type: opts.target.type as any, title: opts.target.title, content: opts.target.content });
+    }
 
     const transcript = history
       .map((m: any) => {
@@ -273,7 +326,7 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
       })
       .join('\n');
 
-    const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} "${opts.target.title || opts.target.id}". Answer the user's questions directly in formatted markdown. Keep focus on this object. Do not return JSON.`;
+    const prompt = `${transcript}\n\nuser: ${opts.message}\n\nContinue as Sidekick for ${opts.target.type} "${opts.target.title || opts.target.id}". Answer the user's questions directly in formatted markdown.`;
 
     const { generateLLMCompletion } = await import('@/lib/agentic/llm-provider');
     const text = await generateLLMCompletion({
