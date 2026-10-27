@@ -1,7 +1,6 @@
 'use client';
 
 import { markNotePersistedRemote, markComposePersisted, markComposeDraft } from '@/lib/notes/compose-draft-registry';
-import { updateNote, createNote } from '@/lib/actions/client-ops';
 import { getLiveNoteForSync, getLiveGoalForSync, getLiveEventForSync } from '@/lib/sync/pending-sync-bridge';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';

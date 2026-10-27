@@ -1,16 +1,22 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Target, FormInput, Tag, Copy, FolderKanban, ShieldAlert, FileCode, Calendar, Bot, Layers, Trash2 } from 'lucide-react';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
 import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
+import { useWorkspace } from '@/context/WorkspaceContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useNotes } from '@/context/NotesContext';
+import { useTask } from '@/context/TaskContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { AgenticMarkdown } from '@/components/agentic/AgenticMarkdown';
+import { AgenticPreviewDrawer } from '@/components/agentic/AgenticPreviewDrawer';
 import { getAgenticUserMessage } from '@/lib/agentic/errors';
 import toast from 'react-hot-toast';
 
-// Sidekick — flagship per-object companion. One session per object (targetType/targetId).
-// Migrated from SummarizeDrawer: keeps summarize skeleton but adds full chat + LocalEngine + sidekick prompt.
+// Sidekick — flagship workspace & per-object companion.
 
 export type SidekickTarget = { type: string; id: string; title?: string; content?: string; metadata?: Record<string, unknown>; tags?: string[] };
 
@@ -170,10 +176,50 @@ export function SidekickDrawer({
   onClose: () => void;
   target: SidekickTarget | null;
 }) {
+  const router = useRouter();
+  const { user: currentUser } = useAuth();
+  const { activeWorkspace } = useWorkspace();
+  const { notes = [] } = useNotes();
+  const { tasks = [] } = useTask();
   const { openFileDrawer } = useUnifiedFileDrawer();
+  const { open: openUnified } = useUnifiedDrawer();
+
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [localTarget, setLocalTarget] = useState<SidekickTarget | null>(initialTarget);
+  const [focusedObjectTarget, setFocusedObjectTarget] = useState<SidekickTarget | null>(initialTarget);
+  const [scopeMode, setScopeMode] = useState<'object' | 'workspace'>('workspace');
+
+  const defaultWorkspaceTarget = useMemo<SidekickTarget>(() => ({
+    type: 'workspace',
+    id: activeWorkspace?.id || 'personal',
+    title: activeWorkspace?.title || 'Workspace Assistant',
+  }), [activeWorkspace?.id, activeWorkspace?.title]);
+
+  const [localTarget, setLocalTarget] = useState<SidekickTarget>(() => {
+    if (initialTarget && initialTarget.type !== 'workspace') {
+      return initialTarget;
+    }
+    return defaultWorkspaceTarget;
+  });
+
+  useEffect(() => {
+    if (initialTarget) {
+      if (initialTarget.type !== 'workspace') {
+        setFocusedObjectTarget(initialTarget);
+        setScopeMode('object');
+        setLocalTarget(initialTarget);
+      } else {
+        setScopeMode('workspace');
+        setLocalTarget(initialTarget);
+      }
+    } else {
+      setScopeMode('workspace');
+      setLocalTarget(defaultWorkspaceTarget);
+    }
+  }, [initialTarget, defaultWorkspaceTarget]);
+
+  const target = localTarget;
+
   const [result, setResult] = useState<SidekickResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -183,13 +229,8 @@ export function SidekickDrawer({
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachedSessionObjects, setAttachedSessionObjects] = useState<any[]>([]);
   const [showAttachedObjectsDrawer, setShowAttachedObjectsDrawer] = useState(false);
+  const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setLocalTarget(initialTarget);
-  }, [initialTarget]);
-
-  const target = localTarget;
 
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -521,10 +562,17 @@ export function SidekickDrawer({
               args: parsed.toolCall.args || {},
             };
             const execRes = await executeAgenticToolCallWithToast(callInput, {
-              user: null,
-              router: { push: () => {} } as any,
-              notes: [],
-              tasks: [],
+              user: currentUser ? { $id: currentUser.$id } : null,
+              router,
+              notes,
+              tasks,
+              openDrawer: (drawerType: string, payload?: Record<string, unknown>) => {
+                if (drawerType === 'agentic-preview' && payload?.previewId) {
+                  setActivePreviewId(String(payload.previewId));
+                } else {
+                  openUnified(drawerType as any, payload);
+                }
+              },
             });
 
             if (execRes.success && target) {
@@ -631,6 +679,38 @@ export function SidekickDrawer({
           <div>
             <div className="text-[11px] font-black tracking-widest text-[#A855F7] uppercase">Sidekick</div>
             <div className="text-sm font-black text-white font-clash -mt-1 truncate max-w-[180px]">{target?.title || 'Research companion'}</div>
+            {focusedObjectTarget && focusedObjectTarget.type !== 'workspace' && (
+              <div className="flex items-center gap-1 mt-1 bg-[#161412] p-0.5 rounded-lg border border-white/10 text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScopeMode('object');
+                    setLocalTarget(focusedObjectTarget);
+                  }}
+                  className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                    scopeMode === 'object'
+                      ? 'bg-[#A855F7] text-white'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  Object: {focusedObjectTarget.title || focusedObjectTarget.id}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScopeMode('workspace');
+                    setLocalTarget(defaultWorkspaceTarget);
+                  }}
+                  className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
+                    scopeMode === 'workspace'
+                      ? 'bg-[#A855F7] text-white'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  Workspace: {defaultWorkspaceTarget.title}
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -889,6 +969,36 @@ export function SidekickDrawer({
           </button>
         </div>
       </div>
+
+      {/* Embedded Agentic Preview Partition Drawer */}
+      {activePreviewId && (
+        <Drawer
+          anchor="bottom"
+          open={Boolean(activePreviewId)}
+          onClose={() => setActivePreviewId(null)}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              p: 2,
+              maxWidth: '600px',
+              mx: 'auto',
+            },
+          }}
+          ModalProps={{ keepMounted: false, disablePortal: true, sx: { zIndex: 1600 } }}
+        >
+          <AgenticPreviewDrawer
+            previewId={activePreviewId}
+            onClose={() => setActivePreviewId(null)}
+            onCommitted={() => {
+              toast.success('Preview committed successfully');
+              setActivePreviewId(null);
+            }}
+          />
+        </Drawer>
+      )}
 
       {/* Session Attached Objects Bottom Drawer */}
       {showAttachedObjectsDrawer && (

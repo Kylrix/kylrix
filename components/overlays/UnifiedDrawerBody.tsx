@@ -119,6 +119,11 @@ const AgenticPanelContent = dynamic(
   { ssr: false },
 );
 
+const SidekickDrawer = dynamic(
+  () => import('../agentic/SidekickDrawer').then((m) => m.SidekickDrawer),
+  { ssr: false },
+);
+
 const FollowListDrawer = dynamic(() => import('./FollowListDrawer').then((m) => m.FollowListDrawer), { ssr: false });
 const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
 const SanitizeDrawer = dynamic(() => import('./SanitizeDrawer').then((m) => m.SanitizeDrawer), { ssr: false });
@@ -182,6 +187,20 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           isDesktop
           data-agentic
           onClose={onClose}
+        />
+      );
+    case 'sidekick':
+      return (
+        <SidekickDrawer
+          open
+          onClose={onClose}
+          target={
+            drawerData?.target || {
+              type: 'workspace',
+              id: drawerData?.workspaceId || 'personal',
+              title: drawerData?.workspaceTitle || 'Workspace Assistant',
+            }
+          }
         />
       );
     case 'note':

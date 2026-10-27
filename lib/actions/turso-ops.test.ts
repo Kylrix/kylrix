@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resolveAllUserIds, listWorkspacesTurso } from '@/lib/actions/turso-ops';
+import { resolveAllUserIds } from '@/lib/actions/turso-ops';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 
@@ -14,13 +14,13 @@ describe('Workspace Discovery & User ID Aliasing', () => {
     const email = 'alex@kylrix.space';
 
     // Mock db.select for user lookups and account lookups
-    vi.spyOn(db, 'select').mockImplementation((fields?: any) => {
+    vi.spyOn(db, 'select').mockImplementation((_fields?: any) => {
       return {
         from: (table: any) => {
           return {
-            where: (condition: any) => {
+            where: (_condition: any) => {
               return {
-                limit: async (num: number) => {
+                limit: async (_num: number) => {
                   if (table === schema.user) {
                     return [
                       {
