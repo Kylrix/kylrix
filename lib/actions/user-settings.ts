@@ -144,18 +144,12 @@ export async function listUserIdentitiesAction(jwt?: string) {
 
   try {
     const { db } = await import('@/lib/db');
-    const { account: accountTable, oauthConsent, oauthClient, user: userTable } = await import('@/lib/db/schema');
+    const { account: accountTable, oauthConsent, oauthClient } = await import('@/lib/db/schema');
     const { eq, inArray } = await import('drizzle-orm');
-    const allUserIds = [actor.$id];
-    if (actor.email) {
-      const matchingUsers = await db
-        .select({ id: userTable.id })
-        .from(userTable)
-        .where(eq(userTable.email, actor.email.trim().toLowerCase()));
-      for (const u of matchingUsers) {
-        if (!allUserIds.includes(u.id)) allUserIds.push(u.id);
-      }
-    }
+    const { resolveAllUserIds } = await import('@/lib/actions/turso-ops');
+
+    const resolvedUserIds = await resolveAllUserIds(actor.$id);
+    const allUserIds = Array.from(new Set([actor.$id, ...resolvedUserIds])).filter(Boolean);
 
     const accounts = await db
       .select()

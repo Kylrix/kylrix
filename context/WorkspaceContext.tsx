@@ -182,14 +182,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
     if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
       if (typeof window !== 'undefined') {
-        const existing = localStorage.getItem(`kylrix_workspaces_${uid}`);
-        if (existing) {
-          try {
-            const parsed = JSON.parse(existing);
-            if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
-              return; // Guard against overwriting existing workspaces with personal-only array
-            }
-          } catch {}
+        const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
+        for (const k of existingKeys) {
+          const existing = localStorage.getItem(k);
+          if (existing) {
+            try {
+              const parsed = JSON.parse(existing);
+              if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
+                return; // Guard against overwriting existing workspaces with personal-only array
+              }
+            } catch {}
+          }
         }
       }
     }

@@ -519,7 +519,16 @@ export async function upsertVaultItemTurso(data: any) {
     const titleVal = rawData.title || rawData.name || 'Untitled Secret';
     const typeVal = rawData.type || rawData.itemType || 'login';
     const encryptedDataVal = rawData.encrypted_data || rawData.encryptedData || rawData.password || rawData.secret || '';
-    const ivVal = rawData.iv || null;
+    let ivVal = rawData.iv && String(rawData.iv).trim() !== '' ? String(rawData.iv).trim() : null;
+    if (!ivVal) {
+      if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+        const bytes = new Uint8Array(12);
+        crypto.getRandomValues(bytes);
+        ivVal = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+      } else {
+        ivVal = '000000000000000000000000';
+      }
+    }
     const isTrashedVal = Boolean(rawData.isTrashed ?? rawData.isDeleted ?? rawData.isTrash ?? false);
     const isWorkspaceVal = Boolean(rawData.isWorkspace ?? false);
     const workspaceIdVal = rawData.workspaceId || rawData.projectId || null;
@@ -1373,11 +1382,20 @@ export async function listFormsTurso(userId: string) {
 
   try {
     const allUserIds = await resolveAllUserIds(userId);
+    const wsRes = await listWorkspacesTurso(userId).catch(() => ({ rows: [] }));
+    const workspaceIds = Array.isArray(wsRes?.rows)
+      ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
+      : [];
+
+    const conditions = [inArray(schema.forms.userId, allUserIds)];
+    if (workspaceIds.length > 0) {
+      conditions.push(inArray(schema.forms.workspaceId, workspaceIds));
+    }
 
     const rows = await db
       .select()
       .from(schema.forms)
-      .where(inArray(schema.forms.userId, allUserIds));
+      .where(or(...conditions));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
@@ -1420,11 +1438,20 @@ export async function listEventsTurso(userId: string) {
 
   try {
     const allUserIds = await resolveAllUserIds(userId);
+    const wsRes = await listWorkspacesTurso(userId).catch(() => ({ rows: [] }));
+    const workspaceIds = Array.isArray(wsRes?.rows)
+      ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
+      : [];
+
+    const conditions = [inArray(schema.events.userId, allUserIds)];
+    if (workspaceIds.length > 0) {
+      conditions.push(inArray(schema.events.workspaceId, workspaceIds));
+    }
 
     const rows = await db
       .select()
       .from(schema.events)
-      .where(inArray(schema.events.userId, allUserIds));
+      .where(or(...conditions));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;

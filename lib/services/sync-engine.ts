@@ -188,18 +188,34 @@ async function flushCredentialPending(
   }
 
   const flushRevision = queuedRevision;
-  const { createCredential, updateCredential } = await import('@/lib/data');
+  const { upsertVaultItemTurso } = await import('@/lib/actions/turso-ops');
 
   try {
-    await updateCredential(credId, { ...payload, userId: activeUserId }, { skipPending: true });
-  } catch {
-    await createCredential({ ...payload, id: credId, userId: activeUserId }, { skipPending: true });
+    const res = await upsertVaultItemTurso({ ...payload, id: credId, userId: activeUserId });
+    if (!res?.success) {
+      if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
+        console.warn('[sync-engine] Vault mutation unauthenticated (401), canceling pending retry:', credId);
+        autonomicSyncEngine.cancelPending(pendingKey);
+        autonomicSyncEngine.cancelPending(credId);
+        return;
+      }
+      throw new Error(res?.error || 'upsertVaultItemTurso failed');
+    }
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(credId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(credId, flushRevision);
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      console.warn('[sync-engine] Vault mutation unauthenticated (401), canceling pending retry:', credId);
+      autonomicSyncEngine.cancelPending(pendingKey);
+      autonomicSyncEngine.cancelPending(credId);
+      return;
+    }
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
   }
-
-  failedSyncAttempts.delete(pendingKey);
-  failedSyncAttempts.delete(credId);
-  autonomicSyncEngine.ack(pendingKey, flushRevision);
-  autonomicSyncEngine.ack(credId, flushRevision);
 }
 
 async function flushTotpPending(
@@ -228,18 +244,34 @@ async function flushTotpPending(
   }
 
   const flushRevision = queuedRevision;
-  const { createTotpSecret, updateTotpSecret } = await import('@/lib/data');
+  const { upsertTotpSecretTurso } = await import('@/lib/actions/turso-ops');
 
   try {
-    await updateTotpSecret(totpId, { ...payload, userId: activeUserId }, { skipPending: true });
-  } catch {
-    await createTotpSecret({ ...payload, id: totpId, userId: activeUserId }, { skipPending: true });
+    const res = await upsertTotpSecretTurso({ ...payload, id: totpId, userId: activeUserId });
+    if (!res?.success) {
+      if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
+        console.warn('[sync-engine] TOTP mutation unauthenticated (401), canceling pending retry:', totpId);
+        autonomicSyncEngine.cancelPending(pendingKey);
+        autonomicSyncEngine.cancelPending(totpId);
+        return;
+      }
+      throw new Error(res?.error || 'upsertTotpSecretTurso failed');
+    }
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(totpId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(totpId, flushRevision);
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      console.warn('[sync-engine] TOTP mutation unauthenticated (401), canceling pending retry:', totpId);
+      autonomicSyncEngine.cancelPending(pendingKey);
+      autonomicSyncEngine.cancelPending(totpId);
+      return;
+    }
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
   }
-
-  failedSyncAttempts.delete(pendingKey);
-  failedSyncAttempts.delete(totpId);
-  autonomicSyncEngine.ack(pendingKey, flushRevision);
-  autonomicSyncEngine.ack(totpId, flushRevision);
 }
 
 async function flushFormPending(
@@ -268,18 +300,34 @@ async function flushFormPending(
   }
 
   const flushRevision = queuedRevision;
-  const { updateForm, createForm } = await import('@/lib/actions/client-ops');
+  const { upsertFormTurso } = await import('@/lib/actions/turso-ops');
 
   try {
-    await updateForm(formId, { ...payload, userId: activeUserId }, { skipPending: true });
-  } catch {
-    await createForm({ ...payload, $id: formId, id: formId, userId: activeUserId }, { skipPending: true });
+    const res = await upsertFormTurso({ ...payload, id: formId, userId: activeUserId });
+    if (!res?.success) {
+      if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
+        console.warn('[sync-engine] Form mutation unauthenticated (401), canceling pending retry:', formId);
+        autonomicSyncEngine.cancelPending(pendingKey);
+        autonomicSyncEngine.cancelPending(formId);
+        return;
+      }
+      throw new Error(res?.error || 'upsertFormTurso failed');
+    }
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(formId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(formId, flushRevision);
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      console.warn('[sync-engine] Form mutation unauthenticated (401), canceling pending retry:', formId);
+      autonomicSyncEngine.cancelPending(pendingKey);
+      autonomicSyncEngine.cancelPending(formId);
+      return;
+    }
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
   }
-
-  failedSyncAttempts.delete(pendingKey);
-  failedSyncAttempts.delete(formId);
-  autonomicSyncEngine.ack(pendingKey, flushRevision);
-  autonomicSyncEngine.ack(formId, flushRevision);
 }
 
 async function flushGoalPending(
@@ -316,18 +364,34 @@ async function flushGoalPending(
   }
 
   const flushRevision = goalRevisionOf(payload) || queuedRevision;
-  const { updateGoal, createGoal } = await import('@/lib/actions/client-ops');
+  const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
 
   try {
-    await updateGoal(goalId, dataPayload);
-  } catch {
-    await createGoal({ ...(dataPayload as any), $id: goalId });
+    const res = await upsertGoalTurso({ ...(dataPayload as any), id: goalId, userId: activeUserId, title: dataPayload.title });
+    if (!res?.success) {
+      if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
+        console.warn('[sync-engine] Goal mutation unauthenticated (401), canceling pending retry:', goalId);
+        autonomicSyncEngine.cancelPending(pendingKey);
+        autonomicSyncEngine.cancelPending(goalId);
+        return;
+      }
+      throw new Error(res?.error || 'upsertGoalTurso failed');
+    }
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(goalId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(goalId, flushRevision);
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      console.warn('[sync-engine] Goal mutation unauthenticated (401), canceling pending retry:', goalId);
+      autonomicSyncEngine.cancelPending(pendingKey);
+      autonomicSyncEngine.cancelPending(goalId);
+      return;
+    }
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
   }
-
-  failedSyncAttempts.delete(pendingKey);
-  failedSyncAttempts.delete(goalId);
-  autonomicSyncEngine.ack(pendingKey, flushRevision);
-  autonomicSyncEngine.ack(goalId, flushRevision);
 }
 
 async function flushEventPending(
@@ -356,18 +420,34 @@ async function flushEventPending(
   }
 
   const flushRevision = queuedRevision;
-  const { updateEvent, createEvent } = await import('@/lib/actions/client-ops');
+  const { upsertEventTurso } = await import('@/lib/actions/turso-ops');
 
   try {
-    await updateEvent(eventId, { ...payload, userId: activeUserId }, { skipPending: true });
-  } catch {
-    await createEvent({ ...payload, $id: eventId, userId: activeUserId }, { skipPending: true });
+    const res = await upsertEventTurso({ ...payload, id: eventId, userId: activeUserId });
+    if (!res?.success) {
+      if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
+        console.warn('[sync-engine] Event mutation unauthenticated (401), canceling pending retry:', eventId);
+        autonomicSyncEngine.cancelPending(pendingKey);
+        autonomicSyncEngine.cancelPending(eventId);
+        return;
+      }
+      throw new Error(res?.error || 'upsertEventTurso failed');
+    }
+    failedSyncAttempts.delete(pendingKey);
+    failedSyncAttempts.delete(eventId);
+    autonomicSyncEngine.ack(pendingKey, flushRevision);
+    autonomicSyncEngine.ack(eventId, flushRevision);
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      console.warn('[sync-engine] Event mutation unauthenticated (401), canceling pending retry:', eventId);
+      autonomicSyncEngine.cancelPending(pendingKey);
+      autonomicSyncEngine.cancelPending(eventId);
+      return;
+    }
+    const prev = failedSyncAttempts.get(pendingKey) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(pendingKey, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
   }
-
-  failedSyncAttempts.delete(pendingKey);
-  failedSyncAttempts.delete(eventId);
-  autonomicSyncEngine.ack(pendingKey, flushRevision);
-  autonomicSyncEngine.ack(eventId, flushRevision);
 }
 
 async function flushNotePending(
@@ -395,15 +475,30 @@ async function flushNotePending(
   }
 
   const flushRevision = queuedRevision;
+  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
 
   try {
-    await updateNote(noteId, payload);
-  } catch {
-    await createNote({ ...payload, $id: noteId });
+    const res = await upsertNoteTurso({ ...payload, id: noteId, userId: activeUserId });
+    if (!res?.success) {
+      if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
+        console.warn('[sync-engine] Note mutation unauthenticated (401), canceling pending retry:', noteId);
+        autonomicSyncEngine.cancelPending(noteId);
+        return;
+      }
+      throw new Error(res?.error || 'upsertNoteTurso failed');
+    }
+    failedSyncAttempts.delete(noteId);
+    autonomicSyncEngine.ack(noteId, flushRevision);
+  } catch (err: any) {
+    if (err?.message && (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized'))) {
+      console.warn('[sync-engine] Note mutation unauthenticated (401), canceling pending retry:', noteId);
+      autonomicSyncEngine.cancelPending(noteId);
+      return;
+    }
+    const prev = failedSyncAttempts.get(noteId) || { count: 0, lastFailedAt: 0 };
+    failedSyncAttempts.set(noteId, { count: prev.count + 1, lastFailedAt: Date.now() });
+    notifyStatusListeners();
   }
-
-  failedSyncAttempts.delete(noteId);
-  autonomicSyncEngine.ack(noteId, flushRevision);
 }
 
 export const autonomicSyncEngine = {
