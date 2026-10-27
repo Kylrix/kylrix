@@ -63,13 +63,22 @@ export interface DatabaseRepository {
   ): Promise<void>;
 }
 
+function generateDefaultIvHex(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  return '000000000000000000000000';
+}
+
 function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
   if (!data || typeof data !== 'object') return {};
 
   const titleVal = data.title || data.name || 'Untitled Secret';
   const typeVal = data.type || data.itemType || 'login';
   const encryptedDataVal = data.encrypted_data || data.encryptedData || data.password || data.secret || '';
-  const ivVal = data.iv || null;
+  const ivVal = data.iv && String(data.iv).trim() !== '' ? String(data.iv).trim() : generateDefaultIvHex();
   const isTrashedVal = Boolean(data.isTrashed ?? data.isDeleted ?? data.isTrash ?? false);
   const isWorkspaceVal = Boolean(data.isWorkspace ?? false);
   const workspaceIdVal = data.workspaceId || data.projectId || null;
