@@ -6,26 +6,42 @@ Comprehensive documentation for developers, integrators, and autonomous agents w
 
 ---
 
-## 📚 Documentation vs. Agent Skills (`.agents/skills/`)
-
-- **System Documentation (`docs/`)**: Public and internal documentation answering all questions about system architecture, data models, edge cases, feature behavior, and API integrations. Intended for human developers, external integrators, and AI agents alike.
-- **Agent Skills (`.agents/skills/`)**: Operational guides specifically tailored for autonomous agents and developers actively writing or modifying code in real-time. Contains non-negotiables, code quirks, implementation rules, invariants, and step-by-step modification guidelines.
-
----
-
-## Documentation Index
+## 📚 System Architecture & Core Technical Specs
 
 | Section | Description | Link |
 |---|---|---|
-| **Workspaces Architecture** | Filtering rules, `project_objects` join mapping, edge cases | [workspaces.md](./workspaces.md) |
-| **CLI & Stdio MCP Bridge** | Local-first SQLite, 1-click pairing, commands | [cli.md](./cli.md) |
-| **Agent Integrations** | Copy-paste prompt, MCP + REST setup, verify checklist | [integrations.md](./integrations.md) |
-| **Model Context Protocol (MCP)** | Streamable HTTP & SSE for Cursor, Claude, agents | [mcp.md](./mcp.md) |
-| **HTTP API** | PATs, scopes, REST endpoints | [api.md](./api.md) |
-| **Sign in with Kylrix (OAuth 2.1)** | OIDC, PKCE, client registration | [oauth2.md](./oauth2.md) |
-| **Autonomous Agents** | Provisioning keys, workspaces, identities | [agents.md](./agents.md) |
-| **Markdown Pipeline** | Marked extensions, KaTeX, charts | [markdown.md](./markdown.md) |
-| **Self-Hosting** | Docker deploy, custom base URLs | [SELFHOST.md](../SELFHOST.md) |
+| **System Architecture** | High-level topology, local-first substrate, hybrid execution model | [architecture.md](./architecture.md) |
+| **Database & Persistence** | Turso SQLite schema, Drizzle ORM, `resolveAllUserIds`, repository pattern | [database.md](./database.md) |
+| **Security & Zero-Knowledge Vault** | E2EE Web Crypto, MasterPass Argon2id derivation, 2FA/Passkeys, RAM zeroing | [security-and-vault.md](./security-and-vault.md) |
+| **Sync Engine & Realtime** | `autonomicSyncEngine`, queue flushes, PartyKit WebSockets, tombstones | [sync-and-realtime.md](./sync-and-realtime.md) |
+| **Billing & Subscriptions** | BlockBee crypto infrastructure, `CONTRIBUTOR` tier, coupons, entitlements | [billing.md](./billing.md) |
+| **Packages & TypeScript SDK** | `@kylrix/cli` terminal tool, VS Code extension, `@kylrix/sdk` contracts | [packages-and-sdk.md](./packages-and-sdk.md) |
+| **Frontend UI & Design System** | OpenBricks design, desktop drawer suppression rules, guest local fallbacks | [frontend-ui.md](./frontend-ui.md) |
+
+---
+
+## 🔌 API Protocols & Agent Integrations
+
+| Section | Description | Link |
+|---|---|---|
+| **Workspaces Architecture** | Personal vs Concrete workspaces, `project_objects` join mapping, edge cases | [workspaces.md](./workspaces.md) |
+| **CLI & Stdio MCP Bridge** | Local-first SQLite store, 1-click pairing, `kylrix exec` RAM zeroing | [cli.md](./cli.md) |
+| **Agent Integrations** | Copy-paste prompts, MCP + REST setup, verification checklist | [integrations.md](./integrations.md) |
+| **Model Context Protocol (MCP)** | Streamable HTTP & SSE transport for Cursor, Claude, agents | [mcp.md](./mcp.md) |
+| **WebMCP (W3C Standard)** | Browser-native tool exposition via `navigator.modelContext` | [webmcp.md](./webmcp.md) |
+| **HTTP REST API** | PATs, scopes, REST endpoints summary | [api.md](./api.md) |
+| **Sign in with Kylrix (OAuth 2.1)** | OIDC, PKCE flow, token endpoints | [oauth2.md](./oauth2.md) |
+| **Autonomous Agents** | Agent provisioning, identities, authorization keys | [agents.md](./agents.md) |
+| **Markdown Pipeline** | Marked custom extensions, KaTeX math, charts, quote cards | [markdown.md](./markdown.md) |
+| **Pairing Protocol** | Device authentication, cryptographically secure pairing codes | [PAIRING_PROTOCOL.md](./PAIRING_PROTOCOL.md) |
+| **Self-Hosting** | Docker deployment, custom base URIs, environment setup | [SELFHOST.md](../SELFHOST.md) |
+
+---
+
+## 📚 Documentation vs. Agent Skills (`.agents/skills/`)
+
+- **System Documentation (`docs/`)**: Complete technical documentation answering all questions about system architecture, data models, edge cases, security, feature behavior, and API integrations. Intended for human developers, external integrators, and AI agents alike.
+- **Agent Skills (`.agents/skills/`)**: Operational guides specifically tailored for autonomous agents and developers actively writing or modifying code in real-time. Contains non-negotiables, code quirks, implementation rules, invariants, and step-by-step modification guidelines.
 
 ---
 
