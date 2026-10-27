@@ -176,7 +176,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>(initialItems);
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 
-  const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string) => {
+  const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string, allowSinglePersonal = false) => {
+    // Prevent cache poisoning: Never overwrite existing non-empty cached list with single personal workspace
+    // unless explicitly allowed (e.g. on explicit logout)
+    const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
+    if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
+      if (typeof window !== 'undefined') {
+        const existing = localStorage.getItem(`kylrix_workspaces_${uid}`);
+        if (existing) {
+          try {
+            const parsed = JSON.parse(existing);
+            if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
+              return; // Guard against overwriting existing workspaces with personal-only array
+            }
+          } catch {}
+        }
+      }
+    }
+
     try {
       if (typeof window !== 'undefined') {
         localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
@@ -197,7 +214,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       const { clearSessionProjectsList } = await import('@/lib/projects/projects-cache');
       clearSessionProjectsList();
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      const [rowsInitial, localShared, directUserProjects, globalProjects, customCached] = await Promise.all([
+      const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
+
+      const [tursoRes, rowsInitial, localShared, directUserProjects, globalProjects, customCached] = await Promise.all([
+        listWorkspacesTurso(userId || 'guest').catch(() => ({ success: false, rows: [] })),
         warmProjectsList({
           userId: userId || 'guest',
           getCachedDataAsync,
@@ -209,9 +229,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         LocalEngine.cacheGet<any[]>(`kylrix_workspaces_${userId}`).catch(() => []),
       ]);
 
+      let tursoRows = tursoRes?.rows || [];
       let rows = rowsInitial;
+
       // Heal: empty/poisoned LocalEngine (bad sub-project filter wrote [] or WorkspaceItem[])
-      if (!Array.isArray(rows) || rows.length === 0 || !rows.some((p: any) => p?.$id)) {
+      if (!Array.isArray(rows) || rows.length === 0 || !rows.some((p: any) => p?.$id || p?.id)) {
         rows = await warmProjectsList({
           userId: userId || 'guest',
           getCachedDataAsync,
@@ -220,18 +242,16 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => rowsInitial);
       }
 
-      // Prefer real project rows; switcher cache is last resort (may be personal-only after a bad filter)
-      const candidateRows = (Array.isArray(rows) && rows.length > 0)
-        ? rows
-        : (Array.isArray(directUserProjects) && directUserProjects.length > 0 && directUserProjects.some((p) => p?.$id))
-          ? directUserProjects
-          : (Array.isArray(globalProjects) && globalProjects.some((p) => p?.$id))
-            ? globalProjects
-            : (Array.isArray(customCached) && customCached.length > 0)
-              ? customCached
-              : [];
+      // Combine direct Turso workspace rows with warmProjectsList and local caches
+      const rawCandidates = [
+        ...(Array.isArray(tursoRows) ? tursoRows : []),
+        ...(Array.isArray(rows) ? rows : []),
+        ...(Array.isArray(directUserProjects) ? directUserProjects : []),
+        ...(Array.isArray(globalProjects) ? globalProjects : []),
+        ...(Array.isArray(customCached) ? customCached : []),
+      ];
 
-      const mapped = mapProjectRows(candidateRows);
+      const mapped = mapProjectRows(rawCandidates);
       const mappedLocal = Array.isArray(localShared)
         ? localShared.filter((s) => s.id && s.id !== personalWorkspace.id)
         : [];
@@ -244,11 +264,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       setWorkspaces((prev) => {
-        for (const existing of prev) {
-          if (existing.id && existing.id !== personalWorkspace.id && !byId.has(existing.id)) {
+        // If current refresh produced no non-personal workspaces, but previously existing non-personal workspaces were cached in state,
+        // preserve the existing ones to avoid cache poisoning/loss during transient network failures.
+        const prevNonPersonal = prev.filter((w) => !w.isPersonal && w.id !== personalWorkspace.id);
+        const newNonPersonal = Array.from(byId.values()).filter((w) => !w.isPersonal && w.id !== personalWorkspace.id);
+
+        if (newNonPersonal.length === 0 && prevNonPersonal.length > 0) {
+          for (const existing of prevNonPersonal) {
             byId.set(existing.id, existing);
           }
+          // Schedule silent background retry
+          setTimeout(() => void refreshWorkspaces(), 3000);
+        } else {
+          for (const existing of prev) {
+            if (existing.id && existing.id !== personalWorkspace.id && !byId.has(existing.id)) {
+              byId.set(existing.id, existing);
+            }
+          }
         }
+
         const finalWorkspaces = [personalWorkspace, ...Array.from(byId.values()).filter((w) => w.id !== personalWorkspace.id)];
         persistWorkspacesOffline(finalWorkspaces, userId);
         return finalWorkspaces;
@@ -459,6 +493,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       lastUserIdRef.current = null;
       setActiveWorkspaceIdState('personal');
       setWorkspaces([personalWorkspace]);
+      persistWorkspacesOffline([personalWorkspace], userId, true);
       try {
         const { clearSessionProjectsList } = require('@/lib/projects/projects-cache');
         clearSessionProjectsList();
@@ -466,7 +501,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener('kylrix:auth:logout', handleLogout);
     return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
-  }, [personalWorkspace.id]);
+  }, [personalWorkspace.id, userId, persistWorkspacesOffline]);
 
   const refreshWorkspacesRef = useRef(refreshWorkspaces);
   useEffect(() => {
