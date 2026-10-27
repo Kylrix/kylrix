@@ -501,37 +501,31 @@ export async function loadExistingVaultForDedupe(userId: string): Promise<{
       isSealedVaultText(t?.secretKey) || !criticalTotpKey(t);
 
     if (credentials.some(sealedCred)) {
-      const decrypted: Record<string, unknown>[] = [];
-      for (const row of credentials) {
-        const id = String(row?.$id || row?.id || '').trim();
-        if (!id || !sealedCred(row)) {
-          decrypted.push(row);
-          continue;
-        }
-        try {
-          decrypted.push((await VaultService.getCredential(id)) as any);
-        } catch {
-          decrypted.push(row);
-        }
-      }
-      credentials = decrypted;
+      credentials = await Promise.all(
+        credentials.map(async (row) => {
+          const id = String(row?.$id || row?.id || '').trim();
+          if (!id || !sealedCred(row)) return row;
+          try {
+            return (await VaultService.getCredential(id)) as any;
+          } catch {
+            return row;
+          }
+        }),
+      );
     }
 
     if (totpSecrets.some(sealedTotp)) {
-      const decrypted: Record<string, unknown>[] = [];
-      for (const row of totpSecrets) {
-        const id = String(row?.$id || row?.id || '').trim();
-        if (!id || !sealedTotp(row)) {
-          decrypted.push(row);
-          continue;
-        }
-        try {
-          decrypted.push((await VaultService.getTOTPSecret(id)) as any);
-        } catch {
-          decrypted.push(row);
-        }
-      }
-      totpSecrets = decrypted;
+      totpSecrets = await Promise.all(
+        totpSecrets.map(async (row) => {
+          const id = String(row?.$id || row?.id || '').trim();
+          if (!id || !sealedTotp(row)) return row;
+          try {
+            return (await VaultService.getTOTPSecret(id)) as any;
+          } catch {
+            return row;
+          }
+        }),
+      );
     }
   } catch {
     /* offline — LocalEngine only */
