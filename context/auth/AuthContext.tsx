@@ -220,16 +220,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const loginWithEmailOTP = useCallback(async (email: string) => {
-    try {
-      const res = await (authClient as any).emailOtp.sendVerificationOtp({ email, type: 'sign-in' });
-      return res?.data?.userId || ulid();
-    } catch {
-      return ulid();
+    const res = await authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' });
+    if (res?.error) {
+      throw new Error(res.error.message || 'Failed to send verification code');
     }
+    return (res as any)?.data?.userId || ulid();
   }, []);
 
   const verifyEmailOTP = useCallback(async (email: string, _userId: string, secret: string): Promise<void> => {
-    const res = await (authClient as any).signIn.emailOtp({ email, otp: secret });
+    const res = await authClient.signIn.emailOtp({ email, otp: secret });
     if (res?.error) {
       throw new Error(res.error.message || 'OTP verification failed');
     }

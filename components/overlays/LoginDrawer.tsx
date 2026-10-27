@@ -442,19 +442,8 @@ export function LoginDrawer() {
     setLoading(true);
 
     try {
-      // 1. Send OTP via Better Auth (best-effort / primary)
-      try {
-        const { authClient } = await import('@/lib/auth/better-auth-client');
-        await authClient.emailOtp.sendVerificationOtp({
-          email: email.trim(),
-          type: 'sign-in',
-        });
-      } catch (betterAuthOtpErr) {
-        console.warn('[LoginDrawer] Better Auth email OTP send fallback to Appwrite:', betterAuthOtpErr);
-      }
-
-      // 2. Send OTP via Appwrite (for session continuity)
-      const id = await loginWithEmailOTP(email);
+      const cleanEmail = email.trim();
+      const id = await loginWithEmailOTP(cleanEmail);
       setUserId(id as any);
       setStep('otp');
       toast.success('Code sent to your email');
@@ -473,19 +462,7 @@ export function LoginDrawer() {
     if (!code || code.length < 6) return;
     setLoading(true);
     try {
-      // 1. Verify OTP with Better Auth
-      try {
-        const { authClient } = await import('@/lib/auth/better-auth-client');
-        await authClient.signIn.emailOtp({
-          email: email.trim(),
-          otp: code.trim(),
-        });
-      } catch (betterAuthVerifyErr) {
-        console.warn('[LoginDrawer] Better Auth OTP verify fallback to Appwrite:', betterAuthVerifyErr);
-      }
-
-      // 2. Verify OTP with Appwrite
-      await verifyEmailOTP(email, userId, code);
+      await verifyEmailOTP(email.trim(), userId, code.trim());
       navigateToAppAfterAuth();
     } catch (err: unknown) {
       if (isMfaRequiredError(err)) {
@@ -500,7 +477,7 @@ export function LoginDrawer() {
     } finally {
       setLoading(false);
     }
-  }, [email, userId, verifyEmailOTP, close]);
+  }, [email, userId, verifyEmailOTP, navigateToAppAfterAuth]);
 
   // Auto-submit effects for 6-digit completion
   useEffect(() => {
@@ -753,11 +730,6 @@ export function LoginDrawer() {
               </div>
             )}
 
-            {userExists === false && policy.passkeySignup && (
-              <p className="text-center text-[10px] text-white/40 font-medium pt-1">
-                Passkey signup is enabled for this instance — enrollment UI wiring is next.
-              </p>
-            )}
           </form>
         );
 
