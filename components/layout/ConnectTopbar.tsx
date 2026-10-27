@@ -2585,6 +2585,46 @@ export default function ConnectTopbar({
                       </Tooltip>
                     )}
 
+                    <Tooltip title="Sidekick Assistant (Agentic Workspace AI)">
+                      <IconButton
+                        id="topbar-sidekick-button"
+                        aria-label="Sidekick Assistant"
+                        onClick={() => {
+                          handleCloseAll();
+                          const wsId = activeWorkspace?.id || 'personal';
+                          const wsTitle = activeWorkspace?.title || 'Workspace Assistant';
+                          window.dispatchEvent(
+                            new CustomEvent('kylrix:open-sidekick', {
+                              detail: {
+                                type: 'workspace',
+                                id: wsId,
+                                title: wsTitle,
+                                content: `Workspace: ${wsTitle}. Active App: ${activeApp}. Notes: ${notes.length}, Tasks: ${tasks.length}`,
+                              },
+                            })
+                          );
+                        }}
+                        sx={{
+                          color: '#A855F7',
+                          bgcolor: '#161412',
+                          border: '1px solid rgba(168, 85, 247, 0.35)',
+                          borderRadius: '50%',
+                          width: 44,
+                          height: 44,
+                          boxShadow: '0 4px 16px rgba(168, 85, 247, 0.2)',
+                          '&:hover': {
+                            bgcolor: '#201D1A',
+                            borderColor: '#A855F7',
+                            transform: 'scale(1.05)',
+                            boxShadow: '0 0 20px rgba(168, 85, 247, 0.4)',
+                          },
+                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        }}
+                      >
+                        <Sparkles size={20} strokeWidth={2.2} />
+                      </IconButton>
+                    </Tooltip>
+
 
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
                       <IdentityAvatar 

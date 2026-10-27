@@ -164,7 +164,7 @@ function MindMapFlow({ data }: { data: SidekickResult['mindMap'] | null }) {
 export function SidekickDrawer({
   open,
   onClose,
-  target,
+  target: initialTarget,
 }: {
   open: boolean;
   onClose: () => void;
@@ -173,6 +173,7 @@ export function SidekickDrawer({
   const { openFileDrawer } = useUnifiedFileDrawer();
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [localTarget, setLocalTarget] = useState<SidekickTarget | null>(initialTarget);
   const [result, setResult] = useState<SidekickResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -183,6 +184,12 @@ export function SidekickDrawer({
   const [attachedSessionObjects, setAttachedSessionObjects] = useState<any[]>([]);
   const [showAttachedObjectsDrawer, setShowAttachedObjectsDrawer] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLocalTarget(initialTarget);
+  }, [initialTarget]);
+
+  const target = localTarget;
 
   useEffect(() => {
     const h = () => setIsMobile(window.innerWidth < 768);
@@ -491,14 +498,66 @@ export function SidekickDrawer({
         toast.error(res.error);
         return;
       }
+      const rawResponse = res?.response ? res.response : res?.result ? JSON.stringify(res.result) : 'Done.';
       const assistant: ChatMsg = {
         id: `a_${Date.now()}`,
         role: 'assistant',
-        content: res?.response ? res.response : res?.result ? JSON.stringify(res.result) : 'Done.',
+        content: rawResponse,
       };
       const updated = [...next, assistant];
       setMessages(updated);
       await LocalEngine.cacheSet(`sidekick:chat:${target.type}:${target.id}`, updated).catch(()=>{});
+
+      // Detect and run tool call if response contains toolCall block
+      try {
+        const jsonBlockMatch = rawResponse.match(/```json\s*(\{[\s\S]*?\})\s*```/) || rawResponse.match(/(\{[\s\S]*?"toolCall"[\s\S]*?\})/);
+        if (jsonBlockMatch) {
+          const parsed = JSON.parse(jsonBlockMatch[1]);
+          if (parsed?.toolCall?.toolKey) {
+            const { executeAgenticToolCallWithToast } = await import('@/lib/agentic/client-executor');
+            const callInput = {
+              toolKey: parsed.toolCall.toolKey,
+              specifier: parsed.toolCall.specifier || target.id,
+              args: parsed.toolCall.args || {},
+            };
+            const execRes = await executeAgenticToolCallWithToast(callInput, {
+              user: null,
+              router: { push: () => {} } as any,
+              notes: [],
+              tasks: [],
+            });
+
+            if (execRes.success && target) {
+              const toolKey = parsed.toolCall.toolKey;
+              const args = parsed.toolCall.args || {};
+              if (
+                toolKey === 'update_note' || toolKey === 'objects.idea.update' ||
+                toolKey === 'update_goal' || toolKey === 'objects.goal.update' ||
+                toolKey === 'update_form' || toolKey === 'objects.form.update' ||
+                toolKey === 'update_event' || toolKey === 'objects.event.update' ||
+                toolKey === 'update_project' || toolKey === 'objects.workspace.update'
+              ) {
+                const newTitle = args.title || target.title;
+                const newContent = args.content || args.description || target.content;
+                const newTags = args.tags || target.tags;
+                const updatedTarget = {
+                  ...target,
+                  title: newTitle,
+                  content: newContent,
+                  tags: newTags,
+                };
+                setLocalTarget(updatedTarget);
+                LocalEngine.cacheSet(`sidekick:result:${target.type}:${target.id}`, {
+                  ...result,
+                  oneLiner: newTitle ? `${newTitle} — ${target.type}` : result?.oneLiner,
+                }).catch(() => {});
+              }
+            }
+          }
+        }
+      } catch (toolErr) {
+        console.warn('Failed to parse or execute sidekick tool call:', toolErr);
+      }
 
       const activeSid = res?.sessionId || sessionId;
       if (res?.sessionId && !sessionId) setSessionId(res.sessionId);

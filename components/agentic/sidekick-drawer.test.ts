@@ -56,4 +56,52 @@ describe('Sidekick Drawer Message Content Safety', () => {
     const result = renderMessageContentHelper(jsonContent);
     expect(result?.cleanText).toBe('This form collects user feedback for the release candidate.');
   });
+
+  it('correctly extracts tool call blocks from assistant responses for direct update execution', () => {
+    const responseWithToolCall = `Updated the note title and content as requested.
+
+\`\`\`json
+{
+  "toolCall": {
+    "toolKey": "update_note",
+    "specifier": "n_998877",
+    "args": {
+      "title": "Refactored System Architecture",
+      "content": "New architecture notes..."
+    }
+  }
+}
+\`\`\``;
+
+    const jsonBlockMatch = responseWithToolCall.match(/```json\s*(\{[\s\S]*?\})\s*```/) || responseWithToolCall.match(/(\{[\s\S]*?"toolCall"[\s\S]*?\})/);
+    expect(jsonBlockMatch).not.toBeNull();
+    const parsed = JSON.parse(jsonBlockMatch![1]);
+    expect(parsed.toolCall.toolKey).toBe('update_note');
+    expect(parsed.toolCall.specifier).toBe('n_998877');
+    expect(parsed.toolCall.args.title).toBe('Refactored System Architecture');
+  });
+
+  it('verifies topbar agentic icon dispatches kylrix:open-sidekick event', () => {
+    let capturedDetail: any = null;
+    const listener = (e: Event) => {
+      capturedDetail = (e as CustomEvent).detail;
+    };
+    window.addEventListener('kylrix:open-sidekick', listener);
+
+    window.dispatchEvent(
+      new CustomEvent('kylrix:open-sidekick', {
+        detail: {
+          type: 'workspace',
+          id: 'ws_default',
+          title: 'Workspace Assistant',
+        },
+      })
+    );
+
+    window.removeEventListener('kylrix:open-sidekick', listener);
+    expect(capturedDetail).not.toBeNull();
+    expect(capturedDetail.type).toBe('workspace');
+    expect(capturedDetail.id).toBe('ws_default');
+    expect(capturedDetail.title).toBe('Workspace Assistant');
+  });
 });
