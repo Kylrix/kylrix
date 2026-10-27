@@ -1,0 +1,199 @@
+
+> kylrix@1.0.0 dev /app
+> next dev --turbopack -H 0.0.0.0 -p ${PORT:-3005}
+
+▲ Next.js 16.4.0 (Turbopack)
+- Local:         http://localhost:3005
+- Network:       http://0.0.0.0:3005
+✓ Ready in 598ms
+✓ Running next.config.js took 185ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead.
+
+  To migrate automatically, run:
+  npx @next/codemod@canary middleware-to-proxy .
+
+  Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+- Experiments (use with caution):
+  · optimizePackageImports
+  ✓ taint
+
+○ Compiling / ...
+ HEAD / 200 in 26.5s (next.js: 23.7s, proxy.ts: 137ms, application-code: 2.6s)
+○ Compiling /settings ...
+ GET /settings 200 in 9.8s (next.js: 8.9s, proxy.ts: 22ms, application-code: 882ms)
+[browser] -------------- RxDB Open Core RxStorage -------------------------------
+You are using the free Dexie.js based RxStorage implementation from RxDB https://rxdb.info/rx-storage-dexie.html?console=dexie
+While this is a great option, we want to let you know that there are faster storage solutions available in our premium plugins.
+For professional users and production environments, we highly recommend considering these premium options to enhance performance and reliability.
+ https://rxdb.info/premium/?console=dexie
+If you already purchased premium access you can disable this log by calling the setPremiumFlag() function from rxdb-premium/plugins/shared.
+---------------------------------------------------------------------
+ POST /settings 200 in 1480ms (next.js: 451ms, proxy.ts: 11ms, application-code: 1019ms)
+  └─ ƒ checkTelegramConnection() in 51ms lib/actions/telegram.ts
+○ Compiling /api/auth/[...all] ...
+ GET /settings 200 in 834ms (next.js: 665ms, proxy.ts: 7ms, application-code: 162ms)
+[browser] -------------- RxDB Open Core RxStorage -------------------------------
+You are using the free Dexie.js based RxStorage implementation from RxDB https://rxdb.info/rx-storage-dexie.html?console=dexie
+While this is a great option, we want to let you know that there are faster storage solutions available in our premium plugins.
+For professional users and production environments, we highly recommend considering these premium options to enhance performance and reliability.
+ https://rxdb.info/premium/?console=dexie
+If you already purchased premium access you can disable this log by calling the setPremiumFlag() function from rxdb-premium/plugins/shared.
+---------------------------------------------------------------------
+ POST /settings 200 in 225ms (next.js: 83ms, proxy.ts: 30ms, application-code: 113ms)
+  └─ ƒ checkTelegramConnection() in 12ms lib/actions/telegram.ts
+ POST /settings 200 in 91ms (next.js: 47ms, proxy.ts: 9ms, application-code: 35ms)
+  └─ ƒ getComputeBalanceAction() in 5ms lib/actions/ai.ts
+ POST /settings 200 in 70ms (next.js: 36ms, proxy.ts: 11ms, application-code: 22ms)
+  └─ ƒ checkTelegramConnection() in 3ms lib/actions/telegram.ts
+ POST /settings 200 in 60ms (next.js: 30ms, proxy.ts: 7ms, application-code: 22ms)
+  └─ ƒ getComputeBalanceAction() in 4ms lib/actions/ai.ts
+ GET /api/auth/get-session 200 in 2.8s (next.js: 2.4s, proxy.ts: 8ms, application-code: 445ms)
+ GET /api/auth/get-session 200 in 84ms (next.js: 53ms, proxy.ts: 6ms, application-code: 25ms)
+ GET /api/auth/get-session 200 in 53ms (next.js: 24ms, proxy.ts: 11ms, application-code: 19ms)
+ GET /api/auth/get-session 200 in 33ms (next.js: 11ms, proxy.ts: 4ms, application-code: 18ms)
+ GET /api/auth/get-session 200 in 34ms (next.js: 11ms, proxy.ts: 4ms, application-code: 18ms)
+ GET /api/auth/get-session 200 in 66ms (next.js: 38ms, proxy.ts: 7ms, application-code: 21ms)
+[turso-ops] listEventsTurso failed: Error: Failed query: select "id", "creator_id", "calendar_id", "title", "description", "start_time", "end_time", "location", "meeting_url", "visibility", "status", "cover_image_id", "recurrence_rule", "is_public", "is_guest", "is_pinned", "source", "keep_permission", "is_deleted", "is_trash", "is_workspace", "workspace_id", "attendee_count", "is_agentic", "dek", "created_at", "updated_at" from "events" where "events"."creator_id" in (?)
+params: guest
+    at async listEventsTurso (lib/actions/turso-ops.ts:1376:18)
+  1374 |     const allUserIds = await resolveAllUserIds(userId);
+  1375 |
+> 1376 |     const rows = await db
+       |                  ^
+  1377 |       .select()
+  1378 |       .from(schema.events)
+  1379 |       .where(inArray(schema.events.userId, allUserIds)); {
+  query: 'select "id", "creator_id", "calendar_id", "title", "description", "start_time", "end_time", "location", "meeting_url", "visibility", "status", "cover_image_id", "recurrence_rule", "is_public", "is_guest", "is_pinned", "source", "keep_permission", "is_deleted", "is_trash", "is_workspace", "workspace_id", "attendee_count", "is_agentic", "dek", "created_at", "updated_at" from "events" where "events"."creator_id" in (?)',
+  params: [ 'guest' ],
+  [cause]: Error [LibsqlError]: SQL_INPUT_ERROR: SQLite input error: no such column: "is_guest" - should this be a string literal in single-quotes? (at offset 193)
+      at async listEventsTurso (lib/actions/turso-ops.ts:1376:18)
+    1374 |     const allUserIds = await resolveAllUserIds(userId);
+    1375 |
+  > 1376 |     const rows = await db
+         |                  ^
+    1377 |       .select()
+    1378 |       .from(schema.events)
+    1379 |       .where(inArray(schema.events.userId, allUserIds)); {
+    code: 'SQL_INPUT_ERROR',
+    extendedCode: undefined,
+    rawCode: undefined,
+    [cause]: [Error [ResponseError]: SQLite input error: no such column: "is_guest" - should this be a string literal in single-quotes? (at offset 193)] {
+      code: 'SQL_INPUT_ERROR',
+      proto: [Object]
+    }
+  }
+}
+ POST /settings 200 in 3.0s (next.js: 29ms, proxy.ts: 6ms, application-code: 2.9s)
+  └─ ƒ listEventsTurso("guest") in 2910ms lib/actions/turso-ops.ts
+ GET /settings 200 in 202ms (next.js: 27ms, proxy.ts: 5ms, application-code: 170ms)
+[browser] -------------- RxDB Open Core RxStorage -------------------------------
+You are using the free Dexie.js based RxStorage implementation from RxDB https://rxdb.info/rx-storage-dexie.html?console=dexie
+While this is a great option, we want to let you know that there are faster storage solutions available in our premium plugins.
+For professional users and production environments, we highly recommend considering these premium options to enhance performance and reliability.
+ https://rxdb.info/premium/?console=dexie
+If you already purchased premium access you can disable this log by calling the setPremiumFlag() function from rxdb-premium/plugins/shared.
+---------------------------------------------------------------------
+ GET /api/auth/get-session 200 in 81ms (next.js: 55ms, proxy.ts: 5ms, application-code: 21ms)
+ POST /settings 200 in 76ms (next.js: 40ms, proxy.ts: 8ms, application-code: 28ms)
+  └─ ƒ checkTelegramConnection() in 6ms lib/actions/telegram.ts
+ GET /api/auth/get-session 200 in 38ms (next.js: 9ms, proxy.ts: 4ms, application-code: 25ms)
+ POST /settings 200 in 65ms (next.js: 26ms, proxy.ts: 5ms, application-code: 34ms)
+  └─ ƒ getComputeBalanceAction() in 14ms lib/actions/ai.ts
+ POST /settings 200 in 66ms (next.js: 28ms, proxy.ts: 6ms, application-code: 32ms)
+  └─ ƒ checkTelegramConnection() in 7ms lib/actions/telegram.ts
+ GET /api/auth/get-session 200 in 52ms (next.js: 20ms, proxy.ts: 10ms, application-code: 22ms)
+ GET /api/auth/get-session 200 in 155ms (next.js: 101ms, proxy.ts: 17ms, application-code: 37ms)
+ POST /settings 200 in 152ms (next.js: 38ms, proxy.ts: 10ms, application-code: 104ms)
+  └─ ƒ getComputeBalanceAction() in 11ms lib/actions/ai.ts
+ GET /api/auth/get-session 200 in 54ms (next.js: 21ms, proxy.ts: 11ms, application-code: 21ms)
+ GET /api/auth/get-session 200 in 27ms (next.js: 9ms, proxy.ts: 4ms, application-code: 14ms)
+[turso-ops] listEventsTurso failed: Error: Failed query: select "id", "creator_id", "calendar_id", "title", "description", "start_time", "end_time", "location", "meeting_url", "visibility", "status", "cover_image_id", "recurrence_rule", "is_public", "is_guest", "is_pinned", "source", "keep_permission", "is_deleted", "is_trash", "is_workspace", "workspace_id", "attendee_count", "is_agentic", "dek", "created_at", "updated_at" from "events" where "events"."creator_id" in (?)
+params: guest
+    at async listEventsTurso (lib/actions/turso-ops.ts:1376:18)
+  1374 |     const allUserIds = await resolveAllUserIds(userId);
+  1375 |
+> 1376 |     const rows = await db
+       |                  ^
+  1377 |       .select()
+  1378 |       .from(schema.events)
+  1379 |       .where(inArray(schema.events.userId, allUserIds)); {
+  query: 'select "id", "creator_id", "calendar_id", "title", "description", "start_time", "end_time", "location", "meeting_url", "visibility", "status", "cover_image_id", "recurrence_rule", "is_public", "is_guest", "is_pinned", "source", "keep_permission", "is_deleted", "is_trash", "is_workspace", "workspace_id", "attendee_count", "is_agentic", "dek", "created_at", "updated_at" from "events" where "events"."creator_id" in (?)',
+  params: [ 'guest' ],
+  [cause]: Error [LibsqlError]: SQL_INPUT_ERROR: SQLite input error: no such column: "is_guest" - should this be a string literal in single-quotes? (at offset 193)
+      at async listEventsTurso (lib/actions/turso-ops.ts:1376:18)
+    1374 |     const allUserIds = await resolveAllUserIds(userId);
+    1375 |
+  > 1376 |     const rows = await db
+         |                  ^
+    1377 |       .select()
+    1378 |       .from(schema.events)
+    1379 |       .where(inArray(schema.events.userId, allUserIds)); {
+    code: 'SQL_INPUT_ERROR',
+    extendedCode: undefined,
+    rawCode: undefined,
+    [cause]: [Error [ResponseError]: SQLite input error: no such column: "is_guest" - should this be a string literal in single-quotes? (at offset 193)] {
+      code: 'SQL_INPUT_ERROR',
+      proto: [Object]
+    }
+  }
+}
+ POST /settings 200 in 1487ms (next.js: 85ms, proxy.ts: 8ms, application-code: 1394ms)
+  └─ ƒ listEventsTurso("guest") in 1373ms lib/actions/turso-ops.ts
+[turso-ops] listEventsTurso failed: Error: Failed query: select "id", "creator_id", "calendar_id", "title", "description", "start_time", "end_time", "location", "meeting_url", "visibility", "status", "cover_image_id", "recurrence_rule", "is_public", "is_guest", "is_pinned", "source", "keep_permission", "is_deleted", "is_trash", "is_workspace", "workspace_id", "attendee_count", "is_agentic", "dek", "created_at", "updated_at" from "events" where "events"."creator_id" in (?)
+params: guest
+    at async listEventsTurso (lib/actions/turso-ops.ts:1376:18)
+  1374 |     const allUserIds = await resolveAllUserIds(userId);
+  1375 |
+> 1376 |     const rows = await db
+       |                  ^
+  1377 |       .select()
+  1378 |       .from(schema.events)
+  1379 |       .where(inArray(schema.events.userId, allUserIds)); {
+  query: 'select "id", "creator_id", "calendar_id", "title", "description", "start_time", "end_time", "location", "meeting_url", "visibility", "status", "cover_image_id", "recurrence_rule", "is_public", "is_guest", "is_pinned", "source", "keep_permission", "is_deleted", "is_trash", "is_workspace", "workspace_id", "attendee_count", "is_agentic", "dek", "created_at", "updated_at" from "events" where "events"."creator_id" in (?)',
+  params: [ 'guest' ],
+  [cause]: Error [LibsqlError]: SQL_INPUT_ERROR: SQLite input error: no such column: "is_guest" - should this be a string literal in single-quotes? (at offset 193)
+      at async listEventsTurso (lib/actions/turso-ops.ts:1376:18)
+    1374 |     const allUserIds = await resolveAllUserIds(userId);
+    1375 |
+  > 1376 |     const rows = await db
+         |                  ^
+    1377 |       .select()
+    1378 |       .from(schema.events)
+    1379 |       .where(inArray(schema.events.userId, allUserIds)); {
+    code: 'SQL_INPUT_ERROR',
+    extendedCode: undefined,
+    rawCode: undefined,
+    [cause]: [Error [ResponseError]: SQLite input error: no such column: "is_guest" - should this be a string literal in single-quotes? (at offset 193)] {
+      code: 'SQL_INPUT_ERROR',
+      proto: [Object]
+    }
+  }
+}
+ POST /settings 200 in 528ms (next.js: 25ms, proxy.ts: 4ms, application-code: 499ms)
+  └─ ƒ listEventsTurso("guest") in 482ms lib/actions/turso-ops.ts
+⨯ Error: Unauthorized
+    at listPatsSecure (lib/actions/secure-ops/pats.ts:41:26)
+  39 | }) {
+  40 |   const actor = await getActor(opts?.jwt);
+> 41 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  42 |   const data = await PatService.listForUser(actor.$id, {
+  43 |     isWorkspace: opts?.isWorkspace,
+  44 |     workspaceId: opts?.workspaceId, {
+  digest: '935732525'
+}
+ POST /settings 500 in 63ms (next.js: 25ms, proxy.ts: 5ms, application-code: 33ms)
+  └─ ƒ listPatsSecure({"isWorkspace":false,"jwt":""}) in 3ms lib/actions/secure-ops.ts
+⨯ Error: Unauthorized
+    at listPatsSecure (lib/actions/secure-ops/pats.ts:41:26)
+  39 | }) {
+  40 |   const actor = await getActor(opts?.jwt);
+> 41 |   if (!actor?.$id) throw new Error('Unauthorized');
+     |                          ^
+  42 |   const data = await PatService.listForUser(actor.$id, {
+  43 |     isWorkspace: opts?.isWorkspace,
+  44 |     workspaceId: opts?.workspaceId, {
+  digest: '935732525'
+}
+ POST /settings 500 in 68ms (next.js: 24ms, proxy.ts: 4ms, application-code: 39ms)
+  └─ ƒ listPatsSecure({"isWorkspace":false,"jwt":""}) in 4ms lib/actions/secure-ops.ts
