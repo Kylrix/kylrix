@@ -72,6 +72,23 @@ describe('GitHub Webhook Route Verification', () => {
     expect(data.error).toBe('Invalid webhook signature');
   });
 
+  it('should return 403 safely without crashing or leaking timing for malformed/short signature', async () => {
+    process.env.GITHUB_WEBHOOK_SECRET = 'test_secret';
+    const req = new NextRequest('http://localhost:3000/api/github/webhook', {
+      method: 'POST',
+      body: JSON.stringify({ zen: 'Non-blocking is better than blocking.' }),
+      headers: {
+        'x-github-event': 'ping',
+        'x-hub-signature-256': 'short',
+      },
+    });
+
+    const res = await POST(req);
+    const data = await res.json();
+    expect(res.status).toBe(403);
+    expect(data.error).toBe('Invalid webhook signature');
+  });
+
   it('should return 200 with valid signature for ping event', async () => {
     const secret = 'test_secret';
     process.env.GITHUB_WEBHOOK_SECRET = secret;

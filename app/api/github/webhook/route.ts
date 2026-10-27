@@ -30,10 +30,13 @@ export async function POST(req: NextRequest) {
 
     const hmac = crypto.createHmac('sha256', webhookSecret);
     const digest = `sha256=${hmac.update(rawBody).digest('hex')}`;
-    const sigBuf = Buffer.from(signature);
-    const digestBuf = Buffer.from(digest);
 
-    if (sigBuf.length !== digestBuf.length || !crypto.timingSafeEqual(sigBuf, digestBuf)) {
+    // Hash both input signature and expected digest to 32-byte digests to enforce strict constant-time comparison
+    // regardless of user input length, preventing timing side-channel leaks.
+    const signatureHash = crypto.createHash('sha256').update(signature).digest();
+    const digestHash = crypto.createHash('sha256').update(digest).digest();
+
+    if (!crypto.timingSafeEqual(signatureHash, digestHash)) {
       return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 403 });
     }
 
