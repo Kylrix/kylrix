@@ -27,6 +27,23 @@ describe('renderMarkdownHtml security & sanitization', () => {
     expect(html).toContain('Click Me');
   });
 
+  it('strips whitespace-prefixed and obfuscated pseudo-protocol URLs', () => {
+    const raw1 = '<a href="  javascript:alert(1)">Click1</a>';
+    const raw2 = '<a href="vbscript:alert(1)">Click2</a>';
+    const raw3 = '<a href="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">Click3</a>';
+
+    expect(renderMarkdownHtml(raw1)).not.toContain('javascript:');
+    expect(renderMarkdownHtml(raw2)).not.toContain('vbscript:');
+    expect(renderMarkdownHtml(raw3)).not.toContain('data:text/html');
+  });
+
+  it('secures external target=_blank links with rel="noopener noreferrer"', () => {
+    const raw = '<a href="https://example.com" target="_blank">External</a>';
+    const html = renderMarkdownHtml(raw);
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
   it('preserves valid markdown styling and standard safe elements', () => {
     const raw = '**Bold** and *Italic* text with `inline code`';
     const html = renderMarkdownHtml(raw);
