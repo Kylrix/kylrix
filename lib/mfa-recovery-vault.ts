@@ -46,12 +46,12 @@ export async function loadMfaRecoveryCodes(userId: string): Promise<string[] | n
     return fromVaultUser;
   }
 
-  const credential = await findMfaRecoveryCredential(userId);
+  const credential = (await findMfaRecoveryCredential(userId)) as any;
   if (!credential?.notes) {
     return null;
   }
 
-  const codes = credential.notes
+  const codes = (credential.notes as string)
     .split('\n')
     .map((line: any) => line.trim())
     .filter(Boolean);
