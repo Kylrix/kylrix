@@ -6,6 +6,14 @@ import { LocalEngine } from '@/lib/services/LocalEngine';
 import { isDogfoodSafetyActive } from '@/lib/deployment/surface';
 import { parseGoalPendingKey, goalPendingKey } from '@/lib/sync/goal-keys';
 import { pickGoalAutosavePayload } from '@/lib/goals/pick-goal-autosave-payload';
+import {
+  upsertVaultItemTurso,
+  upsertTotpSecretTurso,
+  upsertFormTurso,
+  upsertGoalTurso,
+  upsertEventTurso,
+  upsertNoteTurso,
+} from '@/lib/actions/turso-ops';
 
 
 const PENDING_QUEUE_KEY = 'kylrix:sync:pending-queue';
@@ -187,7 +195,6 @@ async function flushCredentialPending(
   }
 
   const flushRevision = queuedRevision;
-  const { upsertVaultItemTurso } = await import('@/lib/actions/turso-ops');
 
   try {
     const res = await upsertVaultItemTurso({ ...payload, id: credId, userId: activeUserId });
@@ -243,7 +250,6 @@ async function flushTotpPending(
   }
 
   const flushRevision = queuedRevision;
-  const { upsertTotpSecretTurso } = await import('@/lib/actions/turso-ops');
 
   try {
     const res = await upsertTotpSecretTurso({ ...payload, id: totpId, userId: activeUserId });
@@ -299,7 +305,6 @@ async function flushFormPending(
   }
 
   const flushRevision = queuedRevision;
-  const { upsertFormTurso } = await import('@/lib/actions/turso-ops');
 
   try {
     const res = await upsertFormTurso({ ...payload, id: formId, userId: activeUserId });
@@ -363,7 +368,6 @@ async function flushGoalPending(
   }
 
   const flushRevision = goalRevisionOf(payload) || queuedRevision;
-  const { upsertGoalTurso } = await import('@/lib/actions/turso-ops');
 
   try {
     const res = await upsertGoalTurso({ ...(dataPayload as any), id: goalId, userId: activeUserId, title: dataPayload.title });
@@ -419,7 +423,6 @@ async function flushEventPending(
   }
 
   const flushRevision = queuedRevision;
-  const { upsertEventTurso } = await import('@/lib/actions/turso-ops');
 
   try {
     const res = await upsertEventTurso({ ...payload, id: eventId, userId: activeUserId });
@@ -474,7 +477,6 @@ async function flushNotePending(
   }
 
   const flushRevision = queuedRevision;
-  const { upsertNoteTurso } = await import('@/lib/actions/turso-ops');
 
   try {
     const res = await upsertNoteTurso({ ...payload, id: noteId, userId: activeUserId });
@@ -630,6 +632,9 @@ export const autonomicSyncEngine = {
       markComposePersisted(id);
       markNotePersistedRemote(id);
     }
+    if (pendingById.size === 0) {
+      firstPendingTimestamp = null;
+    }
     writePersistedQueue();
     notifyStatusListeners();
   },
@@ -654,6 +659,9 @@ export const autonomicSyncEngine = {
     if (!parseGoalPendingKey(id) && !id.includes(':')) {
       markComposePersisted(id);
       markNotePersistedRemote(id);
+    }
+    if (pendingById.size === 0) {
+      firstPendingTimestamp = null;
     }
     writePersistedQueue();
     notifyStatusListeners();
@@ -687,34 +695,40 @@ export const autonomicSyncEngine = {
       const db = await getRxDB().catch(() => null);
 
       const pendingIds = Array.from(pendingById.keys());
-      for (const pendingId of pendingIds) {
-        const queuedRevision = pendingById.get(pendingId) || '';
-        try {
-          if (pendingId.startsWith('cred:')) {
-            const rawId = pendingId.replace(/^cred:/, '');
-            await flushCredentialPending(pendingId, rawId, queuedRevision, db, activeUserId);
-          } else if (pendingId.startsWith('totp:')) {
-            const rawId = pendingId.replace(/^totp:/, '');
-            await flushTotpPending(pendingId, rawId, queuedRevision, db, activeUserId);
-          } else if (pendingId.startsWith('form:')) {
-            const rawId = pendingId.replace(/^form:/, '');
-            await flushFormPending(pendingId, rawId, queuedRevision, db, activeUserId);
-          } else if (pendingId.startsWith('event:')) {
-            const rawEventId = pendingId.replace(/^event:/, '');
-            await flushEventPending(pendingId, rawEventId, queuedRevision, db, activeUserId);
-          } else {
-            const goalId = parseGoalPendingKey(pendingId);
-            if (goalId) {
-              await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
+      // Bolt: Flush pending items concurrently with Promise.all to avoid sequential network latency
+      await Promise.all(
+        pendingIds.map(async (pendingId) => {
+          const queuedRevision = pendingById.get(pendingId) || '';
+          try {
+            if (pendingId.startsWith('cred:')) {
+              const rawId = pendingId.replace(/^cred:/, '');
+              await flushCredentialPending(pendingId, rawId, queuedRevision, db, activeUserId);
+            } else if (pendingId.startsWith('totp:')) {
+              const rawId = pendingId.replace(/^totp:/, '');
+              await flushTotpPending(pendingId, rawId, queuedRevision, db, activeUserId);
+            } else if (pendingId.startsWith('form:')) {
+              const rawId = pendingId.replace(/^form:/, '');
+              await flushFormPending(pendingId, rawId, queuedRevision, db, activeUserId);
+            } else if (pendingId.startsWith('event:')) {
+              const rawEventId = pendingId.replace(/^event:/, '');
+              await flushEventPending(pendingId, rawEventId, queuedRevision, db, activeUserId);
             } else {
-              await flushNotePending(pendingId, queuedRevision, db, activeUserId);
+              const goalId = parseGoalPendingKey(pendingId);
+              if (goalId) {
+                await flushGoalPending(pendingId, goalId, queuedRevision, db, activeUserId);
+              } else {
+                await flushNotePending(pendingId, queuedRevision, db, activeUserId);
+              }
             }
-          }
-        } catch {}
-      }
+          } catch {}
+        })
+      );
     } finally {
       isSyncing = false;
       const hasFlushable = pendingById.size > 0;
+      if (!hasFlushable) {
+        firstPendingTimestamp = null;
+      }
       if (flushQueuedDuringSync || hasFlushable) {
         scheduleDemandFlush({ retry: true });
       }
