@@ -181,6 +181,33 @@ describe('Vault Items & Credentials Normalization and CRUD', () => {
     expect(meta.username).toBe('api_client');
   });
 
+  it('handles passwords and metadata with special characters (quotes, colons, semicolons, braces)', async () => {
+    const specialPassword = "W; a}:XP@QRE<Dyb)' \"}'";
+    const specialTitle = "Zup GitHub's & Google's oauth";
+
+    const adapter = new TursoDatabaseAdapter();
+    const created = await adapter.createRow<any>('turso', 'credentials', 'cred_special_1', {
+      userId: 'user_123',
+      title: specialTitle,
+      encryptedData: specialPassword,
+      metadata: JSON.stringify({
+        notes: "Notes with single quote ' and double quote \" and brace }",
+        username: "User'Name:123",
+      }),
+    });
+
+    expect(created).toBeDefined();
+    expect(mockVaultRows.length).toBe(1);
+
+    const row = mockVaultRows[0];
+    expect(row.title).toBe(specialTitle);
+    expect(row.encryptedData).toBe(specialPassword);
+
+    const meta = JSON.parse(row.metadata);
+    expect(meta.username).toBe("User'Name:123");
+    expect(meta.notes).toBe("Notes with single quote ' and double quote \" and brace }");
+  });
+
   it('upsertTotpSecretTurso normalizes legacy fields correctly', async () => {
     const res = await upsertTotpSecretTurso({
       id: 'totp_turso_1',
