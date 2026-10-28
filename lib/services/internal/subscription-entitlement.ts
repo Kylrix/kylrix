@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
@@ -20,7 +21,7 @@ type EntitlementResult = {
 };
 
 const entitlementCache = new Map<string, { data: EntitlementResult; expiresAt: number }>();
-const ENTITLEMENT_TTL_MS = 15000; // 15 seconds
+const ENTITLEMENT_TTL_MS = 60000; // 60 seconds
 
 export function invalidateEntitlementCache(userId?: string) {
   if (userId) {
@@ -39,7 +40,7 @@ export async function suspendAccountAndLogIpSecure(_params: {
   return true;
 }
 
-export async function getVerifiedProEntitlementForUser(userId: string): Promise<EntitlementResult> {
+export const getVerifiedProEntitlementForUser = cache(async function getVerifiedProEntitlementForUser(userId: string): Promise<EntitlementResult> {
   const cleanUserId = String(userId || '').trim();
   if (!cleanUserId) {
     return { active: false, expiresAt: null, source: 'none', uiTier: 'FREE' };
@@ -170,7 +171,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     source: 'none',
     uiTier: 'FREE',
   };
-}
+});
 
 export async function hasPaidKylrixPlanServer(userId: string): Promise<boolean> {
   const entitlement = await getVerifiedProEntitlementForUser(userId);

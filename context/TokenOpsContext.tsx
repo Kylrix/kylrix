@@ -159,7 +159,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     /**
-     * Idle pages have no pending transfers to settle. Skip the global 10s polling cost
+     * Idle pages have no pending transfers to settle. Skip the global 60s polling cost
      * (re-parsing localStorage, scheduling timers) until there's actually work queued.
      */
     if (pendingTransfers.length === 0) return;
@@ -200,7 +200,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
       }
       savePendingTransfers(working);
       setPendingTransfers(working);
-    }, 10000);
+    }, 60000);
     return () => window.clearInterval(timer);
   }, [notifyTokenEvent, getTokenClient, pendingTransfers.length]);
 

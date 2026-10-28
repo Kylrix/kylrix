@@ -34,8 +34,8 @@ let flushQueuedDuringSync = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
 let firstPendingTimestamp: number | null = null;
 
-const FLUSH_TYPING_DEBOUNCE_MS = 150;
-const FLUSH_DISCRETE_MS = 0;
+const FLUSH_TYPING_DEBOUNCE_MS = 300;
+const FLUSH_DISCRETE_MS = 300;
 const HARD_CEILING_MS = 500;
 const RETRY_BASE_MS = 100;
 const RETRY_MAX_MS = 1_500;

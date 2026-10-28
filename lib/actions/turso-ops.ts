@@ -1,5 +1,6 @@
 'use server';
 
+import { cache } from 'react';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, inArray } from 'drizzle-orm';
@@ -10,7 +11,7 @@ type CacheEntry<T> = {
   expiresAt: number;
 };
 
-const queryTTLMs = 3000; // 3 seconds short TTL for list queries
+const queryTTLMs = 60000; // 60 seconds short TTL for list queries with write-invalidation
 const resourceCache = new Map<string, CacheEntry<any>>();
 
 export async function invalidateResourceCache(keyPrefix?: string, userId?: string, rowId?: string) {
@@ -597,7 +598,7 @@ export async function upsertVaultItemTurso(data: any) {
   }
 }
 
-export async function listVaultItemsTurso(userId: string) {
+export const listVaultItemsTurso = cache(async function listVaultItemsTurso(userId: string) {
   const cacheKey = `vault:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -653,7 +654,7 @@ export async function listVaultItemsTurso(userId: string) {
     console.error('[turso-ops] listVaultItemsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function deleteVaultItemTurso(id: string) {
   try {
@@ -736,7 +737,7 @@ export async function upsertTotpSecretTurso(data: any) {
   }
 }
 
-export async function listTotpSecretsTurso(userId: string) {
+export const listTotpSecretsTurso = cache(async function listTotpSecretsTurso(userId: string) {
   const cacheKey = `totp:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -782,7 +783,7 @@ export async function listTotpSecretsTurso(userId: string) {
     console.error('[turso-ops] listTotpSecretsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function deleteTotpSecretTurso(id: string) {
   try {
@@ -870,7 +871,7 @@ export async function deleteWorkspaceTurso(workspaceId: string) {
   }
 }
 
-export async function listWorkspacesTurso(userId: string) {
+export const listWorkspacesTurso = cache(async function listWorkspacesTurso(userId: string) {
   const cacheKey = `workspaces:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -958,7 +959,7 @@ export async function listWorkspacesTurso(userId: string) {
     console.error('[turso-ops] listWorkspacesTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function getWorkspaceTurso(id: string) {
   try {
@@ -1173,7 +1174,7 @@ export async function deleteNoteTurso(noteId: string) {
   }
 }
 
-export async function listNotesTurso(userId: string) {
+export const listNotesTurso = cache(async function listNotesTurso(userId: string) {
   const cacheKey = `notes:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -1194,7 +1195,7 @@ export async function listNotesTurso(userId: string) {
     console.error('[turso-ops] listNotesTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function getNoteTurso(noteId: string) {
   try {
@@ -1297,7 +1298,7 @@ export async function upsertGoalTurso(
   }
 }
 
-export async function listGoalsTurso(userId: string) {
+export const listGoalsTurso = cache(async function listGoalsTurso(userId: string) {
   const cacheKey = `goals:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -1318,7 +1319,7 @@ export async function listGoalsTurso(userId: string) {
     console.error('[turso-ops] listGoalsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function getGoalTurso(goalId: string) {
   try {
@@ -1381,7 +1382,7 @@ export async function upsertFormTurso(data: typeof schema.forms.$inferInsert) {
   }
 }
 
-export async function listFormsTurso(userId: string) {
+export const listFormsTurso = cache(async function listFormsTurso(userId: string) {
   const cacheKey = `forms:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -1411,7 +1412,7 @@ export async function listFormsTurso(userId: string) {
     console.error('[turso-ops] listFormsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function upsertEventTurso(data: typeof schema.events.$inferInsert) {
   try {
@@ -1437,7 +1438,7 @@ export async function upsertEventTurso(data: typeof schema.events.$inferInsert) 
   }
 }
 
-export async function listEventsTurso(userId: string) {
+export const listEventsTurso = cache(async function listEventsTurso(userId: string) {
   const cacheKey = `events:${userId}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
@@ -1467,7 +1468,7 @@ export async function listEventsTurso(userId: string) {
     console.error('[turso-ops] listEventsTurso failed:', err);
     return { success: false, rows: [], error: err.message };
   }
-}
+});
 
 export async function upsertAgenticSessionTurso(data: typeof schema.agenticSessions.$inferInsert) {
   try {
@@ -1938,20 +1939,27 @@ export async function upsertProfileTurso(data: typeof schema.profiles.$inferInse
   }
 }
 
-export async function getProfileTurso(userId: string) {
+export const getProfileTurso = cache(async function getProfileTurso(userId: string) {
+  const cacheKey = `profile:${userId}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
+  }
   try {
     const rows = await db
       .select()
       .from(schema.profiles)
       .where(eq(schema.profiles.userId, userId))
       .limit(1);
-    return { success: true, profile: rows[0] || null };
+    const result = { success: true, profile: rows[0] || null };
+    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    return result;
   } catch (err: any) {
     return { success: false, profile: null, error: err.message };
   }
-}
+});
 
-export async function getProfileByUsernameTurso(username: string) {
+export const getProfileByUsernameTurso = cache(async function getProfileByUsernameTurso(username: string) {
   const normalized = String(username || '').trim().toLowerCase().replace(/^@/, '');
   if (!normalized) return { success: true, profile: null };
 
@@ -2000,4 +2008,4 @@ export async function getProfileByUsernameTurso(username: string) {
   } catch (err: any) {
     return { success: false, profile: null, error: err.message };
   }
-}
+});
