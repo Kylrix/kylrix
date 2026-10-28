@@ -30,18 +30,23 @@ interface KylrixPrefs {
 function ModernSwitch({ 
   checked, 
   onChange, 
+  label,
   disabled = false 
 }: { 
   checked: boolean; 
   onChange: (val: boolean) => void; 
+  label: string;
   disabled?: boolean;
 }) {
   return (
     <button
       type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40 ${
+      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161412] disabled:opacity-40 ${
         checked ? 'bg-[#6366F1]' : 'bg-white/10'
       }`}
     >
@@ -184,6 +189,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={devMode}
               onChange={(checked) => void toggleDevMode(checked)}
+              label="Developer Mode & Tools"
             />
           </div>
 
@@ -205,6 +211,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={Boolean(prefs.demo_mode)}
               onChange={(checked) => updatePreference('demo_mode', checked)}
+              label="Demo / Presentation Mode"
             />
           </div>
 
@@ -219,6 +226,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={prefs.smartSystemHistory !== false}
               onChange={(checked) => updatePreference('smartSystemHistory', checked)}
+              label="Smart Assistant Interaction Memory"
             />
           </div>
         </div>
@@ -281,6 +289,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={Boolean(prefs.compact_density)}
               onChange={(checked) => updatePreference('compact_density', checked)}
+              label="Compact Information Density"
             />
           </div>
         </div>
@@ -307,6 +316,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={prefs.sound_effects !== false}
               onChange={(checked) => updatePreference('sound_effects', checked)}
+              label="Tactile Audio Feedback"
             />
           </div>
 
@@ -321,6 +331,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={prefs.haptic_feedback !== false}
               onChange={(checked) => updatePreference('haptic_feedback', checked)}
+              label="Mobile Haptic Vibration"
             />
           </div>
         </div>
@@ -347,6 +358,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={prefs.emailNotifications !== false}
               onChange={(checked) => updatePreference('emailNotifications', checked)}
+              label="Account Activity Relay"
             />
           </div>
 
@@ -361,6 +373,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={prefs.sessionReminders !== false}
               onChange={(checked) => updatePreference('sessionReminders', checked)}
+              label="New Session & Security Alerts"
             />
           </div>
 
@@ -375,6 +388,7 @@ export default function PreferencesManager({ onSave }: { onSave?: () => void }) 
             <ModernSwitch
               checked={Boolean(prefs.marketingEmails)}
               onChange={(checked) => updatePreference('marketingEmails', checked)}
+              label="Product Releases & Announcements"
             />
           </div>
         </div>
