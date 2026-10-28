@@ -138,6 +138,19 @@ describe('encoding helpers', () => {
     }
   });
 
+  it('behaves identically without Buffer (atob path)', () => {
+    vi.stubGlobal('Buffer', undefined);
+    try {
+      for (const bad of ['@@@@', 'abc', 'a===', 'a b c']) {
+        expectZk(() => base64ToBytes(bad), 'invalid_encoding');
+      }
+      const bytes = new Uint8Array([1, 2, 3, 250]);
+      expect(Array.from(base64ToBytes(bytesToBase64(bytes)))).toEqual(Array.from(bytes));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('accepts empty string as zero bytes', () => {
     expect(base64ToBytes('').byteLength).toBe(0);
   });
