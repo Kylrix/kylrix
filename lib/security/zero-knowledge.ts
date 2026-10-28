@@ -458,8 +458,9 @@ export function validateAetEnvelope(e: unknown): AetEnvelope {
   const env = e as Record<string, unknown>;
   if (env.v !== 1 || env.alg !== 'AES-256-GCM' || env.kdf !== 'HKDF-SHA256') fail();
   if (typeof env.salt !== 'string') fail();
+  const salt = env.salt as string;
   try {
-    if (base64ToBytes(env.salt).byteLength !== 16) fail();
+    if (base64ToBytes(salt).byteLength !== 16) fail();
   } catch {
     fail();
   }
@@ -484,8 +485,10 @@ export function validateAetEnvelope(e: unknown): AetEnvelope {
     const en = entry as Record<string, unknown>;
     if (en.algorithm !== 'AES-256-GCM') fail();
     if (typeof en.iv !== 'string' || typeof en.wrappedDek !== 'string') fail();
+    const iv = en.iv as string;
+    const wrappedDek = en.wrappedDek as string;
     try {
-      if (base64ToBytes(en.iv).byteLength !== 12 || base64ToBytes(en.wrappedDek).byteLength !== 48) fail();
+      if (base64ToBytes(iv).byteLength !== 12 || base64ToBytes(wrappedDek).byteLength !== 48) fail();
     } catch {
       fail();
     }
