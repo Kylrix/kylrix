@@ -86,6 +86,7 @@ import {
   getAgentSessionCommand,
   startAgentSessionCommand,
   deleteAgentSessionCommand,
+  connectAgentCommand,
 } from './commands/agents';
 import { searchCommand } from './commands/search';
 import { shareCommand } from './commands/share';
@@ -558,6 +559,19 @@ agents
   .command('delete <id>')
   .description('Delete an agent session')
   .action((id, cmdOpts) => deleteAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+
+agents
+  .command('connect [command...]')
+  .description('Check an agent key and start Claude Code, Cursor, or any command with it loaded')
+  .option('--claude-code', 'Start Claude Code (claude) with the agent key')
+  .option('--cursor', 'Start Cursor Agent (cursor-agent) with the agent key')
+  .option('--check', 'Only check the agent key and show what it can open')
+  .allowUnknownOption()
+  .action((command, cmdOpts) => {
+    const rawArgs = process.argv.slice(process.argv.indexOf('connect') + 2);
+    const cmd = rawArgs.includes('--') ? rawArgs.slice(rawArgs.indexOf('--') + 1) : command || [];
+    return connectAgentCommand(cmd, { ...program.opts(), ...cmdOpts });
+  });
 
 // ── 8. Global Search ──
 program

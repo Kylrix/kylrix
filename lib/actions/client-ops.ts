@@ -719,6 +719,7 @@ export async function createPat(params: {
   workspaceId?: string | null;
   keyCategory?: import('@/lib/services/pats').PatCategory;
   agentId?: string | null;
+  aetEnvelope?: unknown;
 }) {
   const jwt = await getJwt();
   const { createPatSecure } = await import('./secure-ops');

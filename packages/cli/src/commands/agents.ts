@@ -1,6 +1,9 @@
+import { spawn } from 'node:child_process';
 import pc from 'picocolors';
+import { isAgentEnclaveToken, zeroClearBytes, type AetResourceKey } from '@/lib/security/zero-knowledge';
+import { openEnclave, type OpenEnclave } from '../enclave';
 import { requireAuthClient } from '../client';
-import { printError, printJson, printSuccess, printTable } from '../formatter';
+import { printError, printInfo, printJson, printSuccess, printTable } from '../formatter';
 
 export async function listAgentSessionsCommand(opts: {
   url?: string;
@@ -40,38 +43,79 @@ export async function listAgentSessionsCommand(opts: {
   }
 }
 
-export async function connectAgentCommand(opts: {
-  url?: string;
-  token?: string;
-  claudeCode?: boolean;
-  cursor?: boolean;
-}) {
-  let etkSecret: string | null = null;
-  let childEnv: Record<string, string> = {};
+function printAgentKeySummary(enclave: OpenEnclave, keys: AetResourceKey[]) {
+  const counts: Record<string, number> = {};
+  for (const k of keys) {
+    const kind = k.split(':')[0];
+    counts[kind] = (counts[kind] || 0) + 1;
+  }
+  printSuccess(
+    `Agent key verified${enclave.expiresAt ? ` — expires ${enclave.expiresAt.slice(0, 10)}` : ' — no expiry'}`
+  );
+  const labels: Record<string, string> = {
+    credential: 'vault item(s)',
+    totp: '2FA code(s)',
+    note: 'note(s)',
+  };
+  for (const [kind, n] of Object.entries(counts)) {
+    printInfo(`  ${n} ${labels[kind] || `${kind}(s)`} can be opened`);
+  }
+  if (keys.length === 0) {
+    printInfo('  This agent key cannot open any items yet.');
+  }
+  if (enclave.scopes.length) {
+    printInfo(`  Permissions: ${enclave.scopes.join(', ')}`);
+  }
+}
 
+export async function connectAgentCommand(
+  command: string[],
+  opts: {
+    url?: string;
+    token?: string;
+    claudeCode?: boolean;
+    cursor?: boolean;
+    check?: boolean;
+  }
+) {
+  const raw =
+    (opts.token && isAgentEnclaveToken(opts.token) ? opts.token : process.env.KYLRIX_AGENT_KEY) || '';
+  if (!raw) {
+    printError('No agent key found. Set KYLRIX_AGENT_KEY or pass --token.');
+    process.exit(1);
+  }
+  if (opts.token && isAgentEnclaveToken(opts.token)) {
+    console.warn(pc.yellow('Your agent key may be saved in shell history. Prefer: export KYLRIX_AGENT_KEY=…'));
+  }
+
+  let enclave: OpenEnclave | null = null;
   try {
-    const rawToken = opts.token || process.env.KYLRIX_AGENT_KEY || process.env.KYLRIX_TOKEN || '';
-    if (rawToken.startsWith('kyl_apk_') && rawToken.includes('.')) {
-      const parts = rawToken.slice(8).split('.');
-      if (parts.length === 2) {
-        etkSecret = parts[1];
-        console.log(pc.dim('🔐 [Kylrix Enclave] Unwrapped Agent Enclave Token (AET) secret in volatile RAM.'));
-      }
-    }
+    enclave = await openEnclave(raw, opts);
+    const keys = Object.keys(enclave.envelope.deks) as AetResourceKey[];
+    const probe = keys[0] ? await enclave.unlockDek(keys[0]) : null; // proves the unlock part is right
+    zeroClearBytes(probe);
+    printAgentKeySummary(enclave, keys);
 
-    const mode = opts.claudeCode ? 'Claude Code' : opts.cursor ? 'Cursor' : 'Autonomous Agent';
-    console.log(pc.green(`🚀 Connected Kylrix Zero-Knowledge Agent Enclave to ${mode}.`));
-    console.log(pc.dim(`Vault DEKs unlocked transiently. Memory will be zero-cleared upon exit.`));
+    const bin = opts.claudeCode ? ['claude'] : opts.cursor ? ['cursor-agent'] : command;
+    if (opts.check || bin.length === 0) return;
 
-    // Zero clear etkSecret reference
-    if (etkSecret) {
-      etkSecret = '';
-    }
+    const childEnv = { ...process.env, KYLRIX_AGENT_KEY: raw };
+    delete childEnv.KYLRIX_TOKEN; // the child signs in with the agent key only
+    enclave.close(); // the parent no longer needs the unlock bytes
+    const child = spawn(bin[0], bin.slice(1), { stdio: 'inherit', env: childEnv });
+    child.on('error', (e) => {
+      printError(`Could not start ${bin[0]}`, e);
+      process.exit(127);
+    });
+    child.on('exit', (code, signal) => {
+      if (signal) process.kill(process.pid, signal);
+      else process.exit(code ?? 0);
+    });
   } catch (err: any) {
-    printError('Failed to connect Agent Enclave', err);
+    printError('Could not connect agent key', err);
     process.exit(1);
   } finally {
-    if (etkSecret) etkSecret = '';
+    enclave?.close();
   }
 }
 

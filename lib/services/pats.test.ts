@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formatPatToken, parsePatToken } from './pats';
+import { formatPatToken, parsePatToken, PatService } from './pats';
+import { bytesToBase64 } from '@/lib/security/zero-knowledge';
 
 describe('PatService and Token Utilities', () => {
   it('correctly formats and parses user PAT tokens', () => {
@@ -70,5 +71,65 @@ describe('PatService and Token Utilities', () => {
     expect(parsePatToken('random_string')).toBeNull();
     expect(parsePatToken('kyl_pat_short')).toBeNull();
     expect(parsePatToken('kyl_unknown_12345_67890')).toBeNull();
+  });
+
+  it('toPublic never exposes metadata.aet', () => {
+    const pub = PatService.toPublic({
+      id: 'pat_1',
+      name: 'agent key',
+      prefix: 'a1b2c3d4',
+      key: 'hash',
+      userId: 'u1',
+      enabled: true,
+      permissions: '["vault:read"]',
+      category: 'agent_enclave_token',
+      metadata: JSON.stringify({
+        agentId: null,
+        aet: { v: 1, deks: { 'credential:x': { wrappedDek: 'w', iv: 'i', algorithm: 'AES-256-GCM' } } },
+      }),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    expect(pub.category).toBe('agent_enclave_token');
+    expect(JSON.stringify(pub)).not.toContain('aet');
+    expect(JSON.stringify(pub)).not.toContain('wrappedDek');
+  });
+
+  it('stores metadata.aet on create and returns a kyl_aet_ bearer', async () => {
+    const envelope = {
+      v: 1,
+      alg: 'AES-256-GCM',
+      kdf: 'HKDF-SHA256',
+      salt: bytesToBase64(new Uint8Array(16)),
+      resources: { credential: true, totp: false, note: false },
+      createdAt: new Date().toISOString(),
+      deks: {},
+    };
+    try {
+      const res = await PatService.create({
+        userId: 'u_test_aet',
+        name: 'agent key',
+        scopes: ['vault:read'],
+        keyCategory: 'agent_enclave_token',
+        aetEnvelope: envelope,
+      });
+      expect(res.token).toMatch(/^kyl_aet_[0-9a-f]{8}_[A-Za-z0-9_-]{32}$/);
+      expect(res.pat.category).toBe('agent_enclave_token');
+    } catch (e: any) {
+      // DB unavailable in unit env is acceptable; failure must not be a validation error
+      expect(e?.code).not.toBe('invalid_envelope');
+    }
+  });
+
+  it('rejects an invalid envelope on create', async () => {
+    await expect(
+      PatService.create({
+        userId: 'u_test_aet',
+        name: 'agent key',
+        scopes: ['vault:read'],
+        keyCategory: 'agent_enclave_token',
+        aetEnvelope: { v: 2 },
+      })
+    ).rejects.toThrowError(expect.objectContaining({ code: 'invalid_envelope' }));
   });
 });

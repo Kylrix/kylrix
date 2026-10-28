@@ -183,6 +183,8 @@ export class KylrixClient {
   public auth = {
     me: (): Promise<ProfileRecord> => this.request<ProfileRecord>('GET', '/me'),
     tokenInfo: (): Promise<TokenInfoRecord> => this.request<TokenInfoRecord>('GET', '/token'),
+    enclave: (): Promise<{ envelope: any; scopes: string[]; expiresAt: string | null }> =>
+      this.request('GET', '/token/enclave'),
     scopes: (): Promise<ScopeCatalogRecord> => this.request<ScopeCatalogRecord>('GET', '/token/scopes'),
     updateScopes: (scopes: string[], mode: 'grant' | 'replace' = 'grant') =>
       this.request('POST', '/token/scopes', { body: { scopes, mode } }),
@@ -394,21 +396,23 @@ export class KylrixClient {
 
   // ── 12. Vault & Secrets ──
   public vault = {
-    list: async (opts: { limit?: number; workspaceId?: string; mek?: string } = {}): Promise<ListResult<any>> => {
+    list: async (opts: { limit?: number; workspaceId?: string; mek?: string; sealed?: boolean } = {}): Promise<ListResult<any>> => {
       const raw = await this.request<any[]>('GET', '/vault', {
         query: {
           limit: opts.limit ?? 50,
           workspaceId: opts.workspaceId || this.activeWorkspaceId,
+          sealed: opts.sealed ? 1 : undefined,
         },
         headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
       });
       return toListResult<any>(raw);
     },
-    get: (id: string, opts: { mek?: string; masterPassword?: string; shareKey?: string; format?: string; pure?: boolean } = {}) =>
+    get: (id: string, opts: { mek?: string; masterPassword?: string; shareKey?: string; format?: string; pure?: boolean; sealed?: boolean } = {}) =>
       this.request<any>('GET', `/vault/${id}`, {
         query: {
           format: opts.format,
           pure: opts.pure,
+          sealed: opts.sealed ? 1 : undefined,
         },
         headers: {
           ...(opts.mek ? { 'x-mek': opts.mek } : {}),
@@ -446,18 +450,22 @@ export class KylrixClient {
 
   // ── 13. TOTP 2FA Secrets ──
   public totp = {
-    list: async (opts: { limit?: number; workspaceId?: string; mek?: string } = {}): Promise<ListResult<any>> => {
+    list: async (opts: { limit?: number; workspaceId?: string; mek?: string; sealed?: boolean } = {}): Promise<ListResult<any>> => {
       const raw = await this.request<any[]>('GET', '/totp', {
         query: {
           limit: opts.limit ?? 50,
           workspaceId: opts.workspaceId || this.activeWorkspaceId,
+          sealed: opts.sealed ? 1 : undefined,
         },
         headers: opts.mek ? { 'x-mek': opts.mek } : undefined,
       });
       return toListResult<any>(raw);
     },
-    get: (id: string, opts: { mek?: string; masterPassword?: string } = {}) =>
+    get: (id: string, opts: { mek?: string; masterPassword?: string; sealed?: boolean } = {}) =>
       this.request<any>('GET', `/totp/${id}`, {
+        query: {
+          sealed: opts.sealed ? 1 : undefined,
+        },
         headers: {
           ...(opts.mek ? { 'x-mek': opts.mek } : {}),
           ...(opts.masterPassword ? { 'x-master-password': opts.masterPassword } : {}),

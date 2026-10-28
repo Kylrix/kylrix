@@ -48,12 +48,162 @@ function toBearerCredential(value) {
   if (t.startsWith(AET_PREFIX) && t.includes(".")) return t.slice(0, t.indexOf("."));
   return t;
 }
-var AET_PREFIX, AET_REGEX;
+function parseAgentToken(input2) {
+  if (typeof input2 !== "string") throw new ZeroKnowledgeError("invalid_token", "Agent key must be text");
+  const t = input2.trim();
+  if (t.startsWith("kyl_apk_") && t.includes(".")) {
+    throw new ZeroKnowledgeError(
+      "legacy_token_format",
+      "This agent key uses an old preview format. Create a new agent key in Settings."
+    );
+  }
+  const m3 = AET_REGEX.exec(t);
+  if (!m3) throw new ZeroKnowledgeError("invalid_token", "Not a valid agent key");
+  const [, prefix, authSecret, etkHex] = m3;
+  return { prefix, bearer: `kyl_aet_${prefix}_${authSecret}`, etkSecret: hexToBytes(etkHex) };
+}
+function base64ToBytes(b64) {
+  if (typeof b64 !== "string" || !B64_RE.test(b64)) {
+    throw new ZeroKnowledgeError("invalid_encoding", "Invalid base64 input");
+  }
+  if (typeof Buffer !== "undefined") {
+    return new Uint8Array(Buffer.from(b64, "base64"));
+  }
+  const binary = atob(b64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+function hexToBytes(hex3) {
+  if (typeof hex3 !== "string" || !HEX_RE.test(hex3)) {
+    throw new ZeroKnowledgeError("invalid_encoding", "Invalid hex input");
+  }
+  const out = new Uint8Array(hex3.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = parseInt(hex3.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+function zeroClearBytes(bytes) {
+  if (bytes && bytes instanceof Uint8Array) {
+    bytes.fill(0);
+  }
+}
+function toArrayBuffer(view) {
+  const out = new ArrayBuffer(view.byteLength);
+  new Uint8Array(out).set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+  return out;
+}
+async function deriveAetWrappingKey(etkSecret, salt) {
+  if (!(etkSecret instanceof Uint8Array) || etkSecret.byteLength !== 32) {
+    throw new ZeroKnowledgeError("invalid_key_length", "Unlock key must be 32 bytes");
+  }
+  if (!(salt instanceof Uint8Array) || salt.byteLength !== 16) {
+    throw new ZeroKnowledgeError("invalid_envelope", "Invalid envelope salt");
+  }
+  const ikm = toArrayBuffer(etkSecret);
+  try {
+    const baseKey = await crypto.subtle.importKey("raw", ikm, "HKDF", false, ["deriveKey"]);
+    return await crypto.subtle.deriveKey(
+      {
+        name: "HKDF",
+        hash: "SHA-256",
+        salt: toArrayBuffer(salt),
+        info: toArrayBuffer(utf8("kylrix/aet/dek-wrap/v1"))
+      },
+      baseKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  } finally {
+    new Uint8Array(ikm).fill(0);
+  }
+}
+async function unwrapDekFromMap(map2, resourceKey, etkSecret, salt) {
+  const entry = map2?.[resourceKey];
+  if (!entry) return null;
+  if (entry.algorithm !== "AES-256-GCM") {
+    throw new ZeroKnowledgeError("unsupported_algorithm", "Unsupported key wrapping method");
+  }
+  const iv = base64ToBytes(entry.iv);
+  const ct = base64ToBytes(entry.wrappedDek);
+  if (iv.byteLength !== 12 || ct.byteLength !== 48) {
+    throw new ZeroKnowledgeError("invalid_envelope", "Malformed key entry");
+  }
+  const key = await deriveAetWrappingKey(etkSecret, salt);
+  try {
+    const dek = new Uint8Array(
+      await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: toArrayBuffer(iv), additionalData: toArrayBuffer(utf8(resourceKey)) },
+        key,
+        toArrayBuffer(ct)
+      )
+    );
+    if (dek.byteLength !== 32) throw new Error();
+    return dek;
+  } catch {
+    throw new ZeroKnowledgeError("decrypt_failed", "Could not unlock this item");
+  }
+}
+function validateAetEnvelope(e2) {
+  const fail = () => {
+    throw new ZeroKnowledgeError("invalid_envelope", "Invalid agent key envelope");
+  };
+  if (!e2 || typeof e2 !== "object") fail();
+  const env = e2;
+  if (env.v !== 1 || env.alg !== "AES-256-GCM" || env.kdf !== "HKDF-SHA256") fail();
+  if (typeof env.salt !== "string") fail();
+  try {
+    if (base64ToBytes(env.salt).byteLength !== 16) fail();
+  } catch {
+    fail();
+  }
+  if (typeof env.createdAt !== "string" || !env.createdAt) fail();
+  const res = env.resources;
+  if (!res || typeof res !== "object" || typeof res.credential !== "boolean" || typeof res.totp !== "boolean" || typeof res.note !== "boolean") {
+    fail();
+  }
+  const deks = env.deks;
+  if (!deks || typeof deks !== "object" || Array.isArray(deks)) fail();
+  const entries = Object.entries(deks);
+  if (entries.length > AET_MAX_DEK_ENTRIES) fail();
+  for (const [key, entry] of entries) {
+    if (!AET_RESOURCE_KEY_RE.test(key)) fail();
+    if (!entry || typeof entry !== "object") fail();
+    const en = entry;
+    if (en.algorithm !== "AES-256-GCM") fail();
+    if (typeof en.iv !== "string" || typeof en.wrappedDek !== "string") fail();
+    try {
+      if (base64ToBytes(en.iv).byteLength !== 12 || base64ToBytes(en.wrappedDek).byteLength !== 48) fail();
+    } catch {
+      fail();
+    }
+  }
+  return e2;
+}
+var ZeroKnowledgeError, AET_PREFIX, AET_REGEX, utf8, B64_RE, HEX_RE, AET_RESOURCE_KEY_RE, AET_MAX_DEK_ENTRIES;
 var init_zero_knowledge = __esm({
   "../../lib/security/zero-knowledge.ts"() {
     "use strict";
+    ZeroKnowledgeError = class extends Error {
+      constructor(code, message) {
+        super(message);
+        this.code = code;
+        this.name = "ZeroKnowledgeError";
+      }
+      code;
+    };
     AET_PREFIX = "kyl_aet_";
     AET_REGEX = /^kyl_aet_([0-9a-f]{8})_([A-Za-z0-9_-]{32})\.etk_([0-9a-f]{64})$/;
+    utf8 = (s) => new TextEncoder().encode(s);
+    B64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+    HEX_RE = /^(?:[0-9a-f]{2})+$/;
+    AET_RESOURCE_KEY_RE = /^(credential|totp|note):[A-Za-z0-9_-]{1,64}$/;
+    AET_MAX_DEK_ENTRIES = 500;
   }
 });
 
@@ -235,6 +385,7 @@ var init_client = __esm({
       auth = {
         me: () => this.request("GET", "/me"),
         tokenInfo: () => this.request("GET", "/token"),
+        enclave: () => this.request("GET", "/token/enclave"),
         scopes: () => this.request("GET", "/token/scopes"),
         updateScopes: (scopes, mode = "grant") => this.request("POST", "/token/scopes", { body: { scopes, mode } }),
         listPats: () => this.request("GET", "/pats"),
@@ -412,7 +563,8 @@ var init_client = __esm({
           const raw = await this.request("GET", "/vault", {
             query: {
               limit: opts.limit ?? 50,
-              workspaceId: opts.workspaceId || this.activeWorkspaceId
+              workspaceId: opts.workspaceId || this.activeWorkspaceId,
+              sealed: opts.sealed ? 1 : void 0
             },
             headers: opts.mek ? { "x-mek": opts.mek } : void 0
           });
@@ -421,7 +573,8 @@ var init_client = __esm({
         get: (id, opts = {}) => this.request("GET", `/vault/${id}`, {
           query: {
             format: opts.format,
-            pure: opts.pure
+            pure: opts.pure,
+            sealed: opts.sealed ? 1 : void 0
           },
           headers: {
             ...opts.mek ? { "x-mek": opts.mek } : {},
@@ -458,13 +611,17 @@ var init_client = __esm({
           const raw = await this.request("GET", "/totp", {
             query: {
               limit: opts.limit ?? 50,
-              workspaceId: opts.workspaceId || this.activeWorkspaceId
+              workspaceId: opts.workspaceId || this.activeWorkspaceId,
+              sealed: opts.sealed ? 1 : void 0
             },
             headers: opts.mek ? { "x-mek": opts.mek } : void 0
           });
           return toListResult(raw);
         },
         get: (id, opts = {}) => this.request("GET", `/totp/${id}`, {
+          query: {
+            sealed: opts.sealed ? 1 : void 0
+          },
           headers: {
             ...opts.mek ? { "x-mek": opts.mek } : {},
             ...opts.masterPassword ? { "x-master-password": opts.masterPassword } : {}
@@ -6638,9 +6795,48 @@ async function deleteTotpCommand(id, opts) {
 }
 
 // src/commands/agents.ts
+init_zero_knowledge();
+import { spawn as spawn3 } from "child_process";
+import pc19 from "picocolors";
+
+// src/enclave.ts
+init_zero_knowledge();
+init_client2();
+init_config();
+async function openEnclave(rawToken, opts = {}) {
+  const parsed = parseAgentToken(rawToken);
+  const env = resolveEnvironment({ url: opts.url });
+  assertSecureTransport(env.apiUrl);
+  const client = getClient({ url: opts.url, token: parsed.bearer });
+  const info = await client.auth.enclave();
+  const envelope = validateAetEnvelope(info.envelope);
+  const salt = base64ToBytes(envelope.salt);
+  let closed = false;
+  return {
+    bearer: parsed.bearer,
+    envelope,
+    scopes: info.scopes || [],
+    expiresAt: info.expiresAt || null,
+    unlockDek: (key) => unwrapDekFromMap(envelope.deks, key, parsed.etkSecret, salt),
+    close: () => {
+      if (closed) return;
+      closed = true;
+      zeroClearBytes(parsed.etkSecret);
+      zeroClearBytes(salt);
+    }
+  };
+}
+function assertSecureTransport(apiUrl) {
+  const u2 = new URL(apiUrl);
+  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(u2.hostname);
+  if (u2.protocol !== "https:" && !local) {
+    throw new Error("Agent keys can only be used over a secure (https) connection.");
+  }
+}
+
+// src/commands/agents.ts
 init_client2();
 init_formatter();
-import pc19 from "picocolors";
 async function listAgentSessionsCommand(opts) {
   try {
     const client = requireAuthClient(opts);
@@ -6666,6 +6862,67 @@ async function listAgentSessionsCommand(opts) {
   } catch (err) {
     printError("Failed to list agent sessions", err);
     process.exit(1);
+  }
+}
+function printAgentKeySummary(enclave, keys) {
+  const counts = {};
+  for (const k2 of keys) {
+    const kind = k2.split(":")[0];
+    counts[kind] = (counts[kind] || 0) + 1;
+  }
+  printSuccess(
+    `Agent key verified${enclave.expiresAt ? ` \u2014 expires ${enclave.expiresAt.slice(0, 10)}` : " \u2014 no expiry"}`
+  );
+  const labels = {
+    credential: "vault item(s)",
+    totp: "2FA code(s)",
+    note: "note(s)"
+  };
+  for (const [kind, n] of Object.entries(counts)) {
+    printInfo(`  ${n} ${labels[kind] || `${kind}(s)`} can be opened`);
+  }
+  if (keys.length === 0) {
+    printInfo("  This agent key cannot open any items yet.");
+  }
+  if (enclave.scopes.length) {
+    printInfo(`  Permissions: ${enclave.scopes.join(", ")}`);
+  }
+}
+async function connectAgentCommand(command, opts) {
+  const raw = (opts.token && isAgentEnclaveToken(opts.token) ? opts.token : process.env.KYLRIX_AGENT_KEY) || "";
+  if (!raw) {
+    printError("No agent key found. Set KYLRIX_AGENT_KEY or pass --token.");
+    process.exit(1);
+  }
+  if (opts.token && isAgentEnclaveToken(opts.token)) {
+    console.warn(pc19.yellow("Your agent key may be saved in shell history. Prefer: export KYLRIX_AGENT_KEY=\u2026"));
+  }
+  let enclave = null;
+  try {
+    enclave = await openEnclave(raw, opts);
+    const keys = Object.keys(enclave.envelope.deks);
+    const probe = keys[0] ? await enclave.unlockDek(keys[0]) : null;
+    zeroClearBytes(probe);
+    printAgentKeySummary(enclave, keys);
+    const bin = opts.claudeCode ? ["claude"] : opts.cursor ? ["cursor-agent"] : command;
+    if (opts.check || bin.length === 0) return;
+    const childEnv = { ...process.env, KYLRIX_AGENT_KEY: raw };
+    delete childEnv.KYLRIX_TOKEN;
+    enclave.close();
+    const child = spawn3(bin[0], bin.slice(1), { stdio: "inherit", env: childEnv });
+    child.on("error", (e2) => {
+      printError(`Could not start ${bin[0]}`, e2);
+      process.exit(127);
+    });
+    child.on("exit", (code, signal) => {
+      if (signal) process.kill(process.pid, signal);
+      else process.exit(code ?? 0);
+    });
+  } catch (err) {
+    printError("Could not connect agent key", err);
+    process.exit(1);
+  } finally {
+    enclave?.close();
   }
 }
 async function getAgentSessionCommand(id, opts) {
@@ -7090,10 +7347,10 @@ import pc26 from "picocolors";
 import * as fs9 from "fs";
 import * as path8 from "path";
 import * as os4 from "os";
-import { spawn as spawn3 } from "child_process";
+import { spawn as spawn4 } from "child_process";
 import pc25 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.21";
+var CURRENT_VERSION = "1.0.22";
 var CACHE_DIR = path8.join(os4.homedir(), ".kylrix");
 var CACHE_FILE = path8.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -7168,7 +7425,7 @@ async function executeUpgrade(targetVersion = "latest", opts = {}) {
   };
   const args = installArgs[pm] || installArgs.npm;
   return new Promise((resolve3, reject) => {
-    const child = spawn3(pm, args, { stdio: opts.silent ? "ignore" : "inherit" });
+    const child = spawn4(pm, args, { stdio: opts.silent ? "ignore" : "inherit" });
     child.on("close", (code) => {
       if (code === 0) {
         writeCachedUpdate(targetVersion === "latest" ? CURRENT_VERSION : targetVersion);
@@ -28827,6 +29084,11 @@ agents.command("list").alias("sessions").description("List agent execution sessi
 agents.command("get <id>").description("Get agent session execution logs and status").action((id, cmdOpts) => getAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
 agents.command("start <title>").description("Start a new autonomous agent session").option("-p, --prompt <prompt>", "Initial task prompt").option("--harness <harness>", "Harness runner", "gemini").action((title, cmdOpts) => startAgentSessionCommand(title, { ...program.opts(), ...cmdOpts }));
 agents.command("delete <id>").description("Delete an agent session").action((id, cmdOpts) => deleteAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+agents.command("connect [command...]").description("Check an agent key and start Claude Code, Cursor, or any command with it loaded").option("--claude-code", "Start Claude Code (claude) with the agent key").option("--cursor", "Start Cursor Agent (cursor-agent) with the agent key").option("--check", "Only check the agent key and show what it can open").allowUnknownOption().action((command, cmdOpts) => {
+  const rawArgs = process.argv.slice(process.argv.indexOf("connect") + 2);
+  const cmd = rawArgs.includes("--") ? rawArgs.slice(rawArgs.indexOf("--") + 1) : command || [];
+  return connectAgentCommand(cmd, { ...program.opts(), ...cmdOpts });
+});
 program.command("search <query>").alias("s").description("Unified search across ideas, goals, events, forms, flows, and secrets").option("-l, --limit <number>", "Number of results (default: 50, 0 for all)", "50").option("-a, --all", "Return all results without limit").action((query, cmdOpts) => searchCommand(query, { ...program.opts(), ...cmdOpts }));
 program.command("share <kind> <id>").description("Generate a share link for a resource (idea, goal, vault, form, flow)").action((kind, id, cmdOpts) => shareCommand(kind, id, { ...program.opts(), ...cmdOpts }));
 var events = program.command("events").description("Manage calendar events and schedules");

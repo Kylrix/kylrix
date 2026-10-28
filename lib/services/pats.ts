@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, desc, count } from 'drizzle-orm';
 import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
-import { AET_BEARER_REGEX, toBearerCredential } from '@/lib/security/zero-knowledge';
+import { AET_BEARER_REGEX, toBearerCredential, validateAetEnvelope, type AetEnvelope } from '@/lib/security/zero-knowledge';
 
 export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token' | 'agent_enclave_token';
 
@@ -190,6 +190,7 @@ export const PatService = {
     workspaceId?: string | null;
     keyCategory?: PatCategory;
     agentId?: string | null;
+    aetEnvelope?: unknown;
   }): Promise<{ pat: PatPublic; token: string }> {
     const scopes = normalizeScopes(params.scopes);
     if (scopes.length === 0) throw new Error('Select at least one permission');
@@ -202,6 +203,13 @@ export const PatService = {
       if (params.isWorkspace) category = 'workspace_pat';
       else if (params.agentId || name.includes('(Agentic PAT)')) category = 'agentic_pat';
       else if (scopes.length === 1 && scopes.includes('agents:provision')) category = 'agent_provisioning_key';
+    }
+
+    // AET envelopes carry client-wrapped DEKs; the server validates shape only.
+    let aet: AetEnvelope | null = null;
+    if (category === 'agent_enclave_token') {
+      aet = validateAetEnvelope(params.aetEnvelope);
+      if (JSON.stringify(aet).length > 196_608) throw new Error('Too many items for one agent key');
     }
 
     const id = 'pat_' + randomBytes(12).toString('hex');
@@ -240,7 +248,7 @@ export const PatService = {
       createdAt: now,
       updatedAt: now,
       permissions: JSON.stringify(scopes),
-      metadata: JSON.stringify({ agentId: params.agentId || null }),
+      metadata: JSON.stringify({ agentId: params.agentId || null, ...(aet ? { aet } : {}) }),
       category,
       workspaceId: params.workspaceId || params.agentId || null,
       isWorkspace: isWs,
@@ -479,5 +487,45 @@ export const PatService = {
     verifiedPatCache.set(hash, { data: result, ts: Date.now() });
 
     return result;
+  },
+
+  /**
+   * Returns the AET envelope, scopes, and expiry for one agent-enclave-token
+   * Row. Only ever called for the authenticating token (no patId parameter on
+   * the endpoint). The etk is never stored or returned.
+   */
+  async getEnclaveEnvelope(patId: string, userId: string): Promise<{
+    envelope: AetEnvelope;
+    scopes: PatScope[];
+    expiresAt: string | null;
+  }> {
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(and(eq(schema.apikey.id, patId), eq(schema.apikey.userId, userId)))
+      .limit(1);
+    const row = rows[0];
+    if (!row || row.category !== 'agent_enclave_token') {
+      const err = new Error('This endpoint requires an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'not_an_agent_key';
+      throw err;
+    }
+    let meta: any = null;
+    try {
+      meta = row.metadata ? JSON.parse(row.metadata) : null;
+    } catch {}
+    const envelope = meta?.aet;
+    if (!envelope || typeof envelope !== 'object') {
+      const err = new Error('Agent key envelope not found');
+      (err as any).status = 404;
+      (err as any).code = 'envelope_missing';
+      throw err;
+    }
+    return {
+      envelope: envelope as AetEnvelope,
+      scopes: normalizeScopes(row.permissions),
+      expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+    };
   },
 };
