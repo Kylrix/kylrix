@@ -28,7 +28,7 @@ import { PAT_SCOPES, PAT_SCOPE_META, type PatScope } from '@/lib/api/scopes';
 import { createPat } from '@/lib/actions/client-ops';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
-type Step = 'name' | 'scopes' | 'done';
+type Step = 'name' | 'wizard_step1' | 'wizard_step2' | 'scopes' | 'done';
 
 const DEFAULT_SCOPES: PatScope[] = ['profile:read', 'notes:read', 'notes:write'];
 
@@ -192,6 +192,13 @@ export function CreatePatDrawer({
   const [selected, setSelected] = useState<PatScope[]>(DEFAULT_SCOPES);
   const [creating, setCreating] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+
+  // Agent Enclave Tokens (AET) & Zero-Knowledge Secrets state
+  const [isAetToken, setIsAetToken] = useState(false);
+  const [permittedVault, setPermittedVault] = useState(true);
+  const [permittedTotp, setPermittedTotp] = useState(true);
+  const [permittedNotes, setPermittedNotes] = useState(true);
+  const [aetExpiryDays, setAetExpiryDays] = useState<number>(30);
 
   // Sweep / Preset state
   const [activeResourceFilter, setActiveResourceFilter] = useState<ResourceCategoryKey | 'all'>('all');
@@ -363,15 +370,163 @@ export function CreatePatDrawer({
                 </p>
               </div>
 
+              <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-indigo-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert size={16} className="text-indigo-400" />
+                    <span className="text-xs font-bold text-white font-mono">Agent Enclave Token (AET)</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isAetToken}
+                    onChange={(e) => setIsAetToken(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366F1] cursor-pointer"
+                  />
+                </div>
+                <p className="text-[11px] text-white/50 leading-relaxed">
+                  Enable Zero-Knowledge secret access. Generates a client-side <code className="text-indigo-300 font-mono">kyl_apk_...</code> token with an ephemeral secret key (<code className="text-indigo-300 font-mono">etkSecret</code>).
+                </p>
+              </div>
+
               <button
                 type="button"
                 disabled={!name.trim()}
-                onClick={() => setStep('scopes')}
+                onClick={() => setStep(isAetToken ? 'wizard_step1' : 'scopes')}
                 className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40 transition-all"
               >
-                Configure Permissions
+                {isAetToken ? 'Next: Zero-Knowledge Wizard' : 'Configure Permissions'}
                 <ChevronRight size={16} />
               </button>
+            </div>
+          )}
+
+          {step === 'wizard_step1' && (
+            <div className="space-y-4 pt-2">
+              <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.08] space-y-1.5">
+                <p className="text-xs font-bold text-indigo-400 font-mono">Step 1: Select Permitted Target Resources</p>
+                <p className="text-xs text-white/50">
+                  Select which encrypted resources this Agent Enclave Token can decrypt using client-side wrapped DEKs.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0A0908] border border-white/10 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <Lock size={16} className="text-indigo-400" />
+                    <div>
+                      <p className="text-xs font-bold text-white">Vault Credentials</p>
+                      <p className="text-[10px] text-white/40">Passwords, API keys, private credentials</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={permittedVault}
+                    onChange={(e) => setPermittedVault(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366F1] cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0A0908] border border-white/10 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <KeyRound size={16} className="text-indigo-400" />
+                    <div>
+                      <p className="text-xs font-bold text-white">TOTP 2FA Secrets</p>
+                      <p className="text-[10px] text-white/40">Authenticator codes & seeds</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={permittedTotp}
+                    onChange={(e) => setPermittedTotp(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366F1] cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0A0908] border border-white/10 cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <Lightbulb size={16} className="text-indigo-400" />
+                    <div>
+                      <p className="text-xs font-bold text-white">Encrypted Notes & Ideas</p>
+                      <p className="text-[10px] text-white/40">Zero-Knowledge locked document bodies</p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={permittedNotes}
+                    onChange={(e) => setPermittedNotes(e.target.checked)}
+                    className="w-4 h-4 accent-[#6366F1] cursor-pointer"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('name')}
+                  className="py-3.5 rounded-2xl border border-white/10 text-white/70 text-xs font-extrabold cursor-pointer hover:bg-white/5"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep('wizard_step2')}
+                  className="py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-xs font-extrabold cursor-pointer"
+                >
+                  Step 2: Security Policy
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'wizard_step2' && (
+            <div className="space-y-4 pt-2">
+              <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.08] space-y-1.5">
+                <p className="text-xs font-bold text-indigo-400 font-mono">Step 2: Security & Expiry Policy</p>
+                <p className="text-xs text-white/50">
+                  Configure token TTL expiration and access limits.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-white/80 block">Token Expiration Policy</label>
+                <select
+                  value={aetExpiryDays}
+                  onChange={(e) => setAetExpiryDays(Number(e.target.value))}
+                  className="w-full rounded-2xl bg-[#0A0908] border border-white/10 px-4 py-3 text-xs text-white outline-none focus:border-[#6366F1]"
+                >
+                  <option value={7}>7 Days</option>
+                  <option value={30}>30 Days (Default)</option>
+                  <option value={90}>90 Days</option>
+                  <option value={365}>365 Days</option>
+                  <option value={0}>No Expiration</option>
+                </select>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-amber-500/20 text-xs text-amber-300 space-y-1">
+                <p className="font-bold flex items-center gap-1">
+                  <ShieldAlert size={14} /> Zero-Knowledge Guarantee
+                </p>
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  The client unlocks the local vault, wraps item DEKs with a fresh <code className="text-amber-200 font-mono">etkSecret</code>, and constructs <code className="text-amber-200 font-mono">kyl_apk_...</code>. The server never receives <code className="text-amber-200 font-mono">etkSecret</code>.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep('wizard_step1')}
+                  className="py-3.5 rounded-2xl border border-white/10 text-white/70 text-xs font-extrabold cursor-pointer hover:bg-white/5"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep('scopes')}
+                  className="py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-xs font-extrabold cursor-pointer"
+                >
+                  Step 3: Review Permissions
+                </button>
+              </div>
             </div>
           )}
 

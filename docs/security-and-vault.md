@@ -62,6 +62,32 @@ Reactive events (`vault-unlocked`, `kylrix:vault-unlocked`, `vault-locked`) auto
 
 ---
 
+## 🤖 Dual-Wrapped Enclave Crypto & Agent Enclave Tokens (AET)
+
+Kylrix provides zero-knowledge secret access and persistent memory for AI agents (Claude Code, Cursor, AutoGPT, CLI, VS Code, REST API, WebMCP, Discord/Telegram) via **Dual-Wrapped Enclave Crypto**.
+
+### Token Secret (`etkSecret`) & Item-Level DEK Wrapping
+When an Agent Enclave Token (`kyl_apk_<tokenId>.<etkSecret>`) is minted in Settings:
+1. **Local Vault Unlock**: The browser unlocks the vault locally using MEK or Passkey PRF.
+2. **Ephemeral Secret Generation**: The client generates a 256-bit secure secret key (`etkSecret`).
+3. **Double-Wrapped DEK Map (`wrappedDeks`)**: The client wraps the DEKs of permitted resources (Vault credentials, TOTP keys, or Encrypted Notes/Ideas) using `etkSecret`.
+4. **Metadata Persistence**: The wrapped DEK map is stored in `apikey.metadata` or item metadata (`notes.metadata`, `vault_items.metadata`).
+5. **Zero Server Exposure**: The server receives `wrappedDeks` but **never possesses MEK or `etkSecret`**.
+
+```json
+{
+  "wrappedDeks": {
+    "vault_item_1": {
+      "wrappedDek": "bXl3cmFwcGVkZGVr...",
+      "iv": "MTJieXRlaXY...",
+      "algorithm": "AES-256-GCM"
+    }
+  }
+}
+```
+
+---
+
 ## 🛡️ RAM Memory Protection & Zeroing (`kylrix exec`)
 
 To prevent process memory dumps or sub-shell environment leakage when running commands with injected vault secrets via `kylrix exec <idOrUrl> -- <command>`:

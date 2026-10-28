@@ -114,7 +114,30 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand('kylrix.search', globalSearchCommand),
     vscode.commands.registerCommand('kylrix.sync', () => syncCommand(refreshAllViews)),
-    vscode.commands.registerCommand('kylrix.connectWorkspace', () => connectWorkspaceCommand(refreshAllViews))
+    vscode.commands.registerCommand('kylrix.connectWorkspace', () => connectWorkspaceCommand(refreshAllViews)),
+
+    vscode.commands.registerCommand('kylrix.copyAgentKey', async () => {
+      const key = await vscode.window.showInputBox({
+        prompt: 'Enter or confirm Zero-Knowledge Agent Enclave Token (kyl_apk_...)',
+        placeHolder: 'kyl_apk_<tokenId>.<etkSecret>',
+      });
+      if (key) {
+        await vscode.env.clipboard.writeText(key);
+        vscode.window.showInformationMessage('Copied Zero-Knowledge Agent Key to clipboard.');
+      }
+    }),
+    vscode.commands.registerCommand('kylrix.injectTerminalSecrets', async () => {
+      const terminal = vscode.window.activeTerminal || vscode.window.createTerminal('Kylrix Enclave');
+      const token = await vscode.window.showInputBox({
+        prompt: 'Agent Enclave Token (kyl_apk_...)',
+        placeHolder: 'kyl_apk_<tokenId>.<etkSecret>',
+      });
+      if (token) {
+        terminal.sendText(`export KYLRIX_AGENT_KEY="${token}"`);
+        terminal.show();
+        vscode.window.showInformationMessage('Injected Agent Enclave Secrets into Terminal session.');
+      }
+    })
   );
 
   // 4. Register Status Bar Item
