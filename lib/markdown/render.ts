@@ -28,12 +28,20 @@ function sanitizeHtml(html: string): string {
     output = String(serverPurify.sanitize(html, MATH_PURIFY));
   }
 
-  // Sanitization pass: strip inline script tags, inline event handlers, and javascript: pseudo-URLs
+  // Sanitization pass: strip inline script tags, inline event handlers, and pseudo-URLs (javascript:, vbscript:, data:text/html)
   if (output) {
     output = output
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|\x27[^\x27]*\x27|[^\s>]+)/gi, '')
-      .replace(/(href|src)\s*=\s*(?:"javascript:[^"]*"|\x27javascript:[^\x27]*\x27|javascript:[^\s>]+)/gi, '');
+      .replace(/\s+on[a-z0-9_]+\s*=\s*(?:"[^"]*"|\x27[^\x27]*\x27|[^\s>]+)/gi, '')
+      .replace(/(href|src|action)\s*=\s*(?:"(?:\s*(?:javascript|vbscript):|\s*data:text\/html)[^"]*"|\x27(?:\s*(?:javascript|vbscript):|\s*data:text\/html)[^\x27]*\x27|(?:\s*(?:javascript|vbscript):|\s*data:text\/html)[^\s>]+)/gi, '');
+
+    // Secure target="_blank" links with rel="noopener noreferrer" against reverse tabnabbing
+    output = output.replace(/<a\b([^>]*\btarget=["']?_blank["']?[^>]*)>/gi, (match, attrs) => {
+      if (/rel=["']?[^"'>]*\b(?:noopener|noreferrer)\b/i.test(attrs)) {
+        return match;
+      }
+      return `<a ${attrs} rel="noopener noreferrer">`;
+    });
   }
 
   return output;
@@ -84,6 +92,8 @@ const MATH_PURIFY: DomPurifyConfig = {
     'alt',
     'class',
     'style',
+    'target',
+    'rel',
     'viewBox',
     'xmlns',
     'd',
