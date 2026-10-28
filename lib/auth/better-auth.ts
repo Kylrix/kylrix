@@ -24,6 +24,12 @@ export const KYLRIX_OAUTH_SCOPES = [
 
 export const auth = betterAuth({
   appName: 'Kylrix',
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ['google', 'github'],
+    },
+  },
   database: drizzleAdapter(db, {
     provider: 'sqlite',
     schema: {
