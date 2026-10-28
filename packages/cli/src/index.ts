@@ -74,7 +74,7 @@ import {
   pushEnvCommand,
   listEnvsCommand,
 } from './commands/envs';
-import { execCommand } from './commands/exec';
+import { execCommand, resolveExecArgs } from './commands/exec';
 import {
   listTotpCommand,
   getTotpCodeCommand,
@@ -492,18 +492,16 @@ envCmd
 
 // ── POSIX Process Wrapper (kylrix exec) ──
 program
-  .command('exec <idOrUrl> [command...]')
+  .command('exec [idOrUrl] [command...]')
   .description('Zero-leak POSIX process wrapper: inject secrets into transient child env and purge RAM on exit')
   .option('--share-key <key>', 'Decryption share key for public vault link')
+  .option('--token <token>', 'Agent key (KYLRIX_AGENT_KEY) for agent-key unlock mode')
+  .option('--json', 'Print loaded item names as JSON')
   .allowUnknownOption()
   .action((idOrUrl, commandArgs, cmdOpts) => {
     const rawArgs = process.argv.slice(process.argv.indexOf('exec') + 2);
-    const argsToRun = rawArgs.includes('--')
-      ? rawArgs.slice(rawArgs.indexOf('--') + 1)
-      : commandArgs && commandArgs.length > 0
-      ? commandArgs
-      : rawArgs.filter((a) => !a.startsWith('-') && a !== idOrUrl);
-    return execCommand(idOrUrl, argsToRun, { ...program.opts(), ...cmdOpts });
+    const { command } = resolveExecArgs(idOrUrl, commandArgs, rawArgs, false);
+    return execCommand(idOrUrl, command, { ...program.opts(), ...cmdOpts });
   });
 
 // ── 6. TOTP 2FA Authenticator ──

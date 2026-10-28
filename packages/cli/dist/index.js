@@ -97,6 +97,17 @@ function toArrayBuffer(view) {
   new Uint8Array(out).set(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
   return out;
 }
+async function importAesKey(raw, usages = ["encrypt", "decrypt"]) {
+  if (!(raw instanceof Uint8Array) || raw.byteLength !== 32) {
+    throw new ZeroKnowledgeError("invalid_key_length", "Key must be 32 bytes");
+  }
+  const copy = toArrayBuffer(raw);
+  try {
+    return await crypto.subtle.importKey("raw", copy, { name: "AES-GCM", length: 256 }, false, usages);
+  } finally {
+    new Uint8Array(copy).fill(0);
+  }
+}
 async function deriveAetWrappingKey(etkSecret, salt) {
   if (!(etkSecret instanceof Uint8Array) || etkSecret.byteLength !== 32) {
     throw new ZeroKnowledgeError("invalid_key_length", "Unlock key must be 32 bytes");
@@ -184,6 +195,25 @@ function validateAetEnvelope(e2) {
     }
   }
   return e2;
+}
+async function decryptRowField(fieldB64, dek) {
+  const key = await importAesKey(dek, ["decrypt"]);
+  const combined = base64ToBytes(fieldB64);
+  if (combined.byteLength < 17) {
+    throw new ZeroKnowledgeError("invalid_envelope", "Malformed field ciphertext");
+  }
+  const iv = combined.subarray(0, 16);
+  const ct = combined.subarray(16);
+  try {
+    const decrypted = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: toArrayBuffer(iv) },
+      key,
+      toArrayBuffer(ct)
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch {
+    throw new ZeroKnowledgeError("decrypt_failed", "Could not decrypt this field");
+  }
 }
 var ZeroKnowledgeError, AET_PREFIX, AET_REGEX, utf8, B64_RE, HEX_RE, AET_RESOURCE_KEY_RE, AET_MAX_DEK_ENTRIES;
 var init_zero_knowledge = __esm({
@@ -6608,10 +6638,213 @@ Showing ${start}\u2013${end} of ${total} environment secret sets. Use --page <N>
 }
 
 // src/commands/exec.ts
+init_zero_knowledge();
 import { spawn as spawn2 } from "child_process";
 import pc17 from "picocolors";
+
+// src/enclave.ts
+init_zero_knowledge();
+init_client2();
+init_config();
+async function openEnclave(rawToken, opts = {}) {
+  const parsed = parseAgentToken(rawToken);
+  const env = resolveEnvironment({ url: opts.url });
+  assertSecureTransport(env.apiUrl);
+  const client = getClient({ url: opts.url, token: parsed.bearer });
+  const info = await client.auth.enclave();
+  const envelope = validateAetEnvelope(info.envelope);
+  const salt = base64ToBytes(envelope.salt);
+  let closed = false;
+  return {
+    bearer: parsed.bearer,
+    envelope,
+    scopes: info.scopes || [],
+    expiresAt: info.expiresAt || null,
+    unlockDek: (key) => unwrapDekFromMap(envelope.deks, key, parsed.etkSecret, salt),
+    close: () => {
+      if (closed) return;
+      closed = true;
+      zeroClearBytes(parsed.etkSecret);
+      zeroClearBytes(salt);
+    }
+  };
+}
+function assertSecureTransport(apiUrl) {
+  const u2 = new URL(apiUrl);
+  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(u2.hostname);
+  if (u2.protocol !== "https:" && !local) {
+    throw new Error("Agent keys can only be used over a secure (https) connection.");
+  }
+}
+
+// src/commands/exec.ts
+init_client2();
 init_formatter();
+var MAX_SEALED_ROWS = 500;
+var ENV_FIELDS = ["name", "username", "password", "url", "notes", "customFields"];
+function resolveExecArgs(idOrUrl, commandArgs, rawArgs, aetMode) {
+  const sep = rawArgs.indexOf("--");
+  if (sep >= 0) {
+    const before = rawArgs.slice(0, sep).filter((a2) => !a2.startsWith("-"));
+    return { idOrUrl: before[0] ?? (idOrUrl || void 0), command: rawArgs.slice(sep + 1) };
+  }
+  if (commandArgs && commandArgs.length > 0) {
+    return { idOrUrl, command: commandArgs };
+  }
+  if (!aetMode) {
+    return { idOrUrl, command: rawArgs.filter((a2) => !a2.startsWith("-") && a2 !== idOrUrl) };
+  }
+  return { idOrUrl, command: [] };
+}
+function sanitizeName(name, fallbackId) {
+  const clean = String(name || "").toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return clean || String(fallbackId).toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+}
+function parseDotenv(text) {
+  const out = {};
+  for (const line of text.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith("#")) continue;
+    const m3 = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(t);
+    if (!m3) continue;
+    let val = m3[2];
+    if (val.startsWith('"') && val.endsWith('"') || val.startsWith("'") && val.endsWith("'")) {
+      val = val.slice(1, -1);
+    }
+    out[m3[1]] = val;
+  }
+  return out;
+}
+function looksLikeEnvBundle(item, unsealed) {
+  if (item?.isEnv) return true;
+  const notes = unsealed.notes || "";
+  return /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/m.test(notes);
+}
+function buildAetEnvVars(item, unsealed, taken) {
+  const vars = {};
+  const claim2 = (key, val) => {
+    let k2 = key;
+    let n = 2;
+    while (taken.has(k2)) k2 = `${key}_${n++}`;
+    taken.add(k2);
+    vars[k2] = val;
+  };
+  if (looksLikeEnvBundle(item, unsealed)) {
+    for (const [k2, v3] of Object.entries(parseDotenv(unsealed.notes || ""))) claim2(k2, v3);
+    try {
+      const cf = typeof unsealed.customFields === "string" ? JSON.parse(unsealed.customFields) : unsealed.customFields;
+      if (cf && typeof cf === "object") {
+        const entries = Array.isArray(cf) ? cf.map((f2) => [f2.label || f2.key || f2.name, f2.value]) : Object.entries(cf);
+        for (const [k2, v3] of entries) {
+          if (k2 && v3 != null) claim2(String(k2).trim(), String(v3));
+        }
+      }
+    } catch {
+    }
+    return vars;
+  }
+  const base = `KYLRIX_SECRET_${sanitizeName(unsealed.name || item?.name, item?.id || "ITEM")}`;
+  if (unsealed.username) claim2(`${base}_USERNAME`, unsealed.username);
+  if (unsealed.password) claim2(`${base}_PASSWORD`, unsealed.password);
+  if (unsealed.url) claim2(`${base}_URL`, unsealed.url);
+  return vars;
+}
+async function decryptGrantedRows(enclave, items) {
+  const taken = /* @__PURE__ */ new Set();
+  const vars = {};
+  const names = [];
+  for (const item of items) {
+    const key = `credential:${item.id}`;
+    const dek = await enclave.unlockDek(key);
+    if (!dek) continue;
+    try {
+      const unsealed = {};
+      const sealed = item.sealed || {};
+      for (const f2 of ENV_FIELDS) {
+        const v3 = sealed[f2];
+        unsealed[f2] = typeof v3 === "string" && v3 ? await decryptRowField(v3, dek) : null;
+      }
+      Object.assign(vars, buildAetEnvVars(item, unsealed, taken));
+      names.push(unsealed.name || item.id);
+    } finally {
+      zeroClearBytes(dek);
+    }
+  }
+  return { vars, names };
+}
+async function execAetMode(idOrUrl, commandArgs, opts) {
+  const raw = (opts.token && isAgentEnclaveToken(opts.token) ? opts.token : process.env.KYLRIX_AGENT_KEY) || "";
+  if (!raw) {
+    printError("No agent key found. Set KYLRIX_AGENT_KEY or pass --token.");
+    process.exit(1);
+  }
+  if (opts.token && isAgentEnclaveToken(opts.token)) {
+    console.warn(pc17.yellow("Your agent key may be saved in shell history. Prefer: export KYLRIX_AGENT_KEY=\u2026"));
+  }
+  if (!commandArgs || commandArgs.length === 0) {
+    printError("Missing command to execute. Usage: `kylrix exec [<id>] -- <command...>`");
+    process.exit(1);
+  }
+  let enclave = null;
+  try {
+    enclave = await openEnclave(raw, opts);
+    const client = getClient({ url: opts.url, token: enclave.bearer });
+    let items = [];
+    if (idOrUrl) {
+      const one = await client.vault.get(idOrUrl, { sealed: true });
+      items = one ? [one] : [];
+    } else {
+      let offset = 0;
+      while (items.length < MAX_SEALED_ROWS) {
+        const page = await client.vault.list({ limit: 100, sealed: true });
+        const batch = page.items || page || [];
+        items = items.concat(batch);
+        if (!Array.isArray(batch) || batch.length < 100) break;
+        offset += batch.length;
+        if (offset > MAX_SEALED_ROWS) break;
+      }
+      items = items.slice(0, MAX_SEALED_ROWS);
+    }
+    const { vars, names } = await decryptGrantedRows(enclave, items);
+    enclave.close();
+    if (opts.json) {
+      printJson({ loaded: names.length, items: names });
+    } else {
+      console.log(pc17.dim(`Loaded ${names.length} secret(s) from your agent key`));
+    }
+    const childEnv = { ...process.env, ...vars };
+    delete childEnv.KYLRIX_AGENT_KEY;
+    delete childEnv.KYLRIX_TOKEN;
+    const [bin, ...args] = commandArgs;
+    const child = spawn2(bin, args, { stdio: "inherit", env: childEnv, shell: true });
+    child.on("error", (e2) => {
+      printError(`Could not start ${bin}`, e2);
+      process.exit(127);
+    });
+    child.on("exit", (code, signal) => {
+      for (const key of Object.keys(vars)) {
+        delete childEnv[key];
+        delete vars[key];
+      }
+      if (signal) process.kill(process.pid, signal);
+      else process.exit(code ?? 0);
+    });
+  } catch (err) {
+    printError("Could not unlock items with your agent key", err);
+    process.exit(1);
+  } finally {
+    enclave?.close();
+  }
+}
 async function execCommand(idOrUrl, commandArgs, opts) {
+  const aetMode = opts.aetMode ?? (isAgentEnclaveToken(opts.token) || isAgentEnclaveToken(process.env.KYLRIX_AGENT_KEY));
+  if (aetMode) {
+    return execAetMode(idOrUrl, commandArgs, opts);
+  }
+  if (!idOrUrl) {
+    printError("Missing command to execute. Usage: `kylrix exec <id-or-url> -- <command...>`");
+    process.exit(1);
+  }
   try {
     if (!commandArgs || commandArgs.length === 0) {
       printError("Missing command to execute. Usage: `kylrix exec <id-or-url> -- <command...>`");
@@ -6629,8 +6862,6 @@ async function execCommand(idOrUrl, commandArgs, opts) {
     });
     child.on("exit", (code, signal) => {
       for (const key of Object.keys(resolved.variables)) {
-        childEnv[key] = "";
-        resolved.variables[key] = "";
         delete childEnv[key];
         delete resolved.variables[key];
       }
@@ -6798,43 +7029,6 @@ async function deleteTotpCommand(id, opts) {
 init_zero_knowledge();
 import { spawn as spawn3 } from "child_process";
 import pc19 from "picocolors";
-
-// src/enclave.ts
-init_zero_knowledge();
-init_client2();
-init_config();
-async function openEnclave(rawToken, opts = {}) {
-  const parsed = parseAgentToken(rawToken);
-  const env = resolveEnvironment({ url: opts.url });
-  assertSecureTransport(env.apiUrl);
-  const client = getClient({ url: opts.url, token: parsed.bearer });
-  const info = await client.auth.enclave();
-  const envelope = validateAetEnvelope(info.envelope);
-  const salt = base64ToBytes(envelope.salt);
-  let closed = false;
-  return {
-    bearer: parsed.bearer,
-    envelope,
-    scopes: info.scopes || [],
-    expiresAt: info.expiresAt || null,
-    unlockDek: (key) => unwrapDekFromMap(envelope.deks, key, parsed.etkSecret, salt),
-    close: () => {
-      if (closed) return;
-      closed = true;
-      zeroClearBytes(parsed.etkSecret);
-      zeroClearBytes(salt);
-    }
-  };
-}
-function assertSecureTransport(apiUrl) {
-  const u2 = new URL(apiUrl);
-  const local = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(u2.hostname);
-  if (u2.protocol !== "https:" && !local) {
-    throw new Error("Agent keys can only be used over a secure (https) connection.");
-  }
-}
-
-// src/commands/agents.ts
 init_client2();
 init_formatter();
 async function listAgentSessionsCommand(opts) {
@@ -7350,7 +7544,7 @@ import * as os4 from "os";
 import { spawn as spawn4 } from "child_process";
 import pc25 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.22";
+var CURRENT_VERSION = "1.0.23";
 var CACHE_DIR = path8.join(os4.homedir(), ".kylrix");
 var CACHE_FILE = path8.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;
@@ -29069,10 +29263,10 @@ envCmd.command("run <idOrUrl> [command...]").description("Inject environment var
 });
 envCmd.command("push <name>").description("Push a local .env file into an encrypted vault secret").option("-f, --file <filepath>", "Source .env file path", ".env").option("--public", "Mark secret as publicly accessible via share link").action((name, cmdOpts) => pushEnvCommand(name, { ...program.opts(), ...cmdOpts, isPublic: cmdOpts.public }));
 envCmd.command("list").description("List all project environment variable bundles in the active workspace").option("-l, --limit <number>", "Number of records (default: 50, 0 for all)", "50").option("-a, --all", "List all records without limit").option("--page <number>", "Page number (default: 1)", "1").action((cmdOpts) => listEnvsCommand({ ...program.opts(), ...cmdOpts }));
-program.command("exec <idOrUrl> [command...]").description("Zero-leak POSIX process wrapper: inject secrets into transient child env and purge RAM on exit").option("--share-key <key>", "Decryption share key for public vault link").allowUnknownOption().action((idOrUrl, commandArgs, cmdOpts) => {
+program.command("exec [idOrUrl] [command...]").description("Zero-leak POSIX process wrapper: inject secrets into transient child env and purge RAM on exit").option("--share-key <key>", "Decryption share key for public vault link").option("--token <token>", "Agent key (KYLRIX_AGENT_KEY) for agent-key unlock mode").option("--json", "Print loaded item names as JSON").allowUnknownOption().action((idOrUrl, commandArgs, cmdOpts) => {
   const rawArgs = process.argv.slice(process.argv.indexOf("exec") + 2);
-  const argsToRun = rawArgs.includes("--") ? rawArgs.slice(rawArgs.indexOf("--") + 1) : commandArgs && commandArgs.length > 0 ? commandArgs : rawArgs.filter((a2) => !a2.startsWith("-") && a2 !== idOrUrl);
-  return execCommand(idOrUrl, argsToRun, { ...program.opts(), ...cmdOpts });
+  const { command } = resolveExecArgs(idOrUrl, commandArgs, rawArgs, false);
+  return execCommand(idOrUrl, command, { ...program.opts(), ...cmdOpts });
 });
 var totp = program.command("totp").alias("2fa").description("Sovereign 2FA TOTP Authenticator");
 totp.command("list").description("List 2FA TOTP accounts and live verification codes").action((cmdOpts) => listTotpCommand({ ...program.opts(), ...cmdOpts }));

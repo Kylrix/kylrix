@@ -7,6 +7,8 @@ import { requireScope } from '@/lib/api/guard';
 import { resolveParentRef } from '@/lib/api/v1/query';
 import { listScopeCatalog, type PatScope } from '@/lib/api/scopes';
 import { PatService } from '@/lib/services/pats';
+import { getEnclave, unsealRowWithEnclave } from '@/lib/security/aet-server';
+import type { AetResourceKey } from '@/lib/security/zero-knowledge';
 import { clampNoteTitle } from '@/constants/noteTitle';
 import {
   cleanRowData,
@@ -2649,18 +2651,28 @@ export const ApiResources = {
       rows = res.rows.filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id));
     }
 
+    const enclave = getEnclave(actor);
     return Promise.all(
       rows.map(async (r: any) => {
         if (opts?.sealed) {
           return shapeSealedVaultItem(r, VAULT_ENCRYPTED_FIELDS.credentials);
         }
-        const unsealed = mekBytes
-          ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
-          : {};
+        let unsealed: Record<string, any> = {};
+        if (mekBytes) {
+          unsealed = await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes);
+        } else if (enclave) {
+          unsealed =
+            (await unsealRowWithEnclave(
+              enclave,
+              `credential:${r.$id}` as AetResourceKey,
+              r,
+              VAULT_ENCRYPTED_FIELDS.credentials
+            )) || {};
+        }
 
         return shapeVaultItem(r, {
           unsealed,
-          hasMek: !!mekBytes,
+          hasMek: !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
           looksEncrypted,
         });
       }),
@@ -2733,7 +2745,8 @@ export const ApiResources = {
       mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
     }
 
-    const { unsealed, keyUsed } = await unsealRowWithAnyKey(
+    const enclave = getEnclave(actor);
+    let { unsealed, keyUsed } = await unsealRowWithAnyKey(
       r,
       VAULT_ENCRYPTED_FIELDS.credentials,
       {
@@ -2743,9 +2756,19 @@ export const ApiResources = {
       }
     );
 
+    if (!keyUsed && !mekBytes && enclave) {
+      const viaEnclave = await unsealRowWithEnclave(
+        enclave,
+        `credential:${r.$id}` as AetResourceKey,
+        r,
+        VAULT_ENCRYPTED_FIELDS.credentials
+      );
+      if (viaEnclave) unsealed = viaEnclave;
+    }
+
     const shaped = shapeVaultItem(r, {
       unsealed,
-      hasMek: !!keyUsed || !!mekBytes,
+      hasMek: !!keyUsed || !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
       looksEncrypted,
     });
 
@@ -3227,18 +3250,28 @@ export const ApiResources = {
       rows = res.rows.filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id));
     }
 
+    const enclave = getEnclave(actor);
     return Promise.all(
       rows.map(async (r: any) => {
         if (opts?.sealed) {
           return shapeSealedTotpSecret(r, VAULT_ENCRYPTED_FIELDS.totpSecrets);
         }
-        const unsealed = mekBytes
-          ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
-          : {};
+        let unsealed: Record<string, any> = {};
+        if (mekBytes) {
+          unsealed = await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes);
+        } else if (enclave) {
+          unsealed =
+            (await unsealRowWithEnclave(
+              enclave,
+              `totp:${r.$id}` as AetResourceKey,
+              r,
+              VAULT_ENCRYPTED_FIELDS.totpSecrets
+            )) || {};
+        }
 
         return shapeTotpSecret(r, {
           unsealed,
-          hasMek: !!mekBytes,
+          hasMek: !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
           looksEncrypted,
         });
       }),
@@ -3274,13 +3307,23 @@ export const ApiResources = {
     }
 
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
-    const unsealed = mekBytes
+    let unsealed: Record<string, any> = mekBytes
       ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
       : {};
+    const enclave = getEnclave(actor);
+    if (!mekBytes && enclave) {
+      const viaEnclave = await unsealRowWithEnclave(
+        enclave,
+        `totp:${r.$id}` as AetResourceKey,
+        r,
+        VAULT_ENCRYPTED_FIELDS.totpSecrets
+      );
+      if (viaEnclave) unsealed = viaEnclave;
+    }
 
     return shapeTotpSecret(r, {
       unsealed,
-      hasMek: !!mekBytes,
+      hasMek: !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
       looksEncrypted,
     });
   },
