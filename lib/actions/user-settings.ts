@@ -165,7 +165,7 @@ export async function listUserIdentitiesAction(jwt?: string) {
       identities.push({
         $id: a.id,
         $createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
-        provider: a.providerId,
+        provider: (a.providerId || '').toLowerCase(),
         providerUid: a.accountId,
         providerEmail: actor.email,
       });
