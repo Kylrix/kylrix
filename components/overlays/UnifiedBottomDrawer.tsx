@@ -35,6 +35,7 @@ export function UnifiedBottomDrawer() {
     'delete-note',
     'security-confirm',
     'project-join-request-confirm',
+    'sidekick',
   ] as string[]).includes(activeContent as string)) {
     return null;
   }
@@ -47,7 +48,7 @@ export function UnifiedBottomDrawer() {
     />
   );
 
-  const isFullscreenMobile = ['pricing', 'tags', 'trash', 'profile-preview', 'agentic'].includes(activeContent as string);
+  const isFullscreenMobile = ['pricing', 'tags', 'trash', 'profile-preview', 'agentic', 'sidekick'].includes(activeContent as string);
   const isCompactBottomDrawer = [
     'share-context',
     'share-note',

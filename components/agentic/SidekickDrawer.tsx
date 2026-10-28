@@ -171,10 +171,12 @@ export function SidekickDrawer({
   open,
   onClose,
   target: initialTarget,
+  embedded = false,
 }: {
   open: boolean;
   onClose: () => void;
   target: SidekickTarget | null;
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const { user: currentUser } = useAuth();
@@ -1084,6 +1086,9 @@ export function SidekickDrawer({
   );
 
   if (!open) return null;
+  if (embedded) {
+    return content;
+  }
   if (!isMobile) {
     const { NativeSidebarMount } = require('@/components/layout/NativeSidebarMount');
     return (
