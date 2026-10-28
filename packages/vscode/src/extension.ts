@@ -33,6 +33,7 @@ import { globalSearchCommand } from './commands/search';
 import { syncCommand, connectWorkspaceCommand, autoSyncOnStartup } from './commands/sync';
 import { resolveEnvironment } from '@/packages/cli/src/config';
 import { hasAuth } from '@/packages/cli/src/client';
+import { validateAgentTokenInput } from '@/lib/security/zero-knowledge';
 
 let statusBarItem: vscode.StatusBarItem;
 
@@ -116,28 +117,8 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('kylrix.sync', () => syncCommand(refreshAllViews)),
     vscode.commands.registerCommand('kylrix.connectWorkspace', () => connectWorkspaceCommand(refreshAllViews)),
 
-    vscode.commands.registerCommand('kylrix.copyAgentKey', async () => {
-      const key = await vscode.window.showInputBox({
-        prompt: 'Enter or confirm Zero-Knowledge Agent Enclave Token (kyl_apk_...)',
-        placeHolder: 'kyl_apk_<tokenId>.<etkSecret>',
-      });
-      if (key) {
-        await vscode.env.clipboard.writeText(key);
-        vscode.window.showInformationMessage('Copied Zero-Knowledge Agent Key to clipboard.');
-      }
-    }),
-    vscode.commands.registerCommand('kylrix.injectTerminalSecrets', async () => {
-      const terminal = vscode.window.activeTerminal || vscode.window.createTerminal('Kylrix Enclave');
-      const token = await vscode.window.showInputBox({
-        prompt: 'Agent Enclave Token (kyl_apk_...)',
-        placeHolder: 'kyl_apk_<tokenId>.<etkSecret>',
-      });
-      if (token) {
-        terminal.sendText(`export KYLRIX_AGENT_KEY="${token}"`);
-        terminal.show();
-        vscode.window.showInformationMessage('Injected Agent Enclave Secrets into Terminal session.');
-      }
-    })
+    vscode.commands.registerCommand('kylrix.copyAgentKey', () => copyAgentKeyCommand()),
+    vscode.commands.registerCommand('kylrix.injectTerminalSecrets', () => injectTerminalSecretsCommand())
   );
 
   // 4. Register Status Bar Item
@@ -171,4 +152,39 @@ function updateStatusBar() {
 
 export function deactivate() {
   console.log('[Kylrix] Kylrix Extension deactivated.');
+}
+
+export async function copyAgentKeyCommand() {
+  const key = await vscode.window.showInputBox({
+    prompt: 'Paste your Kylrix agent key to copy it',
+    placeHolder: 'kyl_aet_…',
+    password: true,
+    ignoreFocusOut: true,
+    validateInput: validateAgentTokenInput,
+  });
+  if (!key) return;
+  await vscode.env.clipboard.writeText(key.trim());
+  vscode.window.showInformationMessage('Agent key copied.');
+}
+
+export async function injectTerminalSecretsCommand() {
+  const token = await vscode.window.showInputBox({
+    prompt: 'Paste your Kylrix agent key',
+    placeHolder: 'kyl_aet_…',
+    password: true,
+    ignoreFocusOut: true,
+    validateInput: validateAgentTokenInput,
+  });
+  if (!token) return;
+  // Always create a new transient terminal: env cannot be added to an existing
+  // terminal without typing the secret into scrollback and shell history.
+  const terminal = vscode.window.createTerminal({
+    name: 'Kylrix Agent',
+    env: { KYLRIX_AGENT_KEY: token.trim() },
+    isTransient: true,
+  });
+  terminal.show();
+  vscode.window.showInformationMessage(
+    'Opened a new Kylrix terminal with your agent key loaded. The key is not shown in the terminal.'
+  );
 }

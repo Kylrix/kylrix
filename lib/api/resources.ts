@@ -7,6 +7,8 @@ import { requireScope } from '@/lib/api/guard';
 import { resolveParentRef } from '@/lib/api/v1/query';
 import { listScopeCatalog, type PatScope } from '@/lib/api/scopes';
 import { PatService } from '@/lib/services/pats';
+import { getEnclave, unsealRowWithEnclave } from '@/lib/security/aet-server';
+import type { AetResourceKey } from '@/lib/security/zero-knowledge';
 import { clampNoteTitle } from '@/constants/noteTitle';
 import {
   cleanRowData,
@@ -100,6 +102,64 @@ function forbidden(message: string): never {
   (err as any).status = 403;
   (err as any).code = 'forbidden';
   throw err;
+}
+
+/**
+ * Sealed-read shapes for agent keys (?sealed=1): non-secret metadata plus the
+ * raw field ciphertexts under `sealed`. The MEK-wrapped DEK is never returned —
+ * the agent cannot use it and does not need it.
+ */
+function shapeSealedVaultItem(r: any, fields: readonly string[]) {
+  const sealed: Record<string, string | null> = {};
+  for (const f of fields) {
+    const v = r[f];
+    sealed[f] = typeof v === 'string' && v.trim() ? v : null;
+  }
+  return {
+    id: String(r.$id || r.id),
+    userId: r.userId || null,
+    itemType: r.itemType || 'login',
+    folderId: r.folderId || null,
+    isFavorite: !!r.isFavorite,
+    isPinned: !!r.isPinned,
+    isPublic: Boolean(r.isPublic),
+    isGuest: Boolean(r.isGuest),
+    isWorkspace: Boolean(r.isWorkspace),
+    projectId: r.projectId || null,
+    isEnv: Boolean(r.isEnv),
+    tags: Array.isArray(r.tags) ? r.tags : [],
+    updatedAt: r.$updatedAt || r.updatedAt || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    hasSecret: !!(r.password || r.cardNumber),
+    name: 'Protected Secret',
+    url: null,
+    username: null,
+    sealed,
+  };
+}
+
+function shapeSealedTotpSecret(r: any, fields: readonly string[]) {
+  const sealed: Record<string, string | null> = {};
+  for (const f of fields) {
+    const v = r[f];
+    sealed[f] = typeof v === 'string' && v.trim() ? v : null;
+  }
+  return {
+    id: String(r.$id || r.id),
+    issuer: 'Encrypted Code',
+    accountName: null,
+    url: null,
+    algorithm: r.algorithm || 'SHA1',
+    digits: r.digits || 6,
+    period: r.period || 30,
+    folderId: r.folderId || null,
+    isFavorite: !!r.isFavorite,
+    tags: Array.isArray(r.tags) ? r.tags : [],
+    updatedAt: r.$updatedAt || r.updatedAt || null,
+    createdAt: r.$createdAt || r.createdAt || null,
+    hasSecret: !!r.secretKey,
+    sealed,
+  };
 }
 
 export class PaymentRequiredError extends Error {
@@ -1061,12 +1121,27 @@ export const ApiResources = {
     requireScope(actor, 'pats:write');
     const name = String(body.name || '').trim();
     if (!name) badRequest('name required');
+    // AET minting needs the client's MEK, so it only happens in the browser
+    // via Server Actions — never through this HTTP endpoint.
+    if (body.keyCategory === 'agent_enclave_token' || body.aetEnvelope !== undefined) {
+      badRequest('Agent keys are created in Settings, not over this endpoint');
+    }
     return PatService.create({
       userId: actor.userId,
       name,
       scopes: body.scopes,
       expiresAt: body.expiresAt != null ? String(body.expiresAt) : null,
     });
+  },
+
+  async tokenEnclave(actor: ApiActor) {
+    if (actor.kind !== 'pat' || actor.category !== 'agent_enclave_token' || !actor.patId) {
+      const err = new Error('This endpoint requires an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'not_an_agent_key';
+      throw err;
+    }
+    return PatService.getEnclaveEnvelope(actor.patId, actor.userId);
   },
 
   async revokePat(actor: ApiActor, patId: string) {
@@ -2521,9 +2596,15 @@ export const ApiResources = {
   async listVaultItems(
     actor: ApiActor,
     limit = 25,
-    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null; sealed?: boolean }
   ) {
     requireScope(actor, 'vault:read');
+    if (opts?.sealed && actor.category !== 'agent_enclave_token') {
+      const err = new Error('Sealed reads require an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'forbidden';
+      throw err;
+    }
     const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal vault access is forbidden for jailed workspace actors');
@@ -2570,15 +2651,28 @@ export const ApiResources = {
       rows = res.rows.filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id));
     }
 
+    const enclave = getEnclave(actor);
     return Promise.all(
       rows.map(async (r: any) => {
-        const unsealed = mekBytes
-          ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes)
-          : {};
+        if (opts?.sealed) {
+          return shapeSealedVaultItem(r, VAULT_ENCRYPTED_FIELDS.credentials);
+        }
+        let unsealed: Record<string, any> = {};
+        if (mekBytes) {
+          unsealed = await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.credentials, mekBytes);
+        } else if (enclave) {
+          unsealed =
+            (await unsealRowWithEnclave(
+              enclave,
+              `credential:${r.$id}` as AetResourceKey,
+              r,
+              VAULT_ENCRYPTED_FIELDS.credentials
+            )) || {};
+        }
 
         return shapeVaultItem(r, {
           unsealed,
-          hasMek: !!mekBytes,
+          hasMek: !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
           looksEncrypted,
         });
       }),
@@ -2596,9 +2690,16 @@ export const ApiResources = {
       agentId?: string | null;
       format?: string | null;
       pure?: boolean;
+      sealed?: boolean;
     }
   ) {
     requireScope(actor, 'vault:read');
+    if (opts?.sealed && actor.category !== 'agent_enclave_token') {
+      const err = new Error('Sealed reads require an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'forbidden';
+      throw err;
+    }
     const tables = systemTables();
     const r = (await tables
       .getRow({
@@ -2613,6 +2714,10 @@ export const ApiResources = {
     }
     if (r.userId === actor.userId) {
       await assertObjectInWorkspace(tables, actor, 'credential', id, r);
+    }
+
+    if (opts?.sealed) {
+      return shapeSealedVaultItem(r, VAULT_ENCRYPTED_FIELDS.credentials);
     }
 
     let mekBytes: Uint8Array | null = null;
@@ -2640,7 +2745,8 @@ export const ApiResources = {
       mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
     }
 
-    const { unsealed, keyUsed } = await unsealRowWithAnyKey(
+    const enclave = getEnclave(actor);
+    let { unsealed, keyUsed } = await unsealRowWithAnyKey(
       r,
       VAULT_ENCRYPTED_FIELDS.credentials,
       {
@@ -2650,9 +2756,19 @@ export const ApiResources = {
       }
     );
 
+    if (!keyUsed && !mekBytes && enclave) {
+      const viaEnclave = await unsealRowWithEnclave(
+        enclave,
+        `credential:${r.$id}` as AetResourceKey,
+        r,
+        VAULT_ENCRYPTED_FIELDS.credentials
+      );
+      if (viaEnclave) unsealed = viaEnclave;
+    }
+
     const shaped = shapeVaultItem(r, {
       unsealed,
-      hasMek: !!keyUsed || !!mekBytes,
+      hasMek: !!keyUsed || !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
       looksEncrypted,
     });
 
@@ -3080,9 +3196,15 @@ export const ApiResources = {
   async listTotpSecrets(
     actor: ApiActor,
     limit = 50,
-    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null; sealed?: boolean }
   ) {
     requireScope(actor, 'vault:read');
+    if (opts?.sealed && actor.category !== 'agent_enclave_token') {
+      const err = new Error('Sealed reads require an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'forbidden';
+      throw err;
+    }
     const wsId = enforceWorkspaceJailing(actor, opts?.workspaceId);
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal TOTP access is forbidden for jailed workspace actors');
@@ -3128,15 +3250,28 @@ export const ApiResources = {
       rows = res.rows.filter((r: any) => !r.isWorkspace && !r.projectId && !linkedIds.has(r.$id));
     }
 
+    const enclave = getEnclave(actor);
     return Promise.all(
       rows.map(async (r: any) => {
-        const unsealed = mekBytes
-          ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
-          : {};
+        if (opts?.sealed) {
+          return shapeSealedTotpSecret(r, VAULT_ENCRYPTED_FIELDS.totpSecrets);
+        }
+        let unsealed: Record<string, any> = {};
+        if (mekBytes) {
+          unsealed = await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes);
+        } else if (enclave) {
+          unsealed =
+            (await unsealRowWithEnclave(
+              enclave,
+              `totp:${r.$id}` as AetResourceKey,
+              r,
+              VAULT_ENCRYPTED_FIELDS.totpSecrets
+            )) || {};
+        }
 
         return shapeTotpSecret(r, {
           unsealed,
-          hasMek: !!mekBytes,
+          hasMek: !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
           looksEncrypted,
         });
       }),
@@ -3146,9 +3281,15 @@ export const ApiResources = {
   async getTotpSecret(
     actor: ApiActor,
     id: string,
-    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null }
+    opts?: { mek?: string | null; workspaceId?: string | null; agentId?: string | null; sealed?: boolean }
   ) {
     requireScope(actor, 'vault:read');
+    if (opts?.sealed && actor.category !== 'agent_enclave_token') {
+      const err = new Error('Sealed reads require an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'forbidden';
+      throw err;
+    }
     const tables = systemTables();
     const r = (await tables
       .getRow({
@@ -3161,14 +3302,28 @@ export const ApiResources = {
     if (!r || r.userId !== actor.userId || r.isDeleted) notFound('TOTP secret not found');
     await assertObjectInWorkspace(tables, actor, 'totp', id, r);
 
+    if (opts?.sealed) {
+      return shapeSealedTotpSecret(r, VAULT_ENCRYPTED_FIELDS.totpSecrets);
+    }
+
     const mekBytes = await resolveWorkspaceMekBytes(tables, actor, opts);
-    const unsealed = mekBytes
+    let unsealed: Record<string, any> = mekBytes
       ? await unsealRowFields(r, VAULT_ENCRYPTED_FIELDS.totpSecrets, mekBytes)
       : {};
+    const enclave = getEnclave(actor);
+    if (!mekBytes && enclave) {
+      const viaEnclave = await unsealRowWithEnclave(
+        enclave,
+        `totp:${r.$id}` as AetResourceKey,
+        r,
+        VAULT_ENCRYPTED_FIELDS.totpSecrets
+      );
+      if (viaEnclave) unsealed = viaEnclave;
+    }
 
     return shapeTotpSecret(r, {
       unsealed,
-      hasMek: !!mekBytes,
+      hasMek: !!mekBytes || (enclave && Object.keys(unsealed).length > 0),
       looksEncrypted,
     });
   },

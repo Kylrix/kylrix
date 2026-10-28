@@ -8,6 +8,15 @@ import {
   enforcePatBurstShield,
 } from '@/lib/api/edge-shield';
 import { assertScope, type PatScope } from '@/lib/api/scopes';
+import {
+  toBearerCredential,
+  parseAgentToken,
+  validateAetEnvelope,
+  base64ToBytes,
+  zeroClearBytes,
+  type ParsedAgentToken,
+} from '@/lib/security/zero-knowledge';
+import { attachEnclave, releaseEnclave } from '@/lib/security/aet-server';
 import { getActor } from '@/lib/actions/secure-ops';
 import { verifyOAuthAccessToken } from '@/lib/oauth2/verify-access-token';
 
@@ -51,8 +60,77 @@ function extractBearer(req: NextRequest): string | null {
   return m ? m[1].trim() : null;
 }
 
+function isSecureRequest(req: NextRequest): boolean {
+  const proto = req.headers.get('x-forwarded-proto') || req.nextUrl?.protocol?.replace(':', '') || '';
+  if (proto === 'https') return true;
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || req.nextUrl?.hostname || '')
+    .split(':')[0]
+    .toLowerCase();
+  return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(host);
+}
+
+function httpError(status: number, code: string, message: string): never {
+  const err = new Error(message);
+  (err as any).status = status;
+  (err as any).code = code;
+  throw err;
+}
+
 export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
-  const bearer = extractBearer(req);
+  // Server-assisted AET unlock (opt-in): the full agent key arrives in the
+  // header; the etk lives in a WeakMap for exactly one request.
+  const agentHeader = req.headers.get('x-kylrix-agent-token');
+  if (agentHeader) {
+    const rawHeaderBearer = extractBearer(req);
+    if (rawHeaderBearer && toBearerCredential(rawHeaderBearer) !== toBearerCredential(agentHeader)) {
+      httpError(400, 'conflicting_credentials', 'Send either Authorization or X-Kylrix-Agent-Token, not two different keys');
+    }
+    if (!isSecureRequest(req)) {
+      httpError(400, 'insecure_transport', 'Agent keys require https');
+    }
+    let parsed: ParsedAgentToken;
+    try {
+      parsed = parseAgentToken(agentHeader);
+    } catch {
+      assertShieldAllowed(enforceApiAnonShield(req));
+      httpError(401, 'invalid_agent_token', 'Invalid agent key');
+    }
+    const verified = await PatService.verifyBearer(parsed!.bearer);
+    if (!verified || verified.pat.category !== 'agent_enclave_token') {
+      zeroClearBytes(parsed!.etkSecret);
+      assertShieldAllowed(enforceApiAnonShield(req));
+      httpError(401, 'invalid_agent_token', 'Invalid or revoked agent key');
+    }
+    assertShieldAllowed(enforcePatBurstShield(verified!.pat.$id));
+    const { limits } = await enforceApiRateLimits({
+      userId: verified!.userId,
+      patId: verified!.pat.$id,
+    });
+    const info = await PatService.getEnclaveEnvelope(verified!.pat.$id, verified!.userId);
+    const envelope = validateAetEnvelope(info.envelope);
+    const actor: ApiActor = {
+      userId: verified!.userId,
+      kind: 'pat',
+      patId: verified!.pat.$id,
+      category: 'agent_enclave_token',
+      agentId: (verified!.pat as any).agentId || null,
+      isAgent: true,
+      workspaceId: verified!.pat.workspaceId || null,
+      scopes: verified!.scopes,
+      rateLimits: limits,
+    };
+    attachEnclave(actor, {
+      etkSecret: parsed!.etkSecret,
+      salt: base64ToBytes(envelope.salt),
+      envelope,
+    });
+    return actor;
+  }
+
+  const rawBearer = extractBearer(req);
+  // Defensive: if a client sends a full AET in Authorization, discard the unlock
+  // part before anything hashes, caches, or logs the credential.
+  const bearer = rawBearer ? toBearerCredential(rawBearer) : rawBearer;
   if (!bearer) {
     assertShieldAllowed(enforceApiAnonShield(req));
     const err = new Error('Missing Authorization Bearer token');
@@ -66,6 +144,7 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
     bearer.startsWith('kyl_punch_') ||
     bearer.startsWith('kyl_apat_') ||
     bearer.startsWith('kyl_apk_') ||
+    bearer.startsWith('kyl_aet_') ||
     bearer.startsWith('kyl_wpat_') ||
     bearer.startsWith('pat_')
   ) {
@@ -84,7 +163,7 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
     });
 
     const isWs = verified.pat.isWorkspace === true || String(verified.pat.isWorkspace) === 'true';
-    const isAgent = (verified.pat as any).category === 'agentic_pat' || (verified.pat as any).category === 'agent_provisioning_key' || !!(verified.pat as any).agentId;
+    const isAgent = (verified.pat as any).category === 'agentic_pat' || (verified.pat as any).category === 'agent_provisioning_key' || (verified.pat as any).category === 'agent_enclave_token' || !!(verified.pat as any).agentId;
 
     return {
       userId: verified.userId,
@@ -264,12 +343,25 @@ export async function withApiGuard(
       throw err;
     }
     const actor = await resolveApiActor(req);
-    const res = await handler(actor);
-    if (actor.rateLimits) {
-      applyRateLimitHeaders(res.headers, actor.rateLimits);
+    try {
+      const res = await handler(actor);
+      if (actor.rateLimits) {
+        applyRateLimitHeaders(res.headers, actor.rateLimits);
+      }
+      // Header-mode responses may contain enclave-decrypted plaintext.
+      if (agentHeaderAttached(actor)) {
+        res.headers.set('Cache-Control', 'no-store');
+        res.headers.set('Pragma', 'no-cache');
+      }
+      return res;
+    } finally {
+      releaseEnclave(actor);
     }
-    return res;
   } catch (err) {
     return jsonErr(err);
   }
+}
+
+function agentHeaderAttached(actor: ApiActor): boolean {
+  return actor.kind === 'pat' && actor.category === 'agent_enclave_token';
 }

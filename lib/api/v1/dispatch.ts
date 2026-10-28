@@ -28,6 +28,12 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
   // Token self-service
   if (a === S.token && !b && method === 'GET') return jsonOk(await ApiResources.tokenMe(actor));
   if (a === S.token && !b && method === 'DELETE') return jsonOk(await ApiResources.revokeCurrentToken(actor));
+  // Envelope for client-side AET unlock (the calling agent key only)
+  if (a === S.token && b === 'enclave' && !c && method === 'GET') {
+    return jsonOk(await ApiResources.tokenEnclave(actor), {
+      headers: { 'Cache-Control': 'no-store' },
+    });
+  }
   if (a === S.token && b === SUB.scopes && !c) {
     if (method === 'GET') return jsonOk(await ApiResources.tokenScopeCatalog(actor));
     if (method === 'PATCH' || method === 'PUT') {
@@ -286,7 +292,8 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     const wsId = workspaceIdParam(params) || undefined;
     const agId = params.get('agentId') || undefined;
     if (method === 'GET') {
-      return jsonOk(await ApiResources.listVaultItems(actor, limit(), { mek: mekHeader, workspaceId: wsId, agentId: agId }));
+      const sealed = params.get('sealed') === '1' || params.get('sealed') === 'true';
+      return jsonOk(await ApiResources.listVaultItems(actor, limit(), { mek: mekHeader, workspaceId: wsId, agentId: agId, sealed }));
     }
     if (method === 'POST') {
       const body = await readBody();
@@ -303,6 +310,7 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     const wsId = workspaceIdParam(params) || undefined;
     const agId = params.get('agentId') || undefined;
     if (method === 'GET') {
+      const sealed = params.get('sealed') === '1' || params.get('sealed') === 'true';
       return jsonOk(
         await ApiResources.getVaultItem(actor, b, {
           mek: mekHeader,
@@ -312,6 +320,7 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
           agentId: agId,
           format: formatParam,
           pure: pureParam,
+          sealed,
         })
       );
     }
@@ -335,7 +344,8 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     const wsId = workspaceIdParam(params) || undefined;
     const agId = params.get('agentId') || undefined;
     if (method === 'GET') {
-      return jsonOk(await ApiResources.listTotpSecrets(actor, limit(), { mek: mekHeader, workspaceId: wsId, agentId: agId }));
+      const sealed = params.get('sealed') === '1' || params.get('sealed') === 'true';
+      return jsonOk(await ApiResources.listTotpSecrets(actor, limit(), { mek: mekHeader, workspaceId: wsId, agentId: agId, sealed }));
     }
     if (method === 'POST') {
       const body = await readBody();
@@ -359,7 +369,8 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     const wsId = workspaceIdParam(params) || undefined;
     const agId = params.get('agentId') || undefined;
     if (method === 'GET') {
-      return jsonOk(await ApiResources.getTotpSecret(actor, targetId, { mek: mekHeader, workspaceId: wsId, agentId: agId }));
+      const sealed = params.get('sealed') === '1' || params.get('sealed') === 'true';
+      return jsonOk(await ApiResources.getTotpSecret(actor, targetId, { mek: mekHeader, workspaceId: wsId, agentId: agId, sealed }));
     }
     if (method === 'PATCH' || method === 'PUT') {
       const body = await readBody();

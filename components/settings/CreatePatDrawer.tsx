@@ -24,12 +24,17 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Drawer, useTheme, useMediaQuery } from '@/lib/openbricks/primitives';
-import { PAT_SCOPES, PAT_SCOPE_META, type PatScope } from '@/lib/api/scopes';
+import { PAT_SCOPES, PAT_SCOPE_META, normalizeScopes, type PatScope } from '@/lib/api/scopes';
 import { createPat } from '@/lib/actions/client-ops';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
+import { formatAgentToken, generateEtkSecret, zeroClearBytes } from '@/lib/security/zero-knowledge';
+import { buildAetEnvelope, loadPermittedRows } from '@/lib/security/aet-mint';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { useAuth } from '@/context/auth/AuthContext';
 
 type Step = 'name' | 'wizard_step1' | 'wizard_step2' | 'scopes' | 'done';
 
+const DRAFT_KEY = 'kylrix.patDrawerDraft';
 const DEFAULT_SCOPES: PatScope[] = ['profile:read', 'notes:read', 'notes:write'];
 
 export type ResourceCategoryKey =
@@ -119,6 +124,47 @@ export const SCOPE_CATEGORIES: ScopeCategoryDef[] = [
   },
 ];
 
+// Resource toggles in the agent-key wizard add and lock these read scopes (#317).
+export const AET_RESOURCE_SCOPES = {
+  vault: ['vault:read'],
+  totp: ['vault:read'], // TOTP routes require vault:read
+  notes: ['notes:read'],
+} as const satisfies Record<string, readonly PatScope[]>;
+
+export function computeAetRequiredScopes(p: {
+  permittedVault: boolean;
+  permittedTotp: boolean;
+  permittedNotes: boolean;
+}): PatScope[] {
+  const s = new Set<PatScope>(['profile:read']);
+  if (p.permittedVault) AET_RESOURCE_SCOPES.vault.forEach((x) => s.add(x));
+  if (p.permittedTotp) AET_RESOURCE_SCOPES.totp.forEach((x) => s.add(x));
+  if (p.permittedNotes) AET_RESOURCE_SCOPES.notes.forEach((x) => s.add(x));
+  return [...s];
+}
+
+export function computeAetScopes(
+  selected: PatScope[],
+  p: Parameters<typeof computeAetRequiredScopes>[0]
+): PatScope[] {
+  return normalizeScopes([...selected, ...computeAetRequiredScopes(p)]);
+}
+
+export function getStepTitle(step: Step, isAetToken: boolean): string {
+  switch (step) {
+    case 'name':
+      return '1. Token Name';
+    case 'wizard_step1':
+      return '2. Permitted Items';
+    case 'wizard_step2':
+      return '3. Security Policy';
+    case 'scopes':
+      return isAetToken ? '4. Permissions & Scopes' : '2. Permissions & Scopes';
+    case 'done':
+      return isAetToken ? '5. Save Your Agent Key' : '3. Save Your Secret Key';
+  }
+}
+
 export function isReadScope(scope: PatScope): boolean {
   return scope.endsWith(':read') || scope === 'profile:read';
 }
@@ -187,18 +233,23 @@ export function CreatePatDrawer({
 }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<PatScope[]>(DEFAULT_SCOPES);
   const [creating, setCreating] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  // Agent Enclave Tokens (AET) & Zero-Knowledge Secrets state
+  // Agent key (AET) state — the unlock key never touches React state or the wire.
   const [isAetToken, setIsAetToken] = useState(false);
   const [permittedVault, setPermittedVault] = useState(true);
   const [permittedTotp, setPermittedTotp] = useState(true);
-  const [permittedNotes, setPermittedNotes] = useState(true);
+  const [permittedNotes, setPermittedNotes] = useState(false);
   const [aetExpiryDays, setAetExpiryDays] = useState<number>(30);
+  const [needsUnlock, setNeedsUnlock] = useState(false);
+  const [unlockPwd, setUnlockPwd] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
+  const [shareSummary, setShareSummary] = useState<{ included: number; skipped: number } | null>(null);
 
   // Sweep / Preset state
   const [activeResourceFilter, setActiveResourceFilter] = useState<ResourceCategoryKey | 'all'>('all');
@@ -219,17 +270,71 @@ export function CreatePatDrawer({
   useEffect(() => {
     if (!open) return;
     setStep('name');
-    setName('');
-    setSelected(DEFAULT_SCOPES);
     setCreating(false);
     setToken(null);
+    setNeedsUnlock(false);
+    setUnlockPwd('');
+    setShareSummary(null);
     setActiveResourceFilter('all');
     setActiveAccessFilter('all');
+    // Restore non-secret draft choices (never the minted key or secrets)
+    let draft: any = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
+    } catch {}
+    if (draft && typeof draft === 'object') {
+      setName(typeof draft.name === 'string' ? draft.name : '');
+      setSelected(Array.isArray(draft.scopes) ? normalizeScopes(draft.scopes) : DEFAULT_SCOPES);
+      setIsAetToken(draft.isAetToken === true);
+      setPermittedVault(draft.permittedVault !== false);
+      setPermittedTotp(draft.permittedTotp !== false);
+      setPermittedNotes(draft.permittedNotes === true);
+      setAetExpiryDays(typeof draft.aetExpiryDays === 'number' ? draft.aetExpiryDays : 30);
+    } else {
+      setName('');
+      setSelected(DEFAULT_SCOPES);
+      setIsAetToken(false);
+      setPermittedVault(true);
+      setPermittedTotp(true);
+      setPermittedNotes(false);
+      setAetExpiryDays(30);
+    }
   }, [open]);
+
+  // Persist non-secret choices so an accidental close keeps the draft.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          name,
+          scopes: selected,
+          isAetToken,
+          permittedVault,
+          permittedTotp,
+          permittedNotes,
+          aetExpiryDays,
+        })
+      );
+    } catch {}
+  }, [name, selected, isAetToken, permittedVault, permittedTotp, permittedNotes, aetExpiryDays]);
+
+  // The minted key string is dropped on unmount and on close.
+  useEffect(() => () => setToken(null), []);
 
   if (!open) return null;
 
+  const handleClose = () => {
+    setToken(null);
+    onClose();
+  };
+
+  const requiredAetScopes = isAetToken
+    ? computeAetRequiredScopes({ permittedVault, permittedTotp, permittedNotes })
+    : [];
+
   const toggleScope = (s: PatScope) => {
+    if (requiredAetScopes.includes(s)) return; // locked: needed for the chosen items
     setSelected((prev) =>
       prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
     );
@@ -250,7 +355,7 @@ export function CreatePatDrawer({
   };
 
   const handleClearAll = () => {
-    setSelected([]);
+    setSelected(isAetToken ? computeAetRequiredScopes({ permittedVault, permittedTotp, permittedNotes }) : []);
     toast.success('Cleared all permissions');
   };
 
@@ -258,7 +363,11 @@ export function CreatePatDrawer({
     setActiveResourceFilter(resource);
     setActiveAccessFilter(access);
     const target = computeSweepScopes(resource, access);
-    setSelected(target);
+    setSelected(
+      isAetToken
+        ? computeAetScopes(target, { permittedVault, permittedTotp, permittedNotes })
+        : target
+    );
 
     const resName = resource === 'all' ? 'All Resources' : SCOPE_CATEGORIES.find((c) => c.key === resource)?.label;
     const accName = access === 'all' ? 'Full Access' : access === 'read' ? 'Read Only' : 'Write & Execute';
@@ -287,6 +396,64 @@ export function CreatePatDrawer({
       toast.error('Pick at least one permission');
       return;
     }
+    if (isAetToken) {
+      const mek = masterPassCrypto.getMasterKey();
+      if (!mek || !masterPassCrypto.isVaultUnlocked()) {
+        setNeedsUnlock(true);
+        return;
+      }
+      const etk = generateEtkSecret();
+      setCreating(true);
+      try {
+        const userId = (user as any)?.$id || (user as any)?.id;
+        const rows = await loadPermittedRows({
+          userId,
+          permittedVault,
+          permittedTotp,
+          permittedNotes,
+          isWorkspace,
+          workspaceId,
+        });
+        const { envelope, included, skipped } = await buildAetEnvelope({
+          mek,
+          rows,
+          etkSecret: etk,
+          resources: { credential: permittedVault, totp: permittedTotp, note: permittedNotes },
+        });
+        if (included === 0) {
+          toast.error('None of the chosen items can be shared yet.');
+          return;
+        }
+        const res = await createPat({
+          name: name.trim(),
+          scopes: computeAetScopes(selected, { permittedVault, permittedTotp, permittedNotes }),
+          expiresAt: aetExpiryDays > 0 ? new Date(Date.now() + aetExpiryDays * 86_400_000).toISOString() : null,
+          keyCategory: 'agent_enclave_token',
+          isWorkspace,
+          workspaceId,
+          aetEnvelope: envelope,
+        });
+        setToken(formatAgentToken(res.token, etk));
+        setShareSummary({ included, skipped });
+        try {
+          sessionStorage.removeItem(DRAFT_KEY);
+        } catch {}
+        setStep('done');
+        try {
+          await navigator.clipboard.writeText(formatAgentToken(res.token, etk));
+          toast.success('Agent key created and copied');
+        } catch {
+          toast.success('Agent key created — copy it now');
+        }
+        onCreated?.();
+      } catch (err: any) {
+        toast.error(err?.message || 'Create failed');
+      } finally {
+        zeroClearBytes(etk);
+        setCreating(false);
+      }
+      return;
+    }
     setCreating(true);
     try {
       const res = await createPat({
@@ -296,6 +463,9 @@ export function CreatePatDrawer({
         workspaceId,
       });
       setToken(res.token);
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch {}
       setStep('done');
       try {
         await navigator.clipboard.writeText(res.token);
@@ -315,7 +485,7 @@ export function CreatePatDrawer({
     <Drawer
       anchor={isDesktop ? 'right' : 'bottom'}
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       keepMounted={false}
       disablePortal
       ModalProps={{ keepMounted: false }}
@@ -327,17 +497,15 @@ export function CreatePatDrawer({
         <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 shrink-0 border-b border-white/[0.06]">
           <div className="min-w-0">
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/40">
-              {isWorkspace ? 'Workspace Key' : 'Personal Access Token'}
+              {isAetToken ? 'Agent Key' : isWorkspace ? 'Workspace Key' : 'Personal Access Token'}
             </p>
             <h2 className="text-lg font-black font-clash text-white tracking-tight truncate">
-              {step === 'name' && '1. Token Name'}
-              {step === 'scopes' && '2. Permissions & Scopes'}
-              {step === 'done' && '3. Save Your Secret Key'}
+              {getStepTitle(step, isAetToken)}
             </h2>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-xl bg-[#0A0908] border border-white/[0.06] text-white/50 hover:text-white cursor-pointer transition-colors"
             aria-label="Close"
           >
@@ -374,7 +542,7 @@ export function CreatePatDrawer({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <ShieldAlert size={16} className="text-indigo-400" />
-                    <span className="text-xs font-bold text-white font-mono">Agent Enclave Token (AET)</span>
+                    <span className="text-xs font-bold text-white font-mono">Agent key with access to private items</span>
                   </div>
                   <input
                     type="checkbox"
@@ -384,7 +552,7 @@ export function CreatePatDrawer({
                   />
                 </div>
                 <p className="text-[11px] text-white/50 leading-relaxed">
-                  Enable Zero-Knowledge secret access. Generates a client-side <code className="text-indigo-300 font-mono">kyl_apk_...</code> token with an ephemeral secret key (<code className="text-indigo-300 font-mono">etkSecret</code>).
+                  Lets an AI agent read the private items you choose. Only you and the agent can open them; Kylrix cannot.
                 </p>
               </div>
 
@@ -394,7 +562,7 @@ export function CreatePatDrawer({
                 onClick={() => setStep(isAetToken ? 'wizard_step1' : 'scopes')}
                 className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40 transition-all"
               >
-                {isAetToken ? 'Next: Zero-Knowledge Wizard' : 'Configure Permissions'}
+                {isAetToken ? 'Next: Choose items' : 'Configure Permissions'}
                 <ChevronRight size={16} />
               </button>
             </div>
@@ -403,9 +571,9 @@ export function CreatePatDrawer({
           {step === 'wizard_step1' && (
             <div className="space-y-4 pt-2">
               <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-white/[0.08] space-y-1.5">
-                <p className="text-xs font-bold text-indigo-400 font-mono">Step 1: Select Permitted Target Resources</p>
+                <p className="text-xs font-bold text-indigo-400 font-mono">Step 1: Select Permitted Items</p>
                 <p className="text-xs text-white/50">
-                  Select which encrypted resources this Agent Enclave Token can decrypt using client-side wrapped DEKs.
+                  Choose which private items this agent key can open.
                 </p>
               </div>
 
@@ -442,12 +610,13 @@ export function CreatePatDrawer({
                   />
                 </label>
 
+                {false && (
                 <label className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0A0908] border border-white/10 cursor-pointer">
                   <div className="flex items-center gap-3">
                     <Lightbulb size={16} className="text-indigo-400" />
                     <div>
-                      <p className="text-xs font-bold text-white">Encrypted Notes & Ideas</p>
-                      <p className="text-[10px] text-white/40">Zero-Knowledge locked document bodies</p>
+                      <p className="text-xs font-bold text-white">Private Notes</p>
+                      <p className="text-[10px] text-white/40">Private notes you have locked</p>
                     </div>
                   </div>
                   <input
@@ -457,6 +626,7 @@ export function CreatePatDrawer({
                     className="w-4 h-4 accent-[#6366F1] cursor-pointer"
                   />
                 </label>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 pt-2">
@@ -469,8 +639,9 @@ export function CreatePatDrawer({
                 </button>
                 <button
                   type="button"
+                  disabled={!permittedVault && !permittedTotp && !permittedNotes}
                   onClick={() => setStep('wizard_step2')}
-                  className="py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-xs font-extrabold cursor-pointer"
+                  className="py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-xs font-extrabold cursor-pointer disabled:opacity-40"
                 >
                   Step 2: Security Policy
                 </button>
@@ -504,10 +675,10 @@ export function CreatePatDrawer({
 
               <div className="p-3.5 rounded-2xl bg-[#0A0908] border border-amber-500/20 text-xs text-amber-300 space-y-1">
                 <p className="font-bold flex items-center gap-1">
-                  <ShieldAlert size={14} /> Zero-Knowledge Guarantee
+                  <ShieldAlert size={14} /> Private by design
                 </p>
                 <p className="text-[11px] text-white/60 leading-relaxed">
-                  The client unlocks the local vault, wraps item DEKs with a fresh <code className="text-amber-200 font-mono">etkSecret</code>, and constructs <code className="text-amber-200 font-mono">kyl_apk_...</code>. The server never receives <code className="text-amber-200 font-mono">etkSecret</code>.
+                  Your browser prepares a key that only this agent can use. Kylrix stores a locked copy and cannot open your items.
                 </p>
               </div>
 
@@ -521,7 +692,12 @@ export function CreatePatDrawer({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setStep('scopes')}
+                  onClick={() => {
+                    setSelected((prev) =>
+                      computeAetScopes(prev, { permittedVault, permittedTotp, permittedNotes })
+                    );
+                    setStep('scopes');
+                  }}
                   className="py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-xs font-extrabold cursor-pointer"
                 >
                   Step 3: Review Permissions
@@ -709,11 +885,14 @@ export function CreatePatDrawer({
                             const on = selected.includes(s);
                             const meta = PAT_SCOPE_META[s];
                             const isRead = isReadScope(s);
+                            const required = requiredAetScopes.includes(s);
 
                             return (
                               <button
                                 key={s}
                                 type="button"
+                                disabled={required}
+                                title={required ? 'Needed for the items you chose' : undefined}
                                 onClick={() => toggleScope(s)}
                                 className={`flex items-center justify-between gap-2 p-2.5 rounded-xl text-left border cursor-pointer transition-all ${
                                   on
@@ -733,7 +912,9 @@ export function CreatePatDrawer({
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-[10px] font-mono text-white/30 truncate">{s}</p>
+                                  <p className="text-[10px] font-mono text-white/30 truncate">
+                                    {s}{required && <span className="text-indigo-300 not-italic font-sans"> · Needed for the items you chose</span>}
+                                  </p>
                                 </div>
 
                                 <div className="flex items-center gap-1.5 shrink-0">
@@ -776,6 +957,49 @@ export function CreatePatDrawer({
                   <ChevronLeft size={16} />
                   Back
                 </button>
+                {needsUnlock ? (
+                  <div className="col-span-2 p-3.5 rounded-2xl bg-[#0A0908] border border-amber-500/30 space-y-2.5">
+                    <p className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                      <Lock size={13} /> Unlock your vault to continue
+                    </p>
+                    <input
+                      type="password"
+                      value={unlockPwd}
+                      onChange={(e) => setUnlockPwd(e.target.value)}
+                      placeholder="Master password"
+                      className="w-full rounded-xl bg-[#161412] border border-white/10 px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-[#6366F1]"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') document.getElementById('aet-unlock-btn')?.click();
+                      }}
+                    />
+                    <button
+                      id="aet-unlock-btn"
+                      type="button"
+                      disabled={unlocking || !unlockPwd}
+                      onClick={async () => {
+                        const userId = (user as any)?.$id || (user as any)?.id;
+                        setUnlocking(true);
+                        try {
+                          const ok = await masterPassCrypto.unlock(unlockPwd, userId, false);
+                          if (ok) {
+                            setNeedsUnlock(false);
+                            setUnlockPwd('');
+                            toast.success('Vault unlocked');
+                          } else {
+                            toast.error('Wrong master password');
+                          }
+                        } catch {
+                          toast.error('Could not unlock vault');
+                        } finally {
+                          setUnlocking(false);
+                        }
+                      }}
+                      className="w-full py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-xs font-extrabold cursor-pointer disabled:opacity-40"
+                    >
+                      {unlocking ? 'Unlocking…' : 'Unlock Vault'}
+                    </button>
+                  </div>
+                ) : (
                 <button
                   type="button"
                   disabled={creating || selected.length === 0}
@@ -783,8 +1007,9 @@ export function CreatePatDrawer({
                   className="inline-flex items-center justify-center gap-1.5 py-3 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-sm font-extrabold cursor-pointer disabled:opacity-40 transition-all"
                 >
                   <KeyRound size={16} />
-                  {creating ? 'Creating…' : `Mint Token (${selected.length})`}
+                  {creating ? 'Creating…' : isAetToken ? 'Mint Agent Key' : `Mint Token (${selected.length})`}
                 </button>
+                )}
               </div>
             </div>
           )}
@@ -793,8 +1018,15 @@ export function CreatePatDrawer({
             <div className="space-y-4 pt-2">
               <div className="rounded-2xl bg-[#0A0908] border border-amber-500/25 p-4 space-y-2">
                 <p className="text-[11px] font-bold text-amber-400">
-                  Secret key generated! Copied to clipboard.
+                  {isAetToken && shareSummary
+                    ? `Agent key created. It can open ${shareSummary.included} items. Copy it now; you will not see it again.`
+                    : 'Secret key generated! Copied to clipboard.'}
                 </p>
+                {isAetToken && shareSummary && shareSummary.skipped > 0 && (
+                  <p className="text-[10px] text-white/50">
+                    {shareSummary.skipped} older items could not be included. Open and save them once to make them shareable.
+                  </p>
+                )}
                 <code className="block text-[11px] font-mono text-white/80 break-all select-all bg-[#161412] p-3 rounded-xl border border-white/10">
                   {token}
                 </code>
@@ -812,7 +1044,7 @@ export function CreatePatDrawer({
               </button>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={handleClose}
                 className="w-full py-3.5 rounded-2xl bg-[#6366F1] hover:bg-[#5558E6] text-white text-sm font-extrabold cursor-pointer transition-colors"
               >
                 Done

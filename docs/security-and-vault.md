@@ -67,24 +67,30 @@ Reactive events (`vault-unlocked`, `kylrix:vault-unlocked`, `vault-locked`) auto
 Kylrix provides zero-knowledge secret access and persistent memory for AI agents (Claude Code, Cursor, AutoGPT, CLI, VS Code, REST API, WebMCP, Discord/Telegram) via **Dual-Wrapped Enclave Crypto**.
 
 ### Token Secret (`etkSecret`) & Item-Level DEK Wrapping
-When an Agent Enclave Token (`kyl_apk_<tokenId>.<etkSecret>`) is minted in Settings:
+An AET has the canonical form `kyl_aet_<8 hex>_<32 b64url auth secret>.etk_<64 hex>`. The part left of the dot is the bearer credential (SHA-256 hashed in `apikey.key`); `etk_<64 hex>` is a 32-byte unlock secret that never leaves the client. `kyl_apk_` remains reserved for Agent Provisioning Keys.
+
+When an agent key is minted in Settings:
 1. **Local Vault Unlock**: The browser unlocks the vault locally using MEK or Passkey PRF.
-2. **Ephemeral Secret Generation**: The client generates a 256-bit secure secret key (`etkSecret`).
-3. **Double-Wrapped DEK Map (`wrappedDeks`)**: The client wraps the DEKs of permitted resources (Vault credentials, TOTP keys, or Encrypted Notes/Ideas) using `etkSecret`.
-4. **Metadata Persistence**: The wrapped DEK map is stored in `apikey.metadata` or item metadata (`notes.metadata`, `vault_items.metadata`).
-5. **Zero Server Exposure**: The server receives `wrappedDeks` but **never possesses MEK or `etkSecret`**.
+2. **Ephemeral Secret Generation**: The client generates a 256-bit `etkSecret`.
+3. **Envelope Construction**: For each permitted Row, the client unwraps the Row DEK with the MEK and re-wraps it under an HKDF-SHA256 key derived from `etkSecret` + a random 16-byte envelope salt. Each entry is AES-256-GCM sealed with AAD equal to its resource key (`credential:<id>` or `totp:<id>`), so entries cannot be swapped between items. Rows without a wrapped DEK (legacy MEK-direct encryption) are skipped and reported.
+4. **Metadata Persistence**: The envelope is stored at `apikey.metadata.aet`. It is never returned by PAT list/me endpoints; `GET /api/v1/token/enclave` serves it only to the authenticating agent key itself.
+5. **Zero Server Exposure**: In the default client-side mode the server holds the envelope but **never possesses MEK or `etkSecret`**. The opt-in `X-Kylrix-Agent-Token` header mode decrypts in-memory for one request (https/loopback only) and is a documented non-zero-knowledge trade-off.
 
 ```json
 {
-  "wrappedDeks": {
-    "vault_item_1": {
-      "wrappedDek": "bXl3cmFwcGVkZGVr...",
-      "iv": "MTJieXRlaXY...",
-      "algorithm": "AES-256-GCM"
-    }
+  "v": 1,
+  "alg": "AES-256-GCM",
+  "kdf": "HKDF-SHA256",
+  "salt": "<b64, 16 bytes>",
+  "resources": { "credential": true, "totp": true, "note": false },
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "deks": {
+    "credential:<id>": { "wrappedDek": "<b64>", "iv": "<b64, 12 bytes>", "algorithm": "AES-256-GCM" }
   }
 }
 ```
+
+Agents read ciphertext via `?sealed=1` on `GET /api/v1/vault[/id]` and `GET /api/v1/totp[/id]` (agent keys only; the MEK-wrapped `dek` is never included), fetch their envelope from `GET /api/v1/token/enclave`, and unlock locally — see `packages/cli/src/enclave.ts`.
 
 ---
 
@@ -94,13 +100,14 @@ To prevent process memory dumps or sub-shell environment leakage when running co
 
 1. Secrets are decrypted directly in Node.js process RAM.
 2. Transient variables are injected into `childEnv = { ...process.env, ...resolved.variables }`.
-3. Upon process termination (`child.on('exit')`), string allocations in memory are explicitly zeroed out:
+3. Upon process termination (`child.on('exit')`), references to decrypted values are deleted from the child env map:
    ```typescript
-   for (const key of Object.keys(resolved.variables)) {
-     (childEnv as any)[key] = '';
-     (resolved.variables as any)[key] = '';
+   for (const key of Object.keys(vars)) {
+     delete (childEnv as any)[key];
+     delete (vars as any)[key];
    }
    ```
+   Note: JavaScript strings are immutable and cannot be overwritten in memory — only `Uint8Array` buffers (unlock keys, salts, DEKs) are truly zeroed via `.fill(0)`. String references are dropped so the GC can reclaim them.
 
 ---
 

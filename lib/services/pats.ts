@@ -3,8 +3,9 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, desc, count } from 'drizzle-orm';
 import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
+import { AET_BEARER_REGEX, toBearerCredential, validateAetEnvelope, type AetEnvelope } from '@/lib/security/zero-knowledge';
 
-export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token';
+export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token' | 'agent_enclave_token';
 
 export type PatRow = {
   $id: string;
@@ -54,6 +55,9 @@ export function formatPatToken(
   secret: string, 
   category: PatCategory = 'user_pat'
 ) {
+  if (category === 'agent_enclave_token') {
+    return `kyl_aet_${prefix}_${secret}`;
+  }
   if (category === 'agent_provisioning_key') {
     return `kyl_apk_${prefix}_${secret}`;
   }
@@ -70,9 +74,15 @@ export function formatPatToken(
 }
 
 export function parsePatToken(raw: string): { prefix: string; token: string; category: PatCategory } | null {
-  const token = String(raw || '').trim();
+  // Strip an AET unlock part first so only the bearer half is ever hashed or stored.
+  const token = toBearerCredential(String(raw || '').trim());
   let category: PatCategory = 'user_pat';
   let rest = '';
+
+  if (token.startsWith('kyl_aet_')) {
+    if (!AET_BEARER_REGEX.test(token)) return null;
+    return { prefix: token.slice(8, 16), token, category: 'agent_enclave_token' };
+  }
 
   if (token.startsWith('kyl_apk_')) {
     category = 'agent_provisioning_key';
@@ -180,6 +190,7 @@ export const PatService = {
     workspaceId?: string | null;
     keyCategory?: PatCategory;
     agentId?: string | null;
+    aetEnvelope?: unknown;
   }): Promise<{ pat: PatPublic; token: string }> {
     const scopes = normalizeScopes(params.scopes);
     if (scopes.length === 0) throw new Error('Select at least one permission');
@@ -194,8 +205,18 @@ export const PatService = {
       else if (scopes.length === 1 && scopes.includes('agents:provision')) category = 'agent_provisioning_key';
     }
 
+    // AET envelopes carry client-wrapped DEKs; the server validates shape only.
+    let aet: AetEnvelope | null = null;
+    if (category === 'agent_enclave_token') {
+      aet = validateAetEnvelope(params.aetEnvelope);
+      if (JSON.stringify(aet).length > 196_608) throw new Error('Too many items for one agent key');
+    }
+
     const id = 'pat_' + randomBytes(12).toString('hex');
-    const tokenPrefix = randomBytes(6).toString('base64url').slice(0, 8);
+    // AET prefixes are fixed-length hex so the bearer never contains '_' or '-'.
+    const tokenPrefix = category === 'agent_enclave_token'
+      ? randomBytes(4).toString('hex')
+      : randomBytes(6).toString('base64url').slice(0, 8);
     const secret = makeSecret();
     const token = formatPatToken(tokenPrefix, secret, category);
     const tokenHash = hashToken(token);
@@ -227,7 +248,7 @@ export const PatService = {
       createdAt: now,
       updatedAt: now,
       permissions: JSON.stringify(scopes),
-      metadata: JSON.stringify({ agentId: params.agentId || null }),
+      metadata: JSON.stringify({ agentId: params.agentId || null, ...(aet ? { aet } : {}) }),
       category,
       workspaceId: params.workspaceId || params.agentId || null,
       isWorkspace: isWs,
@@ -466,5 +487,45 @@ export const PatService = {
     verifiedPatCache.set(hash, { data: result, ts: Date.now() });
 
     return result;
+  },
+
+  /**
+   * Returns the AET envelope, scopes, and expiry for one agent-enclave-token
+   * Row. Only ever called for the authenticating token (no patId parameter on
+   * the endpoint). The etk is never stored or returned.
+   */
+  async getEnclaveEnvelope(patId: string, userId: string): Promise<{
+    envelope: AetEnvelope;
+    scopes: PatScope[];
+    expiresAt: string | null;
+  }> {
+    const rows = await db
+      .select()
+      .from(schema.apikey)
+      .where(and(eq(schema.apikey.id, patId), eq(schema.apikey.userId, userId)))
+      .limit(1);
+    const row = rows[0];
+    if (!row || row.category !== 'agent_enclave_token') {
+      const err = new Error('This endpoint requires an agent key');
+      (err as any).status = 403;
+      (err as any).code = 'not_an_agent_key';
+      throw err;
+    }
+    let meta: any = null;
+    try {
+      meta = row.metadata ? JSON.parse(row.metadata) : null;
+    } catch {}
+    const envelope = meta?.aet;
+    if (!envelope || typeof envelope !== 'object') {
+      const err = new Error('Agent key envelope not found');
+      (err as any).status = 404;
+      (err as any).code = 'envelope_missing';
+      throw err;
+    }
+    return {
+      envelope: envelope as AetEnvelope,
+      scopes: normalizeScopes(row.permissions),
+      expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
+    };
   },
 };

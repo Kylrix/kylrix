@@ -1,5 +1,6 @@
 import { exec } from 'node:child_process';
 import pc from 'picocolors';
+import { toBearerCredential } from '@/lib/security/zero-knowledge';
 import { getClient } from '../client';
 import {
   saveConfig,
@@ -42,6 +43,8 @@ export async function loginCommand(opts: {
       if (effectiveToken.startsWith('kyl_wpat_')) {
         contextLevel = 'Workspace Jailed PAT';
         isJailedWorkspace = true;
+      } else if (effectiveToken.startsWith('kyl_aet_')) {
+        contextLevel = 'Agent Enclave Token (read-only access to chosen items)';
       } else if (effectiveToken.startsWith('kyl_apk_')) {
         contextLevel = 'Agent Provisioning Key (Multi-Workspace Spawning)';
       } else if (effectiveToken.startsWith('kyl_apat_')) {
@@ -63,10 +66,13 @@ export async function loginCommand(opts: {
         }
       } catch {}
 
+      // Never persist the unlock part of an agent key; only the bearer is saved.
+      const storableToken = toBearerCredential(effectiveToken);
+      const droppedUnlockPart = storableToken !== effectiveToken;
       saveConfig(
         {
           apiUrl: env.apiUrl,
-          token: effectiveToken,
+          token: storableToken,
           userId: profile.id,
           email: profile.email,
           tier: profile.tier,
@@ -75,6 +81,9 @@ export async function loginCommand(opts: {
         env.apiUrl
       );
       printSuccess(`Logged in as ${pc.bold(profile.email || profile.id)}`);
+      if (droppedUnlockPart) {
+        printInfo('Saved sign-in only. The unlock part of your agent key is never written to disk. Set KYLRIX_AGENT_KEY to unlock items.');
+      }
       printInfo(`Context:   ${pc.magenta(contextLevel)}`);
       if (detectedWorkspaceId) {
         printInfo(`Workspace: ${pc.green(detectedWorkspaceId)}${isJailedWorkspace ? pc.yellow(' (jailed)') : ''}`);
@@ -233,6 +242,7 @@ export async function whoamiCommand(opts: { url?: string; token?: string; json?:
 
     let contextType = 'Account Context (Can switch to all workspaces)';
     if (env.token?.startsWith('kyl_wpat_')) contextType = 'Workspace Jailed PAT';
+    else if (env.token?.startsWith('kyl_aet_')) contextType = 'Agent Enclave Token';
     else if (env.token?.startsWith('kyl_apk_')) contextType = 'Agent Provisioning Key';
     else if (env.token?.startsWith('kyl_apat_')) contextType = 'Agent Workspace PAT';
     else if (env.token?.startsWith('kyl_pat_')) contextType = 'Personal PAT (Account Level)';

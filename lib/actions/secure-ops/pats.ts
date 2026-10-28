@@ -14,6 +14,7 @@ export async function createPatSecure(params: {
   workspaceId?: string | null;
   keyCategory?: import('@/lib/services/pats').PatCategory;
   agentId?: string | null;
+  aetEnvelope?: unknown;
   jwt?: string;
 }) {
   const actor = await getActor(params.jwt);
@@ -27,6 +28,7 @@ export async function createPatSecure(params: {
     workspaceId: params.workspaceId,
     keyCategory: params.keyCategory,
     agentId: params.agentId,
+    aetEnvelope: params.aetEnvelope,
   });
 }
 

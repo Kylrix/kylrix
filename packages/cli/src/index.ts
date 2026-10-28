@@ -74,7 +74,7 @@ import {
   pushEnvCommand,
   listEnvsCommand,
 } from './commands/envs';
-import { execCommand } from './commands/exec';
+import { execCommand, resolveExecArgs } from './commands/exec';
 import {
   listTotpCommand,
   getTotpCodeCommand,
@@ -86,6 +86,7 @@ import {
   getAgentSessionCommand,
   startAgentSessionCommand,
   deleteAgentSessionCommand,
+  connectAgentCommand,
 } from './commands/agents';
 import { searchCommand } from './commands/search';
 import { shareCommand } from './commands/share';
@@ -491,18 +492,16 @@ envCmd
 
 // ── POSIX Process Wrapper (kylrix exec) ──
 program
-  .command('exec <idOrUrl> [command...]')
+  .command('exec [idOrUrl] [command...]')
   .description('Zero-leak POSIX process wrapper: inject secrets into transient child env and purge RAM on exit')
   .option('--share-key <key>', 'Decryption share key for public vault link')
+  .option('--token <token>', 'Agent key (KYLRIX_AGENT_KEY) for agent-key unlock mode')
+  .option('--json', 'Print loaded item names as JSON')
   .allowUnknownOption()
   .action((idOrUrl, commandArgs, cmdOpts) => {
     const rawArgs = process.argv.slice(process.argv.indexOf('exec') + 2);
-    const argsToRun = rawArgs.includes('--')
-      ? rawArgs.slice(rawArgs.indexOf('--') + 1)
-      : commandArgs && commandArgs.length > 0
-      ? commandArgs
-      : rawArgs.filter((a) => !a.startsWith('-') && a !== idOrUrl);
-    return execCommand(idOrUrl, argsToRun, { ...program.opts(), ...cmdOpts });
+    const { command } = resolveExecArgs(idOrUrl, commandArgs, rawArgs, false);
+    return execCommand(idOrUrl, command, { ...program.opts(), ...cmdOpts });
   });
 
 // ── 6. TOTP 2FA Authenticator ──
@@ -558,6 +557,19 @@ agents
   .command('delete <id>')
   .description('Delete an agent session')
   .action((id, cmdOpts) => deleteAgentSessionCommand(id, { ...program.opts(), ...cmdOpts }));
+
+agents
+  .command('connect [command...]')
+  .description('Check an agent key and start Claude Code, Cursor, or any command with it loaded')
+  .option('--claude-code', 'Start Claude Code (claude) with the agent key')
+  .option('--cursor', 'Start Cursor Agent (cursor-agent) with the agent key')
+  .option('--check', 'Only check the agent key and show what it can open')
+  .allowUnknownOption()
+  .action((command, cmdOpts) => {
+    const rawArgs = process.argv.slice(process.argv.indexOf('connect') + 2);
+    const cmd = rawArgs.includes('--') ? rawArgs.slice(rawArgs.indexOf('--') + 1) : command || [];
+    return connectAgentCommand(cmd, { ...program.opts(), ...cmdOpts });
+  });
 
 // ── 8. Global Search ──
 program

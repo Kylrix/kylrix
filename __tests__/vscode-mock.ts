@@ -30,6 +30,8 @@ export const StatusBarAlignment = {
   Right: 2,
 };
 
+export const createdTerminals: any[] = [];
+
 export const window = {
   registerTreeDataProvider: () => ({ dispose: () => {} }),
   createStatusBarItem: () => new StatusBarItem(),
@@ -40,6 +42,17 @@ export const window = {
   showQuickPick: async () => undefined,
   showTextDocument: async () => {},
   withProgress: async (_opts: any, task: any) => task({ report: () => {} }),
+  activeTerminal: undefined as any,
+  createTerminal: (opts?: any) => {
+    const t = {
+      options: opts,
+      show() {},
+      sendText(_text?: string, _addNewLine?: boolean) {},
+      dispose() {},
+    };
+    createdTerminals.push(t);
+    return t;
+  },
 };
 
 export const workspace = {
