@@ -40,31 +40,33 @@
 Kylrix establishes true zero-knowledge secret access and persistent memory for AI agents (Claude Code, Cursor, AutoGPT, CLI, VS Code, REST API, WebMCP, Discord/Telegram).
 
 ### How Agent Enclave Tokens (AET) Work
-1. **Client-Side DEK Wrapping**: When generating an Agent Enclave Token (`kyl_apk_<tokenId>.<etkSecret>`) in Settings, the browser unlocks the vault locally using MEK/Passkey PRF.
-2. **Ephemeral Token Secret (`etkSecret`)**: The client generates a 256-bit secure secret key (`etkSecret`) and encrypts Data Encryption Keys (DEKs) for permitted resources (Vault credentials, TOTP keys, or Encrypted Notes/Ideas).
-3. **Zero Plaintext Exposure**: Server (Turso SQLite) receives wrapped DEK maps (`wrappedDeks`) but **never possesses the Master Encryption Key (MEK) or Token Secret (`etkSecret`)**.
-4. **RAM Zero-Clearing**: When an agent runs `kylrix exec` or tools via MCP/REST API, the secret is unwrapped in volatile process RAM and cleared immediately upon exit.
+An agent key looks like `kyl_aet_<8 hex>_<32 b64url>.etk_<64 hex>`. Only the part left of the dot ever reaches the server (it is hashed and used as the bearer credential); `etk_…` is a 32-byte unlock key that stays on your machine.
+
+1. **Client-Side DEK Wrapping**: In **Settings → Developers → Create Token**, enable "Agent key with access to private items". The browser asks you to unlock your vault (MEK/Passkey PRF), generates the `etkSecret`, and re-wraps the DEKs of your chosen vault items and 2FA codes under an HKDF-SHA256 wrapping key (AES-256-GCM, per-entry AAD bound to the row id).
+2. **Envelope Storage**: The server stores only the wrapped-DEK envelope in `apikey.metadata.aet` — it **never possesses the MEK or the `etkSecret`**, and the envelope is hidden from all public token listings.
+3. **Two Unlock Modes**:
+   - *Client-side (default, zero-knowledge)*: the CLI/VS Code fetch the envelope via `GET /api/v1/token/enclave` plus sealed ciphertext via `?sealed=1` reads, and unlock locally.
+   - *Server-assisted (opt-in)*: send the full key in the `X-Kylrix-Agent-Token` header over https and the server decrypts granted rows in-memory for one request. Convenient, but no longer zero-knowledge — use only if you trust the server.
+4. **RAM Hygiene**: Unlock keys live as zeroable `Uint8Array` buffers that are cleared after use. Decrypted field values are JS strings and cannot be wiped — references are dropped, which is an honest platform limitation.
 
 ### Quick Start Examples
 
 #### Claude Code / Cursor
-Export your Agent Enclave Token in terminal before running Claude Code or Cursor:
 ```bash
-export KYLRIX_AGENT_KEY="kyl_apk_tok_123456.etk_7f8a9b..."
-claude
+export KYLRIX_AGENT_KEY="kyl_aet_a1b2c3d4_XXXX.etk_7f8a9b..."
+kylrix agents connect --claude-code   # or --cursor, or --check to verify only
 ```
 
 #### CLI Exec
-Inject decrypted secrets transiently into child process environment without leaving traces on disk:
+Inject granted secrets transiently into a child process without leaving traces on disk:
 ```bash
-kylrix exec --token kyl_apk_tok_123456.etk_7f8a9b... -- "npm start"
+kylrix exec --token kyl_aet_... -- "npm start"   # a specific item: kylrix exec <id> -- npm start
 ```
 
 #### WebMCP & REST API
-Pass `X-Kylrix-Agent-Token` header to decrypt zero-knowledge notes and vault items on edge:
 ```bash
 curl -X GET "https://www.kylrix.space/api/v1/vault/secret-id" \
-  -H "X-Kylrix-Agent-Token: kyl_apk_tok_123456.etk_7f8a9b..."
+  -H "X-Kylrix-Agent-Token: kyl_aet_..."
 ```
 
 ---
