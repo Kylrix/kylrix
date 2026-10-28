@@ -147,6 +147,8 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
     case 'tags':
     case 'trash':
       return 560;
+    case 'sidekick':
+      return 520;
     case 'agentic':
       return 440;
     case 'flows':
@@ -194,6 +196,7 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
         <SidekickDrawer
           open
           onClose={onClose}
+          embedded
           target={
             drawerData?.target || {
               type: 'workspace',
