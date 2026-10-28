@@ -58,6 +58,7 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
+    pathname.startsWith('/fonts') ||
     pathname.includes('.')
   ) {
     return NextResponse.next();
@@ -346,6 +347,6 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all routes except static files, _next build assets, and file extensions
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.[\\w]+$).*)'
+    '/((?!_next/static|_next/image|favicon|fonts|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|css|js|map|json|txt|xml)$).*)'
   ],
 };
