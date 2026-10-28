@@ -106,7 +106,11 @@ export default function ConnectedIdentities() {
   }, [refresh]);
 
   const identityFor = (key: string) =>
-    identities.find((i) => i.provider?.toLowerCase() === key.toLowerCase());
+    identities.find(
+      (i) =>
+        i.provider?.toLowerCase() === key.toLowerCase() ||
+        i.providerUid?.toLowerCase() === key.toLowerCase()
+    );
 
   const linkProvider = async (providerKey: 'google' | 'github') => {
     setBusyId(providerKey);

@@ -376,7 +376,7 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
   }
 
   try {
-    // 1. Fetch primary user record by ID, appwriteAccountId, or email
+    // 1. Fetch primary user record by ID, appwriteAccountId, or email, and account records by userId or accountId
     const userConditions = [
       eq(schema.user.id, cleanId),
       eq(schema.user.appwriteAccountId, cleanId),
@@ -385,15 +385,30 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
       userConditions.push(eq(schema.user.email, cleanId.toLowerCase()));
     }
 
-    const matchedUsers = await db
-      .select({
-        id: schema.user.id,
-        appwriteAccountId: schema.user.appwriteAccountId,
-        email: schema.user.email,
-      })
-      .from(schema.user)
-      .where(or(...userConditions))
-      .limit(20);
+    const [matchedUsers, initialAccounts] = await Promise.all([
+      db
+        .select({
+          id: schema.user.id,
+          appwriteAccountId: schema.user.appwriteAccountId,
+          email: schema.user.email,
+        })
+        .from(schema.user)
+        .where(or(...userConditions))
+        .limit(20),
+      db
+        .select({
+          userId: schema.account.userId,
+          accountId: schema.account.accountId,
+        })
+        .from(schema.account)
+        .where(
+          or(
+            eq(schema.account.userId, cleanId),
+            eq(schema.account.accountId, cleanId)
+          )
+        )
+        .limit(20),
+    ]);
 
     for (const u of matchedUsers) {
       if (u.id) allUserIds.add(u.id);
@@ -401,7 +416,12 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
       if (u.email?.trim()) emailsToQuery.add(u.email.trim().toLowerCase());
     }
 
-    // 2. Cross-reference all user IDs sharing the same email
+    for (const acc of initialAccounts) {
+      if (acc.userId) allUserIds.add(acc.userId);
+      if (acc.accountId) allUserIds.add(acc.accountId);
+    }
+
+    // 2. Query all user IDs from schema.user sharing that normalized email address (LOWER(email))
     if (emailsToQuery.size > 0) {
       const { sql } = await import('drizzle-orm');
       for (const email of emailsToQuery) {
@@ -409,6 +429,7 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
           .select({
             id: schema.user.id,
             appwriteAccountId: schema.user.appwriteAccountId,
+            email: schema.user.email,
           })
           .from(schema.user)
           .where(sql`LOWER(${schema.user.email}) = ${email.toLowerCase()}`)
@@ -417,11 +438,12 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
         for (const sharedU of sharedEmailUsers) {
           if (sharedU.id) allUserIds.add(sharedU.id);
           if (sharedU.appwriteAccountId) allUserIds.add(sharedU.appwriteAccountId);
+          if (sharedU.email?.trim()) emailsToQuery.add(sharedU.email.trim().toLowerCase());
         }
       }
     }
 
-    // 3. Query schema.account for all userId and accountId matches linked to any resolved cleanId, accountId, or email-matched user IDs
+    // 3. Query schema.account for all account.userId rows matching ANY of those user IDs OR accountId matching any linked social provider ID
     const currentResolved = Array.from(allUserIds).filter(Boolean);
     if (currentResolved.length > 0) {
       const accountRows = await db
