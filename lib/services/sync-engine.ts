@@ -723,6 +723,12 @@ export const autonomicSyncEngine = {
           } catch {}
         })
       );
+    } catch (err: any) {
+      if (err?.status === 401 || err?.status === 403 || String(err?.message || '').includes('401') || String(err?.message || '').toLowerCase().includes('unauthorized')) {
+        console.warn('[SyncEngine] Auth failure during flush — pausing retry cycle to prevent log spam.');
+        isSyncing = false;
+        return;
+      }
     } finally {
       isSyncing = false;
       const hasFlushable = pendingById.size > 0;

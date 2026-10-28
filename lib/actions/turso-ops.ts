@@ -376,7 +376,7 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
   }
 
   try {
-    // 1. Query user record directly by id, appwriteAccountId, or email
+    // 1. Fetch primary user record by ID, appwriteAccountId, or email
     const userConditions = [
       eq(schema.user.id, cleanId),
       eq(schema.user.appwriteAccountId, cleanId),
@@ -398,27 +398,10 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
     for (const u of matchedUsers) {
       if (u.id) allUserIds.add(u.id);
       if (u.appwriteAccountId) allUserIds.add(u.appwriteAccountId);
-      if (u.email) emailsToQuery.add(u.email.trim().toLowerCase());
+      if (u.email?.trim()) emailsToQuery.add(u.email.trim().toLowerCase());
     }
 
-    // 2. Query schema.account for all userId and accountId matches linked to any resolved cleanId or accountId
-    const accountRows = await db
-      .select({ userId: schema.account.userId, accountId: schema.account.accountId })
-      .from(schema.account)
-      .where(
-        or(
-          eq(schema.account.userId, cleanId),
-          eq(schema.account.accountId, cleanId)
-        )
-      )
-      .limit(50);
-
-    for (const acc of accountRows) {
-      if (acc.userId) allUserIds.add(acc.userId);
-      if (acc.accountId) allUserIds.add(acc.accountId);
-    }
-
-    // 3. Cross-reference all matching email addresses in schema.user (LOWER(email))
+    // 2. Cross-reference all user IDs sharing the same email
     if (emailsToQuery.size > 0) {
       const { sql } = await import('drizzle-orm');
       for (const email of emailsToQuery) {
@@ -438,10 +421,10 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
       }
     }
 
-    // 4. Query accounts and memberships linked to any resolved user IDs
+    // 3. Query schema.account for all userId and accountId matches linked to any resolved cleanId, accountId, or email-matched user IDs
     const currentResolved = Array.from(allUserIds).filter(Boolean);
     if (currentResolved.length > 0) {
-      const extraAccountRows = await db
+      const accountRows = await db
         .select({ userId: schema.account.userId, accountId: schema.account.accountId })
         .from(schema.account)
         .where(
@@ -452,22 +435,25 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
         )
         .limit(50);
 
-      for (const acc of extraAccountRows) {
+      for (const acc of accountRows) {
         if (acc.userId) allUserIds.add(acc.userId);
         if (acc.accountId) allUserIds.add(acc.accountId);
       }
+    }
 
-      // Check workspaceMembers and collaborators for any user_id linked to variants
+    // 4. Query workspaceMembers and collaborators for any linked user IDs
+    const finalResolved = Array.from(allUserIds).filter(Boolean);
+    if (finalResolved.length > 0) {
       const [memberUsers, collabUsers] = await Promise.all([
         db
           .select({ userId: schema.workspaceMembers.userId })
           .from(schema.workspaceMembers)
-          .where(inArray(schema.workspaceMembers.userId, currentResolved))
+          .where(inArray(schema.workspaceMembers.userId, finalResolved))
           .limit(50),
         db
           .select({ userId: schema.collaborators.userId })
           .from(schema.collaborators)
-          .where(inArray(schema.collaborators.userId, currentResolved))
+          .where(inArray(schema.collaborators.userId, finalResolved))
           .limit(50),
       ]);
 

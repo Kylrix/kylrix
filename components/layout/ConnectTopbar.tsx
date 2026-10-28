@@ -30,6 +30,7 @@ import {
   X as CloseIcon,
   Bell,
   Sparkles,
+  Bot,
   Keyboard,
   Target,
   FileText,
@@ -2591,20 +2592,13 @@ export default function ConnectTopbar({
                         aria-label="Sidekick Assistant"
                         onClick={() => {
                           handleCloseAll();
-                          const wsId = activeWorkspace?.id || 'personal';
-                          const wsTitle = activeWorkspace?.title || 'Workspace Assistant';
-                          const targetPayload = {
-                            type: 'workspace',
-                            id: wsId,
-                            title: wsTitle,
-                            content: `Workspace: ${wsTitle}. Active App: ${activeApp}. Notes: ${notes.length}, Tasks: ${tasks.length}`,
-                          };
-                          window.dispatchEvent(
-                            new CustomEvent('kylrix:open-sidekick', {
-                              detail: targetPayload,
-                            })
-                          );
-                          openUnified('sidekick', { target: targetPayload });
+                          openUnified('sidekick', {
+                            target: {
+                              type: 'workspace',
+                              id: activeWorkspace?.id || 'personal',
+                              title: activeWorkspace?.title || 'Workspace Assistant',
+                            },
+                          });
                         }}
                         sx={{
                           color: '#A855F7',
@@ -2623,7 +2617,7 @@ export default function ConnectTopbar({
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
                       >
-                        <Sparkles size={20} strokeWidth={2.2} />
+                        <Bot size={18} />
                       </IconButton>
                     </Tooltip>
 
