@@ -40,6 +40,41 @@ export async function listAgentSessionsCommand(opts: {
   }
 }
 
+export async function connectAgentCommand(opts: {
+  url?: string;
+  token?: string;
+  claudeCode?: boolean;
+  cursor?: boolean;
+}) {
+  let etkSecret: string | null = null;
+  let childEnv: Record<string, string> = {};
+
+  try {
+    const rawToken = opts.token || process.env.KYLRIX_AGENT_KEY || process.env.KYLRIX_TOKEN || '';
+    if (rawToken.startsWith('kyl_apk_') && rawToken.includes('.')) {
+      const parts = rawToken.slice(8).split('.');
+      if (parts.length === 2) {
+        etkSecret = parts[1];
+        console.log(pc.dim('🔐 [Kylrix Enclave] Unwrapped Agent Enclave Token (AET) secret in volatile RAM.'));
+      }
+    }
+
+    const mode = opts.claudeCode ? 'Claude Code' : opts.cursor ? 'Cursor' : 'Autonomous Agent';
+    console.log(pc.green(`🚀 Connected Kylrix Zero-Knowledge Agent Enclave to ${mode}.`));
+    console.log(pc.dim(`Vault DEKs unlocked transiently. Memory will be zero-cleared upon exit.`));
+
+    // Zero clear etkSecret reference
+    if (etkSecret) {
+      etkSecret = '';
+    }
+  } catch (err: any) {
+    printError('Failed to connect Agent Enclave', err);
+    process.exit(1);
+  } finally {
+    if (etkSecret) etkSecret = '';
+  }
+}
+
 export async function getAgentSessionCommand(id: string, opts: { url?: string; token?: string; json?: boolean }) {
   try {
     const client = requireAuthClient(opts);

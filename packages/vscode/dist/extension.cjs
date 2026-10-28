@@ -36,8 +36,8 @@ var require_picocolors = __commonJS({
     "use strict";
     var p = process || {};
     var argv = p.argv || [];
-    var env3 = p.env || {};
-    var isColorSupported = !(!!env3.NO_COLOR || argv.includes("--no-color")) && (!!env3.FORCE_COLOR || argv.includes("--color") || p.platform === "win32" || (p.stdout || {}).isTTY && env3.TERM !== "dumb" || !!env3.CI);
+    var env4 = p.env || {};
+    var isColorSupported = !(!!env4.NO_COLOR || argv.includes("--no-color")) && (!!env4.FORCE_COLOR || argv.includes("--color") || p.platform === "win32" || (p.stdout || {}).isTTY && env4.TERM !== "dumb" || !!env4.CI);
     var formatter = (open, close, replace = open) => (input) => {
       let string = "" + input, index = string.indexOf(close, open.length);
       return ~index ? open + replaceClose(string, close, replace, index) + close : open + string + close;
@@ -1032,15 +1032,15 @@ var KylrixClient = class {
 
 // ../cli/src/client.ts
 function hasAuth(cliOptions = {}) {
-  const env3 = resolveEnvironment(cliOptions);
-  return Boolean(env3.token);
+  const env4 = resolveEnvironment(cliOptions);
+  return Boolean(env4.token);
 }
 function getClient(cliOptions = {}) {
-  const env3 = resolveEnvironment(cliOptions);
+  const env4 = resolveEnvironment(cliOptions);
   return new KylrixClient({
-    baseUrl: env3.apiUrl,
-    token: env3.token,
-    workspaceId: env3.workspaceId
+    baseUrl: env4.apiUrl,
+    token: env4.token,
+    workspaceId: env4.workspaceId
   });
 }
 
@@ -1053,16 +1053,34 @@ var fs2 = __toESM(require("fs"), 1);
 var path2 = __toESM(require("path"), 1);
 var import_node_module = require("module");
 var import_meta = {};
+var ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 function generateLocalId(_prefix) {
-  const now = /* @__PURE__ */ new Date();
-  const sec = Math.floor(now.getTime() / 1e3);
-  const msec = now.getMilliseconds();
-  const hexTimestamp = sec.toString(16) + msec.toString(16).padStart(5, "0");
-  let randomPadding = "";
-  for (let i = 0; i < 7; i++) {
-    randomPadding += Math.floor(Math.random() * 16).toString(16);
+  const now = Date.now();
+  let timeStr = "";
+  let n = now;
+  for (let i = 9; i >= 0; i--) {
+    const mod = n % 32;
+    timeStr = ENCODING[mod] + timeStr;
+    n = Math.floor(n / 32);
   }
-  return hexTimestamp + randomPadding;
+  const bytes = new Uint8Array(16);
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    try {
+      const requireFunc = (0, import_node_module.createRequire)(import_meta.url);
+      const cryptoModule = requireFunc("node:crypto");
+      const buf = cryptoModule.randomBytes(16);
+      bytes.set(buf);
+    } catch {
+      for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  let randStr = "";
+  for (let i = 0; i < 16; i++) {
+    randStr += ENCODING[bytes[i] & 31];
+  }
+  return timeStr + randStr;
 }
 var dbInstances = /* @__PURE__ */ new Map();
 function getNativeSqlite() {
@@ -1091,8 +1109,8 @@ function getNativeSqlite() {
   }
 }
 function getDatabase(targetDbPath, cliOptions) {
-  const env3 = resolveEnvironment(cliOptions);
-  const dbPath = targetDbPath || env3.siloDbPath;
+  const env4 = resolveEnvironment(cliOptions);
+  const dbPath = targetDbPath || env4.siloDbPath;
   if (dbInstances.has(dbPath)) {
     return dbInstances.get(dbPath);
   }
@@ -1318,8 +1336,8 @@ function initSqliteSchema(db) {
 // ../cli/src/local/store.ts
 function loadFallback() {
   try {
-    const env3 = resolveEnvironment();
-    const fallbackPath = env3.siloFallbackPath;
+    const env4 = resolveEnvironment();
+    const fallbackPath = env4.siloFallbackPath;
     if (!fs3.existsSync(fallbackPath)) {
       return { ideas: [], goals: [], events: [], forms: [], flows: [], vault: [], totp: [], tags: [], trash: [] };
     }
@@ -1330,8 +1348,8 @@ function loadFallback() {
 }
 function saveFallback(data) {
   try {
-    const env3 = resolveEnvironment();
-    const fallbackPath = env3.siloFallbackPath;
+    const env4 = resolveEnvironment();
+    const fallbackPath = env4.siloFallbackPath;
     const dir = path3.dirname(fallbackPath);
     if (!fs3.existsSync(dir)) {
       fs3.mkdirSync(dir, { recursive: true });
@@ -2611,20 +2629,20 @@ var StatusTreeProvider = class {
     if (element) return [];
     const items = [];
     try {
-      const env3 = resolveEnvironment();
+      const env4 = resolveEnvironment();
       const _config = loadConfig();
       const isAuthed = hasAuth();
-      const accountLabel = isAuthed ? `Account: ${env3.email || env3.userId || "Logged In"}` : "Account: Anonymous (Local Mode)";
-      const accountDesc = env3.tier ? `Tier: ${env3.tier}` : isAuthed ? "Cloud Connected" : "Local Only";
+      const accountLabel = isAuthed ? `Account: ${env4.email || env4.userId || "Logged In"}` : "Account: Anonymous (Local Mode)";
+      const accountDesc = env4.tier ? `Tier: ${env4.tier}` : isAuthed ? "Cloud Connected" : "Local Only";
       items.push(new StatusItem(accountLabel, accountDesc, "account", {
         command: "kylrix.whoami",
         title: "View Identity"
       }));
-      items.push(new StatusItem(`Server: ${env3.apiUrl}`, env3.partitionKey === "default" ? "Default Cloud" : "Self-Hosted", "server", {
+      items.push(new StatusItem(`Server: ${env4.apiUrl}`, env4.partitionKey === "default" ? "Default Cloud" : "Self-Hosted", "server", {
         command: "kylrix.switchServer",
         title: "Switch Server"
       }));
-      items.push(new StatusItem(`Workspace: ${env3.workspaceId || "Personal Virtual Workspace"}`, "Active Context", "briefcase", {
+      items.push(new StatusItem(`Workspace: ${env4.workspaceId || "Personal Virtual Workspace"}`, "Active Context", "briefcase", {
         command: "kylrix.switchWorkspace",
         title: "Switch Workspace"
       }));
@@ -3045,9 +3063,9 @@ function extractItems(res) {
 }
 async function pushLocalItemsToCloud(opts = {}) {
   const client = getClient(opts);
-  const env3 = resolveEnvironment(opts);
+  const env4 = resolveEnvironment(opts);
   const DatabaseSync = getNativeSqlite();
-  const db = DatabaseSync ? getDatabase(env3.siloDbPath) : null;
+  const db = DatabaseSync ? getDatabase(env4.siloDbPath) : null;
   let pushedIdeas = 0;
   let pushedGoals = 0;
   let pushedEvents = 0;
@@ -3155,7 +3173,7 @@ async function pushLocalItemsToCloud(opts = {}) {
     } catch {
     }
   } else {
-    const fallbackPath = env3.siloFallbackPath;
+    const fallbackPath = env4.siloFallbackPath;
     if (fs4.existsSync(fallbackPath)) {
       try {
         const store = JSON.parse(fs4.readFileSync(fallbackPath, "utf-8"));
@@ -3326,8 +3344,8 @@ async function pullCloudItemsToLocal(opts = {}) {
   return { pulledIdeas, pulledGoals, pulledEvents, pulledForms, pulledFlows, total };
 }
 async function bidirectionalSync(opts = {}) {
-  const env3 = resolveEnvironment(opts);
-  const userTier = (env3.tier || "").toUpperCase();
+  const env4 = resolveEnvironment(opts);
+  const userTier = (env4.tier || "").toUpperCase();
   if (userTier === "FREE") {
     throw new Error("Free accounts operate 100% offline and do not sync to cloud. Cloud sync requires Kylrix Pro.");
   }
@@ -3718,16 +3736,16 @@ async function logoutCommand(refreshCb) {
 }
 async function whoamiCommand() {
   try {
-    const env3 = resolveEnvironment();
+    const env4 = resolveEnvironment();
     const isAuthed = hasAuth();
     if (!isAuthed) {
       vscode11.window.showInformationMessage("Kylrix: Currently in Anonymous / Local-First mode.");
       return;
     }
     const client = getClient();
-    let detail = `Account: ${env3.email || env3.userId || "Authenticated"}
-Server: ${env3.apiUrl}
-Workspace: ${env3.workspaceId || "Personal"}`;
+    let detail = `Account: ${env4.email || env4.userId || "Authenticated"}
+Server: ${env4.apiUrl}
+Workspace: ${env4.workspaceId || "Personal"}`;
     try {
       const user = await client.auth.me();
       if (user?.email) detail += `
@@ -4334,7 +4352,29 @@ function activate(context) {
     vscode17.commands.registerCommand("kylrix.addTotp", () => addTotpCommand(refreshAllViews)),
     vscode17.commands.registerCommand("kylrix.search", globalSearchCommand),
     vscode17.commands.registerCommand("kylrix.sync", () => syncCommand(refreshAllViews)),
-    vscode17.commands.registerCommand("kylrix.connectWorkspace", () => connectWorkspaceCommand(refreshAllViews))
+    vscode17.commands.registerCommand("kylrix.connectWorkspace", () => connectWorkspaceCommand(refreshAllViews)),
+    vscode17.commands.registerCommand("kylrix.copyAgentKey", async () => {
+      const key = await vscode17.window.showInputBox({
+        prompt: "Enter or confirm Zero-Knowledge Agent Enclave Token (kyl_apk_...)",
+        placeHolder: "kyl_apk_<tokenId>.<etkSecret>"
+      });
+      if (key) {
+        await vscode17.env.clipboard.writeText(key);
+        vscode17.window.showInformationMessage("Copied Zero-Knowledge Agent Key to clipboard.");
+      }
+    }),
+    vscode17.commands.registerCommand("kylrix.injectTerminalSecrets", async () => {
+      const terminal = vscode17.window.activeTerminal || vscode17.window.createTerminal("Kylrix Enclave");
+      const token = await vscode17.window.showInputBox({
+        prompt: "Agent Enclave Token (kyl_apk_...)",
+        placeHolder: "kyl_apk_<tokenId>.<etkSecret>"
+      });
+      if (token) {
+        terminal.sendText(`export KYLRIX_AGENT_KEY="${token}"`);
+        terminal.show();
+        vscode17.window.showInformationMessage("Injected Agent Enclave Secrets into Terminal session.");
+      }
+    })
   );
   statusBarItem = vscode17.window.createStatusBarItem(vscode17.StatusBarAlignment.Right, 100);
   statusBarItem.command = "kylrix.whoami";
@@ -4349,11 +4389,11 @@ function activate(context) {
 function updateStatusBar() {
   if (!statusBarItem) return;
   try {
-    const env3 = resolveEnvironment();
+    const env4 = resolveEnvironment();
     const isAuthed = hasAuth();
-    const ws = env3.workspaceId ? ` [ws:${env3.workspaceId}]` : "";
+    const ws = env4.workspaceId ? ` [ws:${env4.workspaceId}]` : "";
     statusBarItem.text = `$(shield) Kylrix${ws}`;
-    statusBarItem.tooltip = `Server: ${env3.apiUrl}
+    statusBarItem.tooltip = `Server: ${env4.apiUrl}
 Status: ${isAuthed ? "Logged In" : "Local Mode"}
 Click to view identity`;
     statusBarItem.show();

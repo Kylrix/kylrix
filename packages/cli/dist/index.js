@@ -1153,15 +1153,32 @@ import * as fs2 from "fs";
 import * as path2 from "path";
 import { createRequire } from "module";
 function generateLocalId(_prefix) {
-  const now = /* @__PURE__ */ new Date();
-  const sec = Math.floor(now.getTime() / 1e3);
-  const msec = now.getMilliseconds();
-  const hexTimestamp = sec.toString(16) + msec.toString(16).padStart(5, "0");
-  let randomPadding = "";
-  for (let i = 0; i < 7; i++) {
-    randomPadding += Math.floor(Math.random() * 16).toString(16);
+  const now = Date.now();
+  let timeStr = "";
+  let n = now;
+  for (let i = 9; i >= 0; i--) {
+    const mod = n % 32;
+    timeStr = ENCODING[mod] + timeStr;
+    n = Math.floor(n / 32);
   }
-  return hexTimestamp + randomPadding;
+  const bytes = new Uint8Array(16);
+  if (typeof globalThis !== "undefined" && globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    try {
+      const requireFunc = createRequire(import.meta.url);
+      const cryptoModule = requireFunc("node:crypto");
+      const buf = cryptoModule.randomBytes(16);
+      bytes.set(buf);
+    } catch {
+      for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  let randStr = "";
+  for (let i = 0; i < 16; i++) {
+    randStr += ENCODING[bytes[i] & 31];
+  }
+  return timeStr + randStr;
 }
 function getNativeSqlite() {
   try {
@@ -1412,11 +1429,12 @@ function initSqliteSchema(db) {
   } catch {
   }
 }
-var dbInstances;
+var ENCODING, dbInstances;
 var init_sqlite = __esm({
   "src/local/sqlite.ts"() {
     "use strict";
     init_config();
+    ENCODING = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
     dbInstances = /* @__PURE__ */ new Map();
   }
 });
