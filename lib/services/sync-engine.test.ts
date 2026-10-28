@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { autonomicSyncEngine } from './sync-engine';
 import { registerLiveEventGetter, registerLiveGoalGetter, registerLiveNoteGetter } from '../sync/pending-sync-bridge';
 
+const tursoMocks = vi.hoisted(() => ({
+  upsertNoteTurso: vi.fn().mockResolvedValue({ success: true }),
+  upsertGoalTurso: vi.fn().mockResolvedValue({ success: true }),
+  upsertEventTurso: vi.fn().mockResolvedValue({ success: true }),
+}));
+
 vi.mock('../auth/better-auth-client', () => ({
   authClient: {
     getSession: vi.fn().mockResolvedValue({
@@ -10,14 +16,7 @@ vi.mock('../auth/better-auth-client', () => ({
   },
 }));
 
-vi.mock('../actions/client-ops', () => ({
-  updateNote: vi.fn().mockResolvedValue({ success: true }),
-  createNote: vi.fn().mockResolvedValue({ success: true }),
-  updateGoal: vi.fn().mockResolvedValue({ success: true }),
-  createGoal: vi.fn().mockResolvedValue({ success: true }),
-  updateEvent: vi.fn().mockResolvedValue({ success: true }),
-  createEvent: vi.fn().mockResolvedValue({ success: true }),
-}));
+vi.mock('@/lib/actions/turso-ops', () => tursoMocks);
 
 describe('autonomicSyncEngine', () => {
   beforeEach(() => {
@@ -57,10 +56,9 @@ describe('autonomicSyncEngine', () => {
 
     await autonomicSyncEngine.runCycle();
 
-    const clientOps = await import('../actions/client-ops');
-    expect(clientOps.updateNote).toHaveBeenCalledWith('note_999', expect.anything());
-    expect(clientOps.updateGoal).toHaveBeenCalledWith('goal_999', expect.anything());
-    expect(clientOps.updateEvent).toHaveBeenCalledWith('event_999', expect.anything(), expect.anything());
+    expect(tursoMocks.upsertNoteTurso).toHaveBeenCalledWith(expect.objectContaining({ id: 'note_999' }));
+    expect(tursoMocks.upsertGoalTurso).toHaveBeenCalledWith(expect.objectContaining({ id: 'goal_999' }));
+    expect(tursoMocks.upsertEventTurso).toHaveBeenCalledWith(expect.objectContaining({ id: 'event_999' }));
 
     expect(autonomicSyncEngine.isPending('note_999')).toBe(false);
     expect(autonomicSyncEngine.isPending('goal_999')).toBe(false);
