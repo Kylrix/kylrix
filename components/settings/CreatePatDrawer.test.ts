@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeSweepScopes,
+  computeAetRequiredScopes,
+  computeAetScopes,
+  getStepTitle,
   isReadScope,
   isWriteScope,
   SCOPE_CATEGORIES,
@@ -55,5 +58,43 @@ describe('CreatePatDrawer helper logic', () => {
       'agents:harness',
       'agents:provision',
     ]);
+  });
+
+  it('#317: permitted resources add and lock the matching read scopes', () => {
+    const required = computeAetRequiredScopes({
+      permittedVault: true,
+      permittedTotp: true,
+      permittedNotes: false,
+    });
+    expect(required).toContain('vault:read');
+    expect(required).toContain('profile:read');
+    expect(required).not.toContain('notes:read');
+
+    const withNotes = computeAetRequiredScopes({
+      permittedVault: false,
+      permittedTotp: false,
+      permittedNotes: true,
+    });
+    expect(withNotes).toContain('notes:read');
+    expect(withNotes).not.toContain('vault:read');
+
+    // extra user-selected scopes are preserved and deduplicated
+    const merged = computeAetScopes(['notes:write', 'vault:read'], {
+      permittedVault: true,
+      permittedTotp: false,
+      permittedNotes: false,
+    });
+    expect(merged).toContain('vault:read');
+    expect(merged).toContain('notes:write');
+    expect(merged.filter((s) => s === 'vault:read')).toHaveLength(1);
+  });
+
+  it('#306: every drawer step has a nonblank title', () => {
+    const steps = ['name', 'wizard_step1', 'wizard_step2', 'scopes', 'done'] as const;
+    for (const s of steps) {
+      expect(getStepTitle(s, false).trim().length).toBeGreaterThan(0);
+      expect(getStepTitle(s, true).trim().length).toBeGreaterThan(0);
+    }
+    expect(getStepTitle('done', true)).toContain('Agent Key');
   });
 });

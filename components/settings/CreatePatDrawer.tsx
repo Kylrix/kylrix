@@ -34,6 +34,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 
 type Step = 'name' | 'wizard_step1' | 'wizard_step2' | 'scopes' | 'done';
 
+const DRAFT_KEY = 'kylrix.patDrawerDraft';
 const DEFAULT_SCOPES: PatScope[] = ['profile:read', 'notes:read', 'notes:write'];
 
 export type ResourceCategoryKey =
@@ -149,6 +150,21 @@ export function computeAetScopes(
   return normalizeScopes([...selected, ...computeAetRequiredScopes(p)]);
 }
 
+export function getStepTitle(step: Step, isAetToken: boolean): string {
+  switch (step) {
+    case 'name':
+      return '1. Token Name';
+    case 'wizard_step1':
+      return '2. Permitted Items';
+    case 'wizard_step2':
+      return '3. Security Policy';
+    case 'scopes':
+      return isAetToken ? '4. Permissions & Scopes' : '2. Permissions & Scopes';
+    case 'done':
+      return isAetToken ? '5. Save Your Agent Key' : '3. Save Your Secret Key';
+  }
+}
+
 export function isReadScope(scope: PatScope): boolean {
   return scope.endsWith(':read') || scope === 'profile:read';
 }
@@ -254,8 +270,6 @@ export function CreatePatDrawer({
   useEffect(() => {
     if (!open) return;
     setStep('name');
-    setName('');
-    setSelected(DEFAULT_SCOPES);
     setCreating(false);
     setToken(null);
     setNeedsUnlock(false);
@@ -263,7 +277,47 @@ export function CreatePatDrawer({
     setShareSummary(null);
     setActiveResourceFilter('all');
     setActiveAccessFilter('all');
+    // Restore non-secret draft choices (never the minted key or secrets)
+    let draft: any = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null');
+    } catch {}
+    if (draft && typeof draft === 'object') {
+      setName(typeof draft.name === 'string' ? draft.name : '');
+      setSelected(Array.isArray(draft.scopes) ? normalizeScopes(draft.scopes) : DEFAULT_SCOPES);
+      setIsAetToken(draft.isAetToken === true);
+      setPermittedVault(draft.permittedVault !== false);
+      setPermittedTotp(draft.permittedTotp !== false);
+      setPermittedNotes(draft.permittedNotes === true);
+      setAetExpiryDays(typeof draft.aetExpiryDays === 'number' ? draft.aetExpiryDays : 30);
+    } else {
+      setName('');
+      setSelected(DEFAULT_SCOPES);
+      setIsAetToken(false);
+      setPermittedVault(true);
+      setPermittedTotp(true);
+      setPermittedNotes(false);
+      setAetExpiryDays(30);
+    }
   }, [open]);
+
+  // Persist non-secret choices so an accidental close keeps the draft.
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          name,
+          scopes: selected,
+          isAetToken,
+          permittedVault,
+          permittedTotp,
+          permittedNotes,
+          aetExpiryDays,
+        })
+      );
+    } catch {}
+  }, [name, selected, isAetToken, permittedVault, permittedTotp, permittedNotes, aetExpiryDays]);
 
   // The minted key string is dropped on unmount and on close.
   useEffect(() => () => setToken(null), []);
@@ -381,6 +435,9 @@ export function CreatePatDrawer({
         });
         setToken(formatAgentToken(res.token, etk));
         setShareSummary({ included, skipped });
+        try {
+          sessionStorage.removeItem(DRAFT_KEY);
+        } catch {}
         setStep('done');
         try {
           await navigator.clipboard.writeText(formatAgentToken(res.token, etk));
@@ -406,6 +463,9 @@ export function CreatePatDrawer({
         workspaceId,
       });
       setToken(res.token);
+      try {
+        sessionStorage.removeItem(DRAFT_KEY);
+      } catch {}
       setStep('done');
       try {
         await navigator.clipboard.writeText(res.token);
@@ -440,9 +500,7 @@ export function CreatePatDrawer({
               {isAetToken ? 'Agent Key' : isWorkspace ? 'Workspace Key' : 'Personal Access Token'}
             </p>
             <h2 className="text-lg font-black font-clash text-white tracking-tight truncate">
-              {step === 'name' && '1. Token Name'}
-              {step === 'scopes' && '2. Permissions & Scopes'}
-              {step === 'done' && '3. Save Your Secret Key'}
+              {getStepTitle(step, isAetToken)}
             </h2>
           </div>
           <button
