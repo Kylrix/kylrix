@@ -3,8 +3,9 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, desc, count } from 'drizzle-orm';
 import { normalizeScopes, type PatScope } from '@/lib/api/scopes';
+import { AET_BEARER_REGEX, toBearerCredential } from '@/lib/security/zero-knowledge';
 
-export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token';
+export type PatCategory = 'user_pat' | 'agent_provisioning_key' | 'agentic_pat' | 'workspace_pat' | 'punch_token' | 'agent_enclave_token';
 
 export type PatRow = {
   $id: string;
@@ -54,6 +55,9 @@ export function formatPatToken(
   secret: string, 
   category: PatCategory = 'user_pat'
 ) {
+  if (category === 'agent_enclave_token') {
+    return `kyl_aet_${prefix}_${secret}`;
+  }
   if (category === 'agent_provisioning_key') {
     return `kyl_apk_${prefix}_${secret}`;
   }
@@ -70,9 +74,15 @@ export function formatPatToken(
 }
 
 export function parsePatToken(raw: string): { prefix: string; token: string; category: PatCategory } | null {
-  const token = String(raw || '').trim();
+  // Strip an AET unlock part first so only the bearer half is ever hashed or stored.
+  const token = toBearerCredential(String(raw || '').trim());
   let category: PatCategory = 'user_pat';
   let rest = '';
+
+  if (token.startsWith('kyl_aet_')) {
+    if (!AET_BEARER_REGEX.test(token)) return null;
+    return { prefix: token.slice(8, 16), token, category: 'agent_enclave_token' };
+  }
 
   if (token.startsWith('kyl_apk_')) {
     category = 'agent_provisioning_key';
@@ -195,7 +205,10 @@ export const PatService = {
     }
 
     const id = 'pat_' + randomBytes(12).toString('hex');
-    const tokenPrefix = randomBytes(6).toString('base64url').slice(0, 8);
+    // AET prefixes are fixed-length hex so the bearer never contains '_' or '-'.
+    const tokenPrefix = category === 'agent_enclave_token'
+      ? randomBytes(4).toString('hex')
+      : randomBytes(6).toString('base64url').slice(0, 8);
     const secret = makeSecret();
     const token = formatPatToken(tokenPrefix, secret, category);
     const tokenHash = hashToken(token);

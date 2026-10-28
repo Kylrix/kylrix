@@ -8,6 +8,7 @@ import {
   enforcePatBurstShield,
 } from '@/lib/api/edge-shield';
 import { assertScope, type PatScope } from '@/lib/api/scopes';
+import { toBearerCredential } from '@/lib/security/zero-knowledge';
 import { getActor } from '@/lib/actions/secure-ops';
 import { verifyOAuthAccessToken } from '@/lib/oauth2/verify-access-token';
 
@@ -52,7 +53,10 @@ function extractBearer(req: NextRequest): string | null {
 }
 
 export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
-  const bearer = extractBearer(req);
+  const rawBearer = extractBearer(req);
+  // Defensive: if a client sends a full AET in Authorization, discard the unlock
+  // part before anything hashes, caches, or logs the credential.
+  const bearer = rawBearer ? toBearerCredential(rawBearer) : rawBearer;
   if (!bearer) {
     assertShieldAllowed(enforceApiAnonShield(req));
     const err = new Error('Missing Authorization Bearer token');
@@ -66,6 +70,7 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
     bearer.startsWith('kyl_punch_') ||
     bearer.startsWith('kyl_apat_') ||
     bearer.startsWith('kyl_apk_') ||
+    bearer.startsWith('kyl_aet_') ||
     bearer.startsWith('kyl_wpat_') ||
     bearer.startsWith('pat_')
   ) {
@@ -84,7 +89,7 @@ export async function resolveApiActor(req: NextRequest): Promise<ApiActor> {
     });
 
     const isWs = verified.pat.isWorkspace === true || String(verified.pat.isWorkspace) === 'true';
-    const isAgent = (verified.pat as any).category === 'agentic_pat' || (verified.pat as any).category === 'agent_provisioning_key' || !!(verified.pat as any).agentId;
+    const isAgent = (verified.pat as any).category === 'agentic_pat' || (verified.pat as any).category === 'agent_provisioning_key' || (verified.pat as any).category === 'agent_enclave_token' || !!(verified.pat as any).agentId;
 
     return {
       userId: verified.userId,

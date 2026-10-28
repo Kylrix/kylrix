@@ -17,5 +17,5 @@
       "@/*": ["../../*"]
     }
   },
-  "include": ["src/**/*", "../../sdk/**/*"]
+  "include": ["src/**/*", "../../sdk/**/*", "../../lib/security/zero-knowledge.ts"]
 }

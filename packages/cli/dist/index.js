@@ -39,6 +39,24 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// ../../lib/security/zero-knowledge.ts
+function isAgentEnclaveToken(value) {
+  return typeof value === "string" && AET_REGEX.test(value.trim());
+}
+function toBearerCredential(value) {
+  const t = value.trim();
+  if (t.startsWith(AET_PREFIX) && t.includes(".")) return t.slice(0, t.indexOf("."));
+  return t;
+}
+var AET_PREFIX, AET_REGEX;
+var init_zero_knowledge = __esm({
+  "../../lib/security/zero-knowledge.ts"() {
+    "use strict";
+    AET_PREFIX = "kyl_aet_";
+    AET_REGEX = /^kyl_aet_([0-9a-f]{8})_([A-Za-z0-9_-]{32})\.etk_([0-9a-f]{64})$/;
+  }
+});
+
 // ../../sdk/pairing-client.ts
 var PairingClient;
 var init_pairing_client = __esm({
@@ -122,6 +140,7 @@ var init_client = __esm({
   "../../sdk/api/client.ts"() {
     "use strict";
     init_pairing_client();
+    init_zero_knowledge();
     KylrixApiError = class extends Error {
       constructor(message, status, code, data) {
         super(message);
@@ -187,7 +206,7 @@ var init_client = __esm({
           ...options.headers
         };
         if (this.token) {
-          headers["Authorization"] = `Bearer ${this.token}`;
+          headers["Authorization"] = `Bearer ${toBearerCredential(this.token)}`;
         }
         let body = void 0;
         if (options.body !== void 0) {
@@ -941,7 +960,7 @@ function resolveEnvironment(cliOptions = {}) {
   const partitionKey = getBaseUriPartitionKey(apiUrl);
   const server2 = config2.servers[apiUrl];
   const account = server2?.activeAccountId ? server2.accounts[server2.activeAccountId] : void 0;
-  let token = cliOptions.token || process.env.KYLRIX_API_KEY || process.env.KYLRIX_PAT || process.env.KYLRIX_TOKEN || account?.token || config2.token;
+  let token = cliOptions.token || process.env.KYLRIX_API_KEY || process.env.KYLRIX_PAT || process.env.KYLRIX_TOKEN || (isAgentEnclaveToken(process.env.KYLRIX_AGENT_KEY) ? toBearerCredential(process.env.KYLRIX_AGENT_KEY) : void 0) || account?.token || config2.token;
   if (!token && config2.servers) {
     for (const s of Object.values(config2.servers)) {
       if (s.activeAccountId && s.accounts[s.activeAccountId]?.token) {
@@ -1051,6 +1070,7 @@ var DEFAULT_API_URL, DEFAULT_OFFLINE_ACCOUNT, CONFIG_DIR, CONFIG_FILE;
 var init_config = __esm({
   "src/config.ts"() {
     "use strict";
+    init_zero_knowledge();
     DEFAULT_API_URL = "https://www.kylrix.space";
     DEFAULT_OFFLINE_ACCOUNT = "default";
     CONFIG_DIR = path.join(os.homedir(), ".kylrix");
@@ -1067,7 +1087,8 @@ function getClient(cliOptions = {}) {
   const env = resolveEnvironment(cliOptions);
   return new KylrixClient({
     baseUrl: env.apiUrl,
-    token: env.token,
+    // Single choke point: an agent key's unlock part never goes on the wire.
+    token: env.token ? toBearerCredential(env.token) : env.token,
     workspaceId: env.workspaceId
   });
 }
@@ -1085,6 +1106,7 @@ var init_client2 = __esm({
   "src/client.ts"() {
     "use strict";
     init_client();
+    init_zero_knowledge();
     init_config();
   }
 });
@@ -3426,6 +3448,7 @@ var require_src = __commonJS({
 import { Command } from "commander";
 
 // src/commands/auth.ts
+init_zero_knowledge();
 init_client2();
 init_config();
 init_formatter();
@@ -3450,6 +3473,8 @@ async function loginCommand(opts) {
       if (effectiveToken.startsWith("kyl_wpat_")) {
         contextLevel = "Workspace Jailed PAT";
         isJailedWorkspace = true;
+      } else if (effectiveToken.startsWith("kyl_aet_")) {
+        contextLevel = "Agent Enclave Token (read-only access to chosen items)";
       } else if (effectiveToken.startsWith("kyl_apk_")) {
         contextLevel = "Agent Provisioning Key (Multi-Workspace Spawning)";
       } else if (effectiveToken.startsWith("kyl_apat_")) {
@@ -3469,10 +3494,12 @@ async function loginCommand(opts) {
         }
       } catch {
       }
+      const storableToken = toBearerCredential(effectiveToken);
+      const droppedUnlockPart = storableToken !== effectiveToken;
       saveConfig(
         {
           apiUrl: env.apiUrl,
-          token: effectiveToken,
+          token: storableToken,
           userId: profile.id,
           email: profile.email,
           tier: profile.tier,
@@ -3481,6 +3508,9 @@ async function loginCommand(opts) {
         env.apiUrl
       );
       printSuccess(`Logged in as ${pc3.bold(profile.email || profile.id)}`);
+      if (droppedUnlockPart) {
+        printInfo("Saved sign-in only. The unlock part of your agent key is never written to disk. Set KYLRIX_AGENT_KEY to unlock items.");
+      }
       printInfo(`Context:   ${pc3.magenta(contextLevel)}`);
       if (detectedWorkspaceId) {
         printInfo(`Workspace: ${pc3.green(detectedWorkspaceId)}${isJailedWorkspace ? pc3.yellow(" (jailed)") : ""}`);
@@ -3615,6 +3645,7 @@ async function whoamiCommand(opts) {
     console.log(`  ${pc3.dim("Tier:")}         ${pc3.cyan(profile.tier || "FREE")}`);
     let contextType = "Account Context (Can switch to all workspaces)";
     if (env.token?.startsWith("kyl_wpat_")) contextType = "Workspace Jailed PAT";
+    else if (env.token?.startsWith("kyl_aet_")) contextType = "Agent Enclave Token";
     else if (env.token?.startsWith("kyl_apk_")) contextType = "Agent Provisioning Key";
     else if (env.token?.startsWith("kyl_apat_")) contextType = "Agent Workspace PAT";
     else if (env.token?.startsWith("kyl_pat_")) contextType = "Personal PAT (Account Level)";
@@ -6464,7 +6495,7 @@ init_formatter();
 import pc18 from "picocolors";
 
 // src/crypto/totp.ts
-import * as crypto from "crypto";
+import * as crypto2 from "crypto";
 function base32Decode(secret) {
   const clean = secret.toUpperCase().replace(/[\s=-]/g, "");
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
@@ -6490,7 +6521,7 @@ function generateTotp(secret, periodSeconds = 30, digits = 6) {
   const remainingSeconds = periodSeconds - nowSeconds % periodSeconds;
   const counterBuf = Buffer.alloc(8);
   counterBuf.writeBigInt64BE(BigInt(counter));
-  const hmac = crypto.createHmac("sha1", key).update(counterBuf).digest();
+  const hmac = crypto2.createHmac("sha1", key).update(counterBuf).digest();
   const offset = hmac[hmac.length - 1] & 15;
   const binary = (hmac[offset] & 127) << 24 | (hmac[offset + 1] & 255) << 16 | (hmac[offset + 2] & 255) << 8 | hmac[offset + 3] & 255;
   const otp = binary % 10 ** digits;
@@ -7062,7 +7093,7 @@ import * as os4 from "os";
 import { spawn as spawn3 } from "child_process";
 import pc25 from "picocolors";
 var PACKAGE_NAME = "@kylrix/cli";
-var CURRENT_VERSION = "1.0.20";
+var CURRENT_VERSION = "1.0.21";
 var CACHE_DIR = path8.join(os4.homedir(), ".kylrix");
 var CACHE_FILE = path8.join(CACHE_DIR, "update-cache.json");
 var CHECK_INTERVAL_MS = 12 * 60 * 60 * 1e3;

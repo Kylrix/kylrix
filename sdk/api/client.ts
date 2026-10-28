@@ -32,6 +32,7 @@ import type {
   ScopeCatalogRecord,
 } from '@/sdk/contracts';
 import { PairingClient } from '@/sdk/pairing-client';
+import { toBearerCredential } from '@/lib/security/zero-knowledge';
 
 export interface KylrixClientOptions {
   baseUrl?: string;
@@ -141,7 +142,8 @@ export class KylrixClient {
     };
 
     if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
+      // An agent key's unlock part never goes on the wire; bearer part only.
+      headers['Authorization'] = `Bearer ${toBearerCredential(this.token)}`;
     }
 
     let body: string | undefined = undefined;

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { isAgentEnclaveToken, toBearerCredential } from '@/lib/security/zero-knowledge';
 
 export const DEFAULT_API_URL = 'https://www.kylrix.space';
 
@@ -485,6 +486,9 @@ export function resolveEnvironment(cliOptions: { url?: string; token?: string; w
     process.env.KYLRIX_API_KEY ||
     process.env.KYLRIX_PAT ||
     process.env.KYLRIX_TOKEN ||
+    (isAgentEnclaveToken(process.env.KYLRIX_AGENT_KEY)
+      ? toBearerCredential(process.env.KYLRIX_AGENT_KEY as string)
+      : undefined) ||
     account?.token ||
     config.token;
 
