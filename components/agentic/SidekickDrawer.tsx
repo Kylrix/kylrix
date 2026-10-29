@@ -719,6 +719,7 @@ export function SidekickDrawer({
           <button
             type="button"
             onClick={() => setShowAttachedObjectsDrawer(true)}
+            aria-label="View attached objects in this Sidekick session"
             className="relative p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-center"
             title="Attached Objects in this Sidekick Session"
           >
@@ -729,7 +730,7 @@ export function SidekickDrawer({
               </span>
             )}
           </button>
-          <button onClick={onClose} className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5">
+          <button onClick={onClose} aria-label="Close Sidekick drawer" className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/5">
             <X size={18} />
           </button>
         </div>
@@ -931,6 +932,7 @@ export function SidekickDrawer({
                 <button
                   type="button"
                   onClick={() => setPendingAttachments((prev) => prev.filter((p) => p.childId !== att.childId))}
+                  aria-label={`Remove attachment ${att.name}`}
                   className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white ml-0.5 cursor-pointer"
                   title="Remove attachment"
                 >
@@ -945,6 +947,7 @@ export function SidekickDrawer({
           <button
             type="button"
             onClick={handleOpenAttachDrawer}
+            aria-label="Attach object"
             className="p-3 rounded-xl bg-[#161412] border border-white/5 text-white/60 hover:text-[#A855F7] hover:border-[#A855F7]/30 transition-colors flex items-center justify-center cursor-pointer shrink-0"
             title="Attach Object"
           >
@@ -965,6 +968,7 @@ export function SidekickDrawer({
           <button
             onClick={handleSend}
             disabled={sending || (!input.trim() && pendingAttachments.length === 0)}
+            aria-label="Send message"
             className="px-4 py-3 rounded-xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-40 text-white font-black flex items-center justify-center shrink-0 cursor-pointer"
           >
             <Send size={16} />
@@ -1033,6 +1037,7 @@ export function SidekickDrawer({
               </div>
               <button
                 onClick={() => setShowAttachedObjectsDrawer(false)}
+                aria-label="Close attached objects list"
                 className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5"
               >
                 <X size={16} />
@@ -1069,6 +1074,7 @@ export function SidekickDrawer({
                       <button
                         type="button"
                         onClick={() => handleDetachSessionObject(obj.childId)}
+                        aria-label={`Detach object ${titleText}`}
                         className="p-2 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer shrink-0 ml-2"
                         title="Detach object"
                       >
