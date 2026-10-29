@@ -265,7 +265,18 @@ export default function SharedGoalClient({
   return (
     <div className="min-h-[70vh] bg-[#0A0908] text-white">
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <SharedWorkspaceBar objectType="goal" />
+        <SharedWorkspaceBar
+          objectType="goal"
+          itemData={{
+            title: view.title,
+            description: view.description || undefined,
+            status: statusLabel,
+            priority: String(view.priority),
+            dueDate: view.dueDate ? new Date(view.dueDate).toLocaleDateString() : undefined,
+            id: view.id,
+            rawJson: view,
+          }}
+        />
         <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#6366F1] mb-3">
           Shared goal
         </p>

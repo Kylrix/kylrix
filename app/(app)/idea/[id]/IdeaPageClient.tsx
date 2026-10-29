@@ -17,6 +17,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { NoteDetailSidebar, NoteAccessRole } from '@/components/ui/NoteDetailSidebar';
+import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 import type { Notes } from '@/lib/data';
 import {
   realtime,
@@ -417,6 +418,17 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
 
   return (
     <div className="min-h-screen bg-[#161412] flex flex-col">
+      <div className="w-full pt-4 px-4 max-w-4xl mx-auto">
+        <SharedWorkspaceBar
+          objectType="idea"
+          itemData={{
+            title: note.title || 'Untitled Idea',
+            content: note.content || '',
+            id: note.$id || note.id,
+            rawJson: note,
+          }}
+        />
+      </div>
       <NoteDetailSidebar
         note={note}
         onUpdate={handleNoteUpdate}
