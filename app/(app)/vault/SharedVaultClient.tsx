@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Lock,
   AlertTriangle} from 'lucide-react';
+import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 
 interface SharedVaultClientProps {
   credentialId: string;
@@ -276,8 +277,29 @@ export default function SharedVaultClient({ credentialId, dekFragment, rawCreden
 
   if (!credential) return null;
 
+  const customFieldsFormatted = credential.customFields?.map((f) => ({
+    label: f.label,
+    value: f.value,
+  }));
+
   return (
-    <div className="shared-vault-wrap">
+    <div className="shared-vault-wrap flex-col">
+      <div className="w-full max-w-[480px] mb-4">
+        <SharedWorkspaceBar
+          objectType="credential"
+          itemData={{
+            title: credential.name,
+            content: credential.notes || undefined,
+            fields: [
+              ...(credential.username ? [{ label: 'Username', value: credential.username }] : []),
+              ...(credential.url ? [{ label: 'Website', value: credential.url }] : []),
+              ...(customFieldsFormatted || []),
+            ],
+            id: credential.$id,
+          }}
+        />
+      </div>
+
       <div className="shared-vault-card">
         {/* Header */}
         <div className="svc-header">

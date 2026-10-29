@@ -14,6 +14,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Shield, Copy, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 
 interface SharedTotpClientProps {
   totpId: string;
@@ -352,7 +353,23 @@ export default function SharedTotpClient({ totpId, keySegments, rawTotp }: Share
   const urgent = secsLeft <= 5;
 
   return (
-    <div className="shared-totp-wrap">
+    <div className="shared-totp-wrap flex-col">
+      <div className="w-full max-w-[400px] mb-4">
+        <SharedWorkspaceBar
+          objectType="totp"
+          itemData={{
+            title: state.label,
+            content: code ? `Active Code: ${code} (${secsLeft}s remaining)` : undefined,
+            id: totpId,
+            fields: [
+              { label: 'Algorithm', value: state.algo },
+              { label: 'Digits', value: String(state.digits) },
+              { label: 'Step', value: `${state.step}s` },
+            ],
+          }}
+        />
+      </div>
+
       <div className="shared-totp-card">
         {/* Header */}
         <div className="stc-header">

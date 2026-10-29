@@ -23,6 +23,7 @@
 <!-- Instant Action Banners -->
 <p align="center">
   <a href="https://www.kylrix.space" target="_blank"><img src="https://img.shields.io/badge/Web_App-Launch_Live-EC4899?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Web App" /></a>
+  <a href="https://discord.gg/YjF5yCBCmx" target="_blank"><img src="https://img.shields.io/badge/Discord_Community-Join_Server-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join Discord Community" /></a>
   <a href="#-cli--local-agent-bridge-kylrixcli"><img src="https://img.shields.io/badge/CLI-Install_&_Run-4F46E5?style=for-the-badge&logo=gnome-terminal&logoColor=white" alt="CLI" /></a>
   <a href="#-mcp-server"><img src="https://img.shields.io/badge/MCP_Server-Connect-8B5CF6?style=for-the-badge&logo=anthropic&logoColor=white" alt="MCP" /></a>
   <a href="docs/api.md"><img src="https://img.shields.io/badge/REST_API-Docs-10B981?style=for-the-badge&logo=fastapi&logoColor=white" alt="REST API" /></a>
@@ -76,6 +77,7 @@ curl -X GET "https://www.kylrix.space/api/v1/vault/secret-id" \
 | Surface | Action / Command |
 |---|---|
 | **🌐 Web App** | [Launch kylrix.space](https://www.kylrix.space) |
+| **💬 Discord Community** | [Join Discord Server](https://discord.gg/YjF5yCBCmx) |
 | **💻 CLI Tool** | `npm i -g @kylrix/cli` |
 | **🔌 MCP Server** | `npx -y @smithery/cli install kylrix/kylrix` |
 | **⚡ Local MCP** | `kylrix mcp` |
@@ -250,6 +252,7 @@ ota up --workflow verify
 | **VS Code Extension** | [`packages/vscode`](packages/vscode) · [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=nathfavour.kylrix-vscode&ssr=false#review-details) |
 | **Telegram Bot** | [Connect Telegram](https://www.kylrix.space/connect/telegram) |
 | **Discord Bot** | [Connect Discord](https://www.kylrix.space/connect/discord) |
+| **Discord Community** | [Join Discord Server](https://discord.gg/YjF5yCBCmx) |
 | **Slack Bot** | *Coming Soon* |
 | **WebMCP** | [docs/webmcp.md](docs/webmcp.md) |
 | **REST API** | [docs/api.md](docs/api.md) |

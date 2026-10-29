@@ -101,6 +101,8 @@ export function PublicAgentSessionView({
   messages: PublicAgentMessage[];
   updatedAt?: string;
 }) {
+  const sessionContent = messages.map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`).join('\n\n');
+
   return (
     <div className="min-h-[70vh] bg-[#0A0908] text-white relative overflow-x-hidden">
       <div
@@ -110,7 +112,14 @@ export function PublicAgentSessionView({
       />
 
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-10">
-        <SharedWorkspaceBar objectType="session" />
+        <SharedWorkspaceBar
+          objectType="session"
+          itemData={{
+            title,
+            content: sessionContent,
+            rawJson: { title, messages, updatedAt },
+          }}
+        />
 
         <header className="rounded-[28px] border border-[#34322F] bg-[#161412] mb-6 overflow-hidden">
           <div className="flex items-start gap-3.5 p-5 sm:p-6">
@@ -177,7 +186,15 @@ export function PublicAgentMessageView({
       />
 
       <div className="relative mx-auto max-w-3xl px-4 sm:px-6 py-8 sm:py-10">
-        <SharedWorkspaceBar objectType="message" />
+        <SharedWorkspaceBar
+          objectType="message"
+          itemData={{
+            title: `Shared ${message.role === 'assistant' ? 'reply' : 'prompt'} from Kylie`,
+            content: message.content,
+            id: message.id,
+            rawJson: { message, sessionId },
+          }}
+        />
 
         <header className="rounded-[28px] border border-[#34322F] bg-[#161412] mb-6 overflow-hidden">
           <div className="flex items-start gap-3.5 p-5 sm:p-6">

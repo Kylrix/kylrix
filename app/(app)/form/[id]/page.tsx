@@ -15,6 +15,7 @@ import { ChatService } from '@/lib/services/chat';
 import { createComment, getNote } from '@/lib/data';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { LocalEngine } from '@/lib/services/LocalEngine';
+import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
 import toast from 'react-hot-toast';
 
 export default function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
@@ -557,8 +558,23 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                 />
             </div>
 
+            {/* Top Action Bar */}
+            {form && (
+                <div className="w-full pt-8 px-6 max-w-3xl z-10">
+                    <SharedWorkspaceBar
+                        objectType="form"
+                        itemData={{
+                            title: form.title || 'Shared Form',
+                            description: form.description || undefined,
+                            id: form.$id || form.id,
+                            rawJson: form,
+                        }}
+                    />
+                </div>
+            )}
+
             {/* Empty Header spacing */}
-            <div className="w-full py-6 flex justify-center items-center relative px-6 z-10 shrink-0">
+            <div className="w-full py-4 flex justify-center items-center relative px-6 z-10 shrink-0">
                 {currentStep > 0 && !submitted && (
                     <button 
                         onClick={handleBack}
