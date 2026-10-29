@@ -1,11 +1,46 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resolveAllUserIds } from '@/lib/actions/turso-ops';
+import { resolveAllUserIds, listNotesTurso, listGoalsTurso } from '@/lib/actions/turso-ops';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 
 describe('Workspace Discovery & User ID Aliasing', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('queries notes and goals with desc(updatedAt) ordering', async () => {
+    let notesQueryHasOrderBy = false;
+    let goalsQueryHasOrderBy = false;
+
+    vi.spyOn(db, 'select').mockImplementation((_fields?: any) => {
+      return {
+        from: (table: any) => {
+          return {
+            where: (_condition: any) => {
+              return {
+                orderBy: (_orderClause: any) => {
+                  if (table === schema.notes) notesQueryHasOrderBy = true;
+                  if (table === schema.goals) goalsQueryHasOrderBy = true;
+                  return Promise.resolve([
+                    { id: '1', title: 'Item 1', updatedAt: '2025-01-02T00:00:00Z' },
+                    { id: '2', title: 'Item 2', updatedAt: '2025-01-01T00:00:00Z' },
+                  ]);
+                },
+                limit: async (_num: number) => [],
+              };
+            },
+          };
+        },
+      } as any;
+    });
+
+    const notesRes = await listNotesTurso('test_user_id');
+    const goalsRes = await listGoalsTurso('test_user_id');
+
+    expect(notesRes.success).toBe(true);
+    expect(notesQueryHasOrderBy).toBe(true);
+    expect(goalsRes.success).toBe(true);
+    expect(goalsQueryHasOrderBy).toBe(true);
   });
 
   it('resolves legacy Appwrite user IDs and accounts via email alias matching', async () => {

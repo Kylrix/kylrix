@@ -3,7 +3,7 @@
 import { cache } from 'react';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, and, or, inArray } from 'drizzle-orm';
+import { eq, and, or, inArray, desc } from 'drizzle-orm';
 import { invalidateRowCache } from '@/lib/actions/secure-ops/shared';
 
 type CacheEntry<T> = {
@@ -377,6 +377,8 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
   }
 
   try {
+    const { sql } = await import('drizzle-orm');
+
     // 1. Fetch primary user record by ID, appwriteAccountId, or email, and account records by userId or accountId
     const userConditions = [
       eq(schema.user.id, cleanId),
@@ -422,9 +424,33 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
       if (acc.accountId) allUserIds.add(acc.accountId);
     }
 
-    // 2. Query all user IDs from schema.user sharing that normalized email address (LOWER(email))
+    // 2. Fetch user records for any newly discovered user IDs from initialAccounts
+    const currentIdsForUserLookup = Array.from(allUserIds).filter(Boolean);
+    if (currentIdsForUserLookup.length > 0) {
+      const secondaryUsers = await db
+        .select({
+          id: schema.user.id,
+          appwriteAccountId: schema.user.appwriteAccountId,
+          email: schema.user.email,
+        })
+        .from(schema.user)
+        .where(
+          or(
+            inArray(schema.user.id, currentIdsForUserLookup),
+            inArray(schema.user.appwriteAccountId, currentIdsForUserLookup)
+          )
+        )
+        .limit(50);
+
+      for (const u of secondaryUsers) {
+        if (u.id) allUserIds.add(u.id);
+        if (u.appwriteAccountId) allUserIds.add(u.appwriteAccountId);
+        if (u.email?.trim()) emailsToQuery.add(u.email.trim().toLowerCase());
+      }
+    }
+
+    // 3. Query all user IDs from schema.user sharing that normalized email address (LOWER(email))
     if (emailsToQuery.size > 0) {
-      const { sql } = await import('drizzle-orm');
       for (const email of emailsToQuery) {
         const sharedEmailUsers = await db
           .select({
@@ -1187,7 +1213,8 @@ export const listNotesTurso = cache(async function listNotesTurso(userId: string
     const rows = await db
       .select()
       .from(schema.notes)
-      .where(and(inArray(schema.notes.userId, allUserIds), eq(schema.notes.isTrashed, false)));
+      .where(and(inArray(schema.notes.userId, allUserIds), eq(schema.notes.isTrashed, false)))
+      .orderBy(desc(schema.notes.updatedAt));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
@@ -1311,7 +1338,8 @@ export const listGoalsTurso = cache(async function listGoalsTurso(userId: string
     const rows = await db
       .select()
       .from(schema.goals)
-      .where(inArray(schema.goals.userId, allUserIds));
+      .where(and(inArray(schema.goals.userId, allUserIds), eq(schema.goals.isTrashed, false)))
+      .orderBy(desc(schema.goals.updatedAt));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
