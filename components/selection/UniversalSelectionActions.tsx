@@ -50,50 +50,53 @@ export function UniversalSelectionActions() {
         const db = await getRxDB().catch(() => null);
 
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        for (const id of selectedIds) {
-          void LocalEngine.markDeleted(id, user?.$id);
-          autonomicSyncEngine.cancelPending(id);
-          if (db) {
-            db.cache.findOne(`goal_${id}`).remove().catch(() => {});
-            db.cache.findOne(`note_${id}`).remove().catch(() => {});
-            db.notes.findOne(id).remove().catch(() => {});
-          }
+        // Concurrently delete selected items instead of sequential awaiting to eliminate O(N * T) latency
+        await Promise.all(
+          selectedIds.map(async (id) => {
+            void LocalEngine.markDeleted(id, user?.$id);
+            autonomicSyncEngine.cancelPending(id);
+            if (db) {
+              db.cache.findOne(`goal_${id}`).remove().catch(() => {});
+              db.cache.findOne(`note_${id}`).remove().catch(() => {});
+              db.notes.findOne(id).remove().catch(() => {});
+            }
 
-          if (activeKind === 'note') {
-            removeNote(id);
-            try {
-              const { deleteNote } = await import('@/lib/actions/client-ops');
-              await deleteNote(id).catch(() => null);
-            } catch {}
-          } else if (activeKind === 'goal' || activeKind === 'task') {
-            deleteTask(id);
-            try {
-              const { tasks } = await import('@/lib/kylrixflow');
-              await tasks.delete(id).catch(() => null);
-            } catch {}
-          } else if (activeKind === 'event') {
-            removeEvent(id);
-            try {
-              const { events } = await import('@/lib/kylrixflow');
-              await events.delete(id).catch(() => null);
-            } catch {}
-          } else if (activeKind === 'form') {
-            try {
-              const { FormsService } = await import('@/lib/services/forms');
-              await FormsService.deleteForm(id).catch(() => null);
-            } catch {}
-          } else if (activeKind === 'credential') {
-            try {
-              const { deleteCredential } = await import('@/lib/data');
-              await deleteCredential(id).catch(() => null);
-            } catch {}
-          } else if (activeKind === 'totp') {
-            try {
-              const { deleteTotpSecret } = await import('@/lib/data');
-              await deleteTotpSecret(id).catch(() => null);
-            } catch {}
-          }
-        }
+            if (activeKind === 'note') {
+              removeNote(id);
+              try {
+                const { deleteNote } = await import('@/lib/actions/client-ops');
+                await deleteNote(id).catch(() => null);
+              } catch {}
+            } else if (activeKind === 'goal' || activeKind === 'task') {
+              deleteTask(id);
+              try {
+                const { tasks } = await import('@/lib/kylrixflow');
+                await tasks.delete(id).catch(() => null);
+              } catch {}
+            } else if (activeKind === 'event') {
+              removeEvent(id);
+              try {
+                const { events } = await import('@/lib/kylrixflow');
+                await events.delete(id).catch(() => null);
+              } catch {}
+            } else if (activeKind === 'form') {
+              try {
+                const { FormsService } = await import('@/lib/services/forms');
+                await FormsService.deleteForm(id).catch(() => null);
+              } catch {}
+            } else if (activeKind === 'credential') {
+              try {
+                const { deleteCredential } = await import('@/lib/data');
+                await deleteCredential(id).catch(() => null);
+              } catch {}
+            } else if (activeKind === 'totp') {
+              try {
+                const { deleteTotpSecret } = await import('@/lib/data');
+                await deleteTotpSecret(id).catch(() => null);
+              } catch {}
+            }
+          })
+        );
 
         toast.success(`Deleted ${count} ${kindLabel}(s)!`, { id: 'bulk-delete' });
         exitSelectMode();
@@ -131,13 +134,16 @@ export function UniversalSelectionActions() {
     toast.loading(`Moving ${count} ${kindLabel}(s) to ${workspace.title}...`, { id: 'bulk-move' });
     try {
       const { attachObjectToProject } = await import('@/lib/projects/object-attachment');
-      for (const id of selectedIds) {
-        await attachObjectToProject({
-          projectId: workspace.id,
-          entityKind: activeKind || 'note',
-          entityId: id,
-        }).catch(() => null);
-      }
+      // Concurrently attach items to workspace instead of sequential awaiting
+      await Promise.all(
+        selectedIds.map((id) =>
+          attachObjectToProject({
+            projectId: workspace.id,
+            entityKind: activeKind || 'note',
+            entityId: id,
+          }).catch(() => null)
+        )
+      );
       toast.success(`Moved ${count} items to ${workspace.title}!`, { id: 'bulk-move' });
       setShowWorkspacePicker(false);
       exitSelectMode();
@@ -153,23 +159,26 @@ export function UniversalSelectionActions() {
     setIsProcessing(true);
     toast.loading(`Pinning / unpinning ${count} item(s)...`, { id: 'bulk-pin' });
     try {
-      for (const id of selectedIds) {
-        if (activeKind === 'note') {
-          const isPin = checkNotePinned(id);
-          if (isPin) await unpinNote(id).catch(() => {});
-          else await pinNote(id).catch(() => {});
-        } else if (activeKind === 'goal' || activeKind === 'task') {
-          await togglePinTask(id).catch(() => {});
-        } else if (activeKind === 'event' || activeKind === 'form') {
-          await togglePin({
-            resourceType: activeKind,
-            resourceId: id,
-            ownerId: user?.$id || 'guest',
-            rowIsPinned: false,
-            setOwnerRowPin: async () => {},
-          }).catch(() => {});
-        }
-      }
+      // Concurrently update pins instead of sequential awaiting
+      await Promise.all(
+        selectedIds.map(async (id) => {
+          if (activeKind === 'note') {
+            const isPin = checkNotePinned(id);
+            if (isPin) await unpinNote(id).catch(() => {});
+            else await pinNote(id).catch(() => {});
+          } else if (activeKind === 'goal' || activeKind === 'task') {
+            await togglePinTask(id).catch(() => {});
+          } else if (activeKind === 'event' || activeKind === 'form') {
+            await togglePin({
+              resourceType: activeKind,
+              resourceId: id,
+              ownerId: user?.$id || 'guest',
+              rowIsPinned: false,
+              setOwnerRowPin: async () => {},
+            }).catch(() => {});
+          }
+        })
+      );
       toast.success(`Updated pins for ${count} item(s)`, { id: 'bulk-pin' });
       exitSelectMode();
     } catch (err: any) {
