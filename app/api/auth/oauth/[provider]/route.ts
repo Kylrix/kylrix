@@ -13,10 +13,12 @@ export function sanitizeCallbackUrl(url: string | null | undefined): string {
 
   const trimmed = url.trim();
 
-  // Reject absolute URLs, protocol-relative URLs, control characters, or backslash evasion attempts
+  // Reject absolute URLs, protocol-relative URLs, control characters, whitespace at head, or backslash evasion attempts
   if (
     trimmed.startsWith('//') ||
     trimmed.startsWith('/\\') ||
+    /^\/[/\\]/.test(trimmed) ||
+    /^\/\s/.test(trimmed) ||
     /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ||
     /[\x00-\x1F\x7F]/.test(trimmed)
   ) {
@@ -28,7 +30,15 @@ export function sanitizeCallbackUrl(url: string | null | undefined): string {
     return '/app';
   }
 
-  return trimmed;
+  try {
+    const parsed = new URL(trimmed, 'https://dummy-base.local');
+    if (parsed.origin !== 'https://dummy-base.local' || parsed.pathname.startsWith('//')) {
+      return '/app';
+    }
+    return parsed.pathname + parsed.search + parsed.hash;
+  } catch {
+    return '/app';
+  }
 }
 
 export async function GET(
