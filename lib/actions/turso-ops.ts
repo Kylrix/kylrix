@@ -1424,7 +1424,10 @@ export const listFormsTurso = cache(async function listFormsTurso(userId: string
       ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
       : [];
 
-    const conditions = [inArray(schema.forms.userId, allUserIds)];
+    const conditions = [
+      inArray(schema.forms.userId, allUserIds),
+      inArray(schema.forms.creatorId, allUserIds),
+    ];
     if (workspaceIds.length > 0) {
       conditions.push(inArray(schema.forms.workspaceId, workspaceIds));
     }
@@ -1432,7 +1435,8 @@ export const listFormsTurso = cache(async function listFormsTurso(userId: string
     const rows = await db
       .select()
       .from(schema.forms)
-      .where(or(...conditions));
+      .where(or(...conditions))
+      .orderBy(desc(schema.forms.createdAt));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
@@ -1480,7 +1484,10 @@ export const listEventsTurso = cache(async function listEventsTurso(userId: stri
       ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
       : [];
 
-    const conditions = [inArray(schema.events.userId, allUserIds)];
+    const conditions = [
+      inArray(schema.events.userId, allUserIds),
+      inArray(schema.events.creatorId, allUserIds),
+    ];
     if (workspaceIds.length > 0) {
       conditions.push(inArray(schema.events.workspaceId, workspaceIds));
     }
@@ -1488,7 +1495,8 @@ export const listEventsTurso = cache(async function listEventsTurso(userId: stri
     const rows = await db
       .select()
       .from(schema.events)
-      .where(or(...conditions));
+      .where(or(...conditions))
+      .orderBy(desc(schema.events.createdAt));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
