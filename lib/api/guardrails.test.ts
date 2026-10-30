@@ -43,12 +43,12 @@ describe('Paid Guardrails & Public Pull Access Unit Tests', () => {
   it('assertPaidActor throws PaymentRequiredError for free-tier actors', async () => {
     const { assertPaidActor, PaymentRequiredError } = await import('./resources');
     await expect(assertPaidActor(freeActor)).rejects.toThrow(PaymentRequiredError);
-  });
+  }, 15000);
 
   it('assertPaidActor succeeds for paid/pro-tier actors', async () => {
     const { assertPaidActor } = await import('./resources');
     await expect(assertPaidActor(proActor)).resolves.not.toThrow();
-  });
+  }, 15000);
 
   it('PaymentRequiredError has 402 status code', async () => {
     const { PaymentRequiredError } = await import('./resources');

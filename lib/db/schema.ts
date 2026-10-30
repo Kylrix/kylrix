@@ -489,6 +489,7 @@ export const threadMessages = sqliteTable('thread_messages', {
 export const forms = sqliteTable('forms', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
+  creatorId: text('creator_id'),
   title: text('title').notNull().default(''),
   description: text('description').default(''),
   schema: text('schema_json').notNull().default('[]'),
@@ -528,6 +529,7 @@ export const formSubmissions = sqliteTable('form_submissions', {
 export const events = sqliteTable('events', {
   id: text('id').primaryKey(),
   userId: text('creator_id').notNull(),
+  creatorId: text('creator_id'),
   calendarId: text('calendar_id').notNull().default('default'),
   title: text('title').notNull().default(''),
   description: text('description').default(''),

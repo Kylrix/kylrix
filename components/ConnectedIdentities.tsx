@@ -192,7 +192,7 @@ export default function ConnectedIdentities() {
                   <p className="text-sm font-bold text-white truncate">{p.name}</p>
                   <p className="text-[11px] text-white/40 truncate">
                     {linked
-                      ? linked.providerEmail || linked.providerUid || 'Connected'
+                      ? linked.providerEmail || (linked.providerUid ? `ID: ${linked.providerUid}` : 'Connected')
                       : 'Not connected'}
                   </p>
                 </div>
