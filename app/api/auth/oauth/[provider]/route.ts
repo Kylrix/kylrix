@@ -28,7 +28,23 @@ export function sanitizeCallbackUrl(url: string | null | undefined): string {
     return '/app';
   }
 
-  return trimmed;
+  try {
+    const dummyOrigin = 'https://kylrix.local';
+    const parsed = new URL(trimmed, dummyOrigin);
+
+    // Defense-in-depth: Ensure origin matches dummy origin and pathname starts with '/' without backslashes
+    if (
+      parsed.origin !== dummyOrigin ||
+      !parsed.pathname.startsWith('/') ||
+      parsed.pathname.includes('\\')
+    ) {
+      return '/app';
+    }
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return '/app';
+  }
 }
 
 export async function GET(
