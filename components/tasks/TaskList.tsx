@@ -61,6 +61,14 @@ export default function TaskList() {
   const { isPinned: isResourcePinned } = useResourcePins();
 
   const tasks = getFilteredTasks();
+
+  // Bolt: Optimization - Pre-compute isPinned boolean state once per task in a Map
+  // to avoid calling isResourcePinned 3x per task during partitioning & sorting passes.
+  const taskPinMap = new Map<string, boolean>();
+  for (const t of tasks) {
+    taskPinMap.set(t.id, isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned));
+  }
+
   const activeTasks = tasks.filter(t => t.status !== 'done');
   const completedTasks = tasks.filter(t => t.status === 'done');
 
@@ -72,7 +80,7 @@ export default function TaskList() {
         priority: t.priority,
         createdAt: t.createdAt instanceof Date && !isNaN(t.createdAt.getTime()) ? t.createdAt.toISOString() : String(t.createdAt ?? ''),
         updatedAt: t.updatedAt instanceof Date && !isNaN(t.updatedAt.getTime()) ? t.updatedAt.toISOString() : String(t.updatedAt ?? ''),
-        isPinned: isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned),
+        isPinned: taskPinMap.get(t.id) ?? false,
       })),
     ).map((row) => row.$id);
     const byId = new Map(rows.map((t) => [t.id, t]));
@@ -80,10 +88,10 @@ export default function TaskList() {
   };
 
   const pinnedTasks = sortTasksByDeadline(
-    activeTasks.filter((t) => isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
+    activeTasks.filter((t) => taskPinMap.get(t.id)),
   );
   const unpinnedTasks = sortTasksByDeadline(
-    activeTasks.filter((t) => !isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned)),
+    activeTasks.filter((t) => !taskPinMap.get(t.id)),
   );
   const sortedCompletedTasks = sortTasksByDeadline(completedTasks);
 
