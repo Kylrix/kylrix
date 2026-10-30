@@ -398,6 +398,7 @@ export const goals = sqliteTable('goals', {
   priority: text('priority').default('medium'),
   dueDate: text('due_date'),
   completedAt: text('completed_at'),
+  isTrashed: integer('is_trashed', { mode: 'boolean' }).default(false),
   isWorkspace: integer('is_workspace', { mode: 'boolean' }).default(false),
   workspaceId: text('workspace_id'),
   projectId: text('project_id'),
