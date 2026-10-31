@@ -833,12 +833,21 @@ export async function deleteTotpSecretTurso(id: string) {
   }
 }
 
-export async function upsertProjectTurso(data: Partial<typeof schema.projects.$inferInsert> & { id: string; creatorId: string; name?: string; title?: string }) {
+export async function upsertProjectTurso(data: Partial<typeof schema.projects.$inferInsert> & { id: string; creatorId: string; name?: string; title?: string; isExternal?: boolean; externalClient?: string | null }) {
   try {
     invalidateResourceCache('workspaces', data.creatorId);
     const now = new Date().toISOString();
     const nameVal = data.name || data.title || 'Workspace';
     const titleVal = data.title || data.name || nameVal;
+
+    let metaObj: Record<string, any> = {};
+    if (data.metadata) {
+      try {
+        metaObj = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : (data.metadata as Record<string, any> || {});
+      } catch {}
+    }
+    if (data.isExternal !== undefined) metaObj.isExternal = Boolean(data.isExternal);
+    if (data.externalClient !== undefined) metaObj.externalClient = data.externalClient;
 
     const payload: typeof schema.projects.$inferInsert = {
       id: data.id,
@@ -857,11 +866,9 @@ export async function upsertProjectTurso(data: Partial<typeof schema.projects.$i
       dek: data.dek || null,
       isPublic: Boolean(data.isPublic),
       isAgentic: Boolean(data.isAgentic),
-      isExternal: Boolean(data.isExternal),
-      externalClient: data.externalClient || null,
       isLocked: Boolean(data.isLocked),
       privacyMode: Boolean(data.privacyMode),
-      metadata: data.metadata || null,
+      metadata: Object.keys(metaObj).length > 0 ? JSON.stringify(metaObj) : (data.metadata || null),
       createdAt: data.createdAt || now,
       updatedAt: data.updatedAt || now,
     };
@@ -907,6 +914,7 @@ export const listWorkspacesTurso = cache(async function listWorkspacesTurso(user
   try {
     const allUserIds = await resolveAllUserIds(userId);
 
+    // Ensure schema.projects (workspaces) matches all resolved user IDs across owner_id or creator_id
     const [ownedRows, projectObjMemberships, wsMemberships, collabMemberships, publicAgenticRows] = await Promise.all([
       db
         .select()
@@ -1424,9 +1432,12 @@ export const listFormsTurso = cache(async function listFormsTurso(userId: string
       ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
       : [];
 
+    // Map queries to check or(inArray(schema.forms.userId, allUserIds), inArray(schema.forms.creatorId, allUserIds))
     const conditions = [
-      inArray(schema.forms.userId, allUserIds),
-      inArray(schema.forms.creatorId, allUserIds),
+      or(
+        inArray(schema.forms.userId, allUserIds),
+        inArray(schema.forms.creatorId, allUserIds)
+      ),
     ];
     if (workspaceIds.length > 0) {
       conditions.push(inArray(schema.forms.workspaceId, workspaceIds));
@@ -1484,9 +1495,12 @@ export const listEventsTurso = cache(async function listEventsTurso(userId: stri
       ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
       : [];
 
+    // Map queries to check or(inArray(schema.events.userId, allUserIds), inArray(schema.events.creatorId, allUserIds))
     const conditions = [
-      inArray(schema.events.userId, allUserIds),
-      inArray(schema.events.creatorId, allUserIds),
+      or(
+        inArray(schema.events.userId, allUserIds),
+        inArray(schema.events.creatorId, allUserIds)
+      ),
     ];
     if (workspaceIds.length > 0) {
       conditions.push(inArray(schema.events.workspaceId, workspaceIds));

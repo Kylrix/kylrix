@@ -55,10 +55,8 @@ export function isWorkspaceRecord(project: Partial<Projects> | null | undefined)
   );
   if (!hasIdentifierOrTitle) return false;
 
-  // Ensure p.title defaults to p.title || p.name || 'Untitled Workspace'
-  if (!p.title) {
-    p.title = p.title || p.name || 'Untitled Workspace';
-  }
+  // Resolve title as (p.title || p.name || 'Untitled Workspace').trim()
+  p.title = String(p.title || p.name || 'Untitled Workspace').trim();
 
   return true;
 }

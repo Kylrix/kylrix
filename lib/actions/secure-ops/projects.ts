@@ -43,7 +43,7 @@ export async function getPublicFormDataSecure(formId: string) {
         schema: tr.schema,
         settings: tr.settings,
         isPublic: Boolean(tr.isPublic),
-        isGuest: Boolean(tr.isGuest),
+        isGuest: Boolean(tr.isPublic),
         $createdAt: tr.createdAt,
         $updatedAt: tr.updatedAt,
       };
