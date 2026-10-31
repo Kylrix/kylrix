@@ -100,7 +100,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         .filter((p: any) => isWorkspaceRecord(p))
         .map((p: any) => {
           const id = String(p.$id || p.id || '').trim();
-          const ownerId = p.ownerId || p.userId || p.creatorId || '';
+          const ownerId = p.ownerId || p.owner_id || p.creatorId || p.creator_id || p.userId || userId;
           const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
           const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
           const externalClient = p.externalClient || null;
@@ -118,9 +118,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           } catch {}
           if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
 
+          const title = (p.title || p.name || 'Untitled Workspace').trim();
+
           return {
             id,
-            title: p.title || p.name || 'Untitled Workspace',
+            title,
             ownerId: ownerId || userId,
             isPersonal: false as const,
             isShared: Boolean(isShared && !isAgentic && !isExternal),
@@ -179,6 +181,24 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string, allowSinglePersonal = false) => {
     // Prevent cache poisoning: Never overwrite existing non-empty cached list with single personal workspace
     // unless explicitly allowed (e.g. on explicit logout)
+    if (items.length <= 1 && !allowSinglePersonal) {
+      if (typeof window !== 'undefined') {
+        const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
+        for (const k of existingKeys) {
+          const existing = localStorage.getItem(k);
+          if (existing) {
+            try {
+              const parsed = JSON.parse(existing);
+              const list = Array.isArray(parsed) ? parsed : (parsed?.rows || parsed?.workspaces || []);
+              if (Array.isArray(list) && list.length >= 2) {
+                return; // Abort the overwrite if current localStorage already has 2 or more cached workspaces
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+
     const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
     if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
       if (typeof window !== 'undefined') {
@@ -246,13 +266,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Combine direct Turso workspace rows with warmProjectsList and local caches
-      const rawCandidates = [
+      let rawCandidates = [
         ...(Array.isArray(tursoRows) ? tursoRows : []),
         ...(Array.isArray(rows) ? rows : []),
         ...(Array.isArray(directUserProjects) ? directUserProjects : []),
         ...(Array.isArray(globalProjects) ? globalProjects : []),
         ...(Array.isArray(customCached) ? customCached : []),
       ];
+
+      // Cache recovery / auto-healing:
+      // If candidateRows produces empty results, bypass the poisoned local cache and re-fetch from listWorkspacesTurso(userId) directly.
+      if (rawCandidates.length === 0 || mapProjectRows(rawCandidates).length === 0) {
+        const directTurso = await listWorkspacesTurso(userId || 'guest').catch(() => ({ success: false, rows: [] }));
+        if (directTurso?.rows && directTurso.rows.length > 0) {
+          rawCandidates = directTurso.rows;
+        }
+      }
 
       const mapped = mapProjectRows(rawCandidates);
       const mappedLocal = Array.isArray(localShared)

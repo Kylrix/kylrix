@@ -29,8 +29,14 @@ export function isWorkspaceRecord(project: Partial<Projects> | null | undefined)
   const id = String(p.$id || p.id || '').trim();
   if (!id) return false;
 
+  // A record is a valid root workspace if !p.parentProjectId (or parentProjectId === null / "")
   const parentId = p.parentProjectId ?? p.parentId ?? null;
   if (parentId !== null && parentId !== undefined && String(parentId).trim() !== '') {
+    return false;
+  }
+
+  // Do NOT require p.kind === 'workspace'; accept records where p.kind == null or p.kind === 'workspace'
+  if (p.kind !== undefined && p.kind !== null && p.kind !== 'workspace') {
     return false;
   }
 
@@ -39,6 +45,19 @@ export function isWorkspaceRecord(project: Partial<Projects> | null | undefined)
     if (meta.isSubProject === true || meta.kind === 'subproject') {
       return false;
     }
+  }
+
+  // Must have either p.title or p.name or p.$id / p.id
+  const hasIdentifierOrTitle = Boolean(
+    (typeof p.title === 'string' && p.title.trim()) ||
+    (typeof p.name === 'string' && p.name.trim()) ||
+    id
+  );
+  if (!hasIdentifierOrTitle) return false;
+
+  // Ensure p.title defaults to p.title || p.name || 'Untitled Workspace'
+  if (!p.title) {
+    p.title = p.title || p.name || 'Untitled Workspace';
   }
 
   return true;
