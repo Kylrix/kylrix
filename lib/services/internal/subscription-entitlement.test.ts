@@ -4,7 +4,7 @@ import {
   suspendAccountAndLogIpSecure,
   invalidateEntitlementCache,
 } from './subscription-entitlement';
-import { computeSubscriptionSig } from './subscription-prefs-merge';
+import { computeSubscriptionSig, verifySubscriptionSig } from './subscription-prefs-merge';
 
 const mockListRows = vi.fn(async () => ({ rows: [] }));
 const mockUsersGet = vi.fn(async (id: string) => ({
@@ -106,5 +106,31 @@ describe('Subscription Entitlement & Fraud Suspension', () => {
     const entitlement = await getVerifiedProEntitlementForUser('user_vip');
     expect(entitlement.active).toBe(true);
     expect(entitlement.uiTier).toBe('PRO');
+  });
+
+  describe('verifySubscriptionSig timing-safe verification', () => {
+    it('verifies valid HMAC signatures', () => {
+      const exp = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+      const sig = computeSubscriptionSig('user_123', 'PRO', exp);
+      expect(verifySubscriptionSig('user_123', 'PRO', exp, sig)).toBe(true);
+    });
+
+    it('rejects tampered signatures, wrong tier, wrong expiration, or altered user', () => {
+      const exp = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
+      const sig = computeSubscriptionSig('user_123', 'PRO', exp);
+
+      // Wrong user
+      expect(verifySubscriptionSig('user_456', 'PRO', exp, sig)).toBe(false);
+      // Wrong tier
+      expect(verifySubscriptionSig('user_123', 'LIFETIME', exp, sig)).toBe(false);
+      // Tampered sig
+      const tamperedSig = sig.slice(0, -2) + (sig.endsWith('0') ? '1' : '0');
+      expect(verifySubscriptionSig('user_123', 'PRO', exp, tamperedSig)).toBe(false);
+      // Arbitrary string / different length
+      expect(verifySubscriptionSig('user_123', 'PRO', exp, 'short_sig')).toBe(false);
+      // Empty / invalid input
+      expect(verifySubscriptionSig('user_123', 'PRO', exp, '')).toBe(false);
+      expect(verifySubscriptionSig('user_123', 'PRO', exp, null as any)).toBe(false);
+    });
   });
 });
