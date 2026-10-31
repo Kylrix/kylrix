@@ -1182,10 +1182,16 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   }, [activeWorkspace?.id]);
 
   const sortedNotes = useMemo(() => {
+    // Bolt: Optimization - Pre-compute isPinned boolean state once per note in a Map
+    // to avoid calling isResourcePinned O(N log N) times inside the sort comparator and .map() pass.
+    const notePinMap = new Map<string, boolean>();
+    for (const row of workspaceScopedNotes) {
+      notePinMap.set(row.$id, isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned));
+    }
     return sortPinnedThenCreatedAt(workspaceScopedNotes, (row) =>
-      isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned),
+      notePinMap.get(row.$id) ?? false,
     ).map((row) => {
-      const pinned = isResourcePinned('note', row.$id, noteOwnerId(row), row.isPinned);
+      const pinned = notePinMap.get(row.$id) ?? false;
       return row.isPinned === pinned ? row : { ...row, isPinned: pinned };
     });
   }, [workspaceScopedNotes, isResourcePinned, noteOwnerId]);
