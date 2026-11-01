@@ -70,10 +70,10 @@ export async function getPublicFormDataSecure(formId: string) {
 
 export async function submitPublicFormDataSecure(input: {
   formId: string;
-  payload: string;
+  payload: string | Record<string, any>;
   submitterId?: string | null;
   status?: string;
-  metadata?: string | null;
+  metadata?: string | Record<string, any> | null;
 }) {
   const formId = String(input?.formId || '').trim();
   if (!formId) throw new Error('formId is required');
@@ -81,13 +81,21 @@ export async function submitPublicFormDataSecure(input: {
   const submissionId = `sub_${ulid()}`;
   const nowIso = new Date().toISOString();
 
+  const payloadStr = typeof input.payload === 'object' && input.payload !== null
+    ? JSON.stringify(input.payload)
+    : String(input.payload || '{}');
+
+  const metadataStr = typeof input.metadata === 'object' && input.metadata !== null
+    ? JSON.stringify(input.metadata)
+    : (input.metadata || null);
+
   await db.insert(schema.formSubmissions).values({
     id: submissionId,
     formId,
     submitterId: input.submitterId || null,
-    payload: input.payload || '{}',
+    payload: payloadStr,
     status: input.status || 'unread',
-    metadata: input.metadata || null,
+    metadata: metadataStr,
     isPublic: true,
     isGuest: true,
     isTrash: false,
@@ -99,9 +107,9 @@ export async function submitPublicFormDataSecure(input: {
     id: submissionId,
     formId,
     submitterId: input.submitterId || null,
-    payload: input.payload,
+    payload: payloadStr,
     status: input.status || 'unread',
-    metadata: input.metadata,
+    metadata: metadataStr,
     $createdAt: nowIso,
   };
 }
