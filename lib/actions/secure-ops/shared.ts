@@ -1,4 +1,5 @@
 export { cookies } from 'next/headers';
+import { cache } from 'react';
 import { createHmac, randomBytes } from 'node:crypto';
 import { systemTables } from '@/lib/data/system-tables';
 import { q } from '@/lib/data/queries';
@@ -132,7 +133,7 @@ export async function getRowCached(params: { databaseId: string; tableId: string
   return await task;
 }
 
-export async function getActor(jwt?: string) {
+export const getActor = cache(async function getActor(jwt?: string) {
   try {
     const { headers } = await import('next/headers');
     const { auth } = await import('@/lib/auth/better-auth');
@@ -157,7 +158,7 @@ export async function getActor(jwt?: string) {
     console.error('[secure-ops] getActor exception:', err);
     return null;
   }
-}
+});
 
 export function isEnvSERVERSDKUser(user: any) {
   const email = String(user?.email || '').trim().toLowerCase();
