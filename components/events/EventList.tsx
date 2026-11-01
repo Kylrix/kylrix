@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Calendar } from 'lucide-react';
 import { EventObjectRow } from './EventObjectRow';
 import { ObjectCreateDrawer } from '@/components/objects/ObjectCreateDrawer';
 import { Event } from '@/types';
@@ -226,7 +226,7 @@ export default function EventList() {
           </div>
           <button
             type="button"
-            className="flex items-center gap-2 px-5 py-3 font-bold rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer text-sm"
+            className="flex items-center gap-2 px-5 py-3 font-bold rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             onClick={() => {
               setIsDialogOpen(true);
             }}
@@ -236,18 +236,24 @@ export default function EventList() {
           </button>
         </div>
 
-        <div className="mb-8 bg-[#000000] rounded-[28px] p-1 border border-white/[0.08] flex gap-1 w-fit">
+        <div
+          role="tablist"
+          aria-label="Filter events"
+          className="mb-8 bg-[#000000] rounded-[28px] p-1 border border-white/[0.08] flex gap-1 w-fit"
+        >
           {['All', 'Past', ...(isAuthenticated ? ['My Events'] : [])].map((tab, idx) => {
             const isActive = tabValue === idx;
             return (
               <button
                 key={tab}
                 type="button"
+                role="tab"
+                aria-selected={isActive}
                 onClick={(e) => {
                   e.preventDefault();
                   setTabValue(idx);
                 }}
-                className={`rounded-full px-5 py-2 font-bold text-xs sm:text-sm font-satoshi transition-all cursor-pointer ${
+                className={`rounded-full px-5 py-2 font-bold text-xs sm:text-sm font-satoshi transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] ${
                   isActive ? 'bg-[#161412] text-white border border-white/10' : 'text-white opacity-60 hover:opacity-100 hover:bg-white/[0.04]'
                 }`}
               >
@@ -257,29 +263,51 @@ export default function EventList() {
           })}
         </div>
 
-        <div className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-          {visibleEvents.map((event) => (
-            <div key={event.id}>
-              <EventObjectRow
-                event={event}
-                onDelete={() => removeEvent(event.id)}
-                onClick={() => {
-                  if (isDesktop) {
-                    openSidebar(
-                      <EventDetails eventId={event.id} initialData={event} />,
-                      event.id,
-                      { hideHeader: true },
-                    );
-                  } else {
-                    openOverlay(
-                      <EventDetails eventId={event.id} initialData={event} onBack={closeOverlay} />,
-                    );
-                  }
-                }}
-              />
+        {visibleEventsAll.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 px-4 text-center rounded-[28px] border border-white/[0.08] bg-[#000000]/40 my-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-[#6366F1] mb-4">
+              <Calendar className="w-7 h-7" aria-hidden="true" />
             </div>
-          ))}
-        </div>
+            <h3 className="text-lg font-bold font-clash text-white tracking-tight mb-1.5">
+              {tabValue === 1 ? 'No past events' : tabValue === 2 ? 'No events created by you' : 'No upcoming events'}
+            </h3>
+            <p className="text-xs sm:text-sm text-[#8E8A86] font-satoshi max-w-sm mb-6">
+              {tabValue === 1 ? 'Past events will appear here.' : 'Schedule deadlines, meetings, or milestones to stay organized.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsDialogOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#4F46E5] text-white font-bold text-xs sm:text-sm font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Schedule an Event</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-6 items-stretch [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+            {visibleEvents.map((event) => (
+              <div key={event.id}>
+                <EventObjectRow
+                  event={event}
+                  onDelete={() => removeEvent(event.id)}
+                  onClick={() => {
+                    if (isDesktop) {
+                      openSidebar(
+                        <EventDetails eventId={event.id} initialData={event} />,
+                        event.id,
+                        { hideHeader: true },
+                      );
+                    } else {
+                      openOverlay(
+                        <EventDetails eventId={event.id} initialData={event} onBack={closeOverlay} />,
+                      );
+                    }
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
         {hasMoreEvents && (
           <div ref={eventSentinelRef} className="flex justify-center py-6">
             <span className="text-xs font-bold tracking-widest uppercase text-white/25">Loading more…</span>
