@@ -30,9 +30,19 @@ let lastPullAt = 0;
 let syncTimeout: NodeJS.Timeout | null = null;
 let retryTimeout: NodeJS.Timeout | null = null;
 let isSyncing = false;
+let isAuthPaused = false;
 let flushQueuedDuringSync = false;
 let persistWriteChain: Promise<void> = Promise.resolve();
 let firstPendingTimestamp: number | null = null;
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('kylrix:auth:login', () => {
+    if (isAuthPaused) {
+      isAuthPaused = false;
+      scheduleDemandFlush({ immediate: true });
+    }
+  });
+}
 
 const FLUSH_TYPING_DEBOUNCE_MS = 300;
 const FLUSH_DISCRETE_MS = 300;
@@ -94,6 +104,7 @@ function maxFailedAttempts(): number {
 
 function scheduleDemandFlush(opts?: { immediate?: boolean; retry?: boolean; discrete?: boolean; activeEditing?: boolean }) {
   if (typeof window === 'undefined') return;
+  if (isAuthPaused) return;
   if (isSyncing) {
     flushQueuedDuringSync = true;
     return;
@@ -668,7 +679,7 @@ export const autonomicSyncEngine = {
   },
 
   async runCycle() {
-    if (isSyncing || isDogfoodSafetyActive()) return;
+    if (isAuthPaused || isSyncing || isDogfoodSafetyActive()) return;
     if (typeof window !== 'undefined' && typeof navigator !== 'undefined' && !navigator.onLine) {
       return;
     }
@@ -726,17 +737,20 @@ export const autonomicSyncEngine = {
     } catch (err: any) {
       if (err?.status === 401 || err?.status === 403 || String(err?.message || '').includes('401') || String(err?.message || '').toLowerCase().includes('unauthorized')) {
         console.warn('[SyncEngine] Auth failure during flush — pausing retry cycle to prevent log spam.');
+        isAuthPaused = true;
         isSyncing = false;
         return;
       }
     } finally {
       isSyncing = false;
-      const hasFlushable = pendingById.size > 0;
-      if (!hasFlushable) {
-        firstPendingTimestamp = null;
-      }
-      if (flushQueuedDuringSync || hasFlushable) {
-        scheduleDemandFlush({ retry: true });
+      if (!isAuthPaused) {
+        const hasFlushable = pendingById.size > 0;
+        if (!hasFlushable) {
+          firstPendingTimestamp = null;
+        }
+        if (flushQueuedDuringSync || hasFlushable) {
+          scheduleDemandFlush({ retry: true });
+        }
       }
       flushQueuedDuringSync = false;
     }

@@ -365,7 +365,7 @@ export async function normalizeKeychainRow(row: any): Promise<any> {
  * Resolves canonical user IDs for a user using indexed lookups (id PK, email index, account userId)
  * to bridge fragmented user accounts across OAuth providers and legacy Appwrite migrations.
  */
-export async function resolveAllUserIds(userId: string): Promise<string[]> {
+export const resolveAllUserIds = cache(async function resolveAllUserIds(userId: string): Promise<string[]> {
   const cleanId = String(userId || '').trim();
   if (!cleanId) return [];
 
@@ -518,7 +518,7 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
   }
 
   return Array.from(allUserIds).filter(Boolean);
-}
+});
 
 export async function listKeychainTurso(userId: string) {
   try {

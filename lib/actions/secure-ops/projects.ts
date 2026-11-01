@@ -353,6 +353,9 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
+  const { invalidateResourceCache } = await import('@/lib/actions/turso-ops');
+  await invalidateResourceCache('forms', undefined, formId);
+
   await db.delete(schema.forms).where(eq(schema.forms.id, formId));
   return { $id: formId, success: true };
 }
@@ -400,6 +403,9 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
 export async function deleteEventSecure(eventId: string, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) throw new Error('Unauthorized');
+
+  const { invalidateResourceCache } = await import('@/lib/actions/turso-ops');
+  await invalidateResourceCache('events', undefined, eventId);
 
   await db.delete(schema.events).where(eq(schema.events.id, eventId));
   return { success: true };
