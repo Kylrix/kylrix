@@ -93,19 +93,22 @@ export const LocalEngine = {
       `initial_notes_${uid}`,
     ];
 
-    for (const key of listKeys) {
-      try {
-        const cached = await this.cacheGet<any>(key);
-        if (!cached) continue;
-        if (Array.isArray(cached)) {
-          const updated = cached.filter((item: any) => (item?.$id || item?.id) !== id);
-          await this.cacheSet(key, updated);
-        } else if (cached && Array.isArray(cached.rows)) {
-          const updatedRows = cached.rows.filter((item: any) => (item?.$id || item?.id) !== id);
-          await this.cacheSet(key, { ...cached, rows: updatedRows, total: updatedRows.length });
-        }
-      } catch {}
-    }
+    // Bolt: Invalidate and filter cached list collections concurrently to eliminate O(N * T) serial latency across 9 cache keys
+    await Promise.all(
+      listKeys.map(async (key) => {
+        try {
+          const cached = await this.cacheGet<any>(key);
+          if (!cached) return;
+          if (Array.isArray(cached)) {
+            const updated = cached.filter((item: any) => (item?.$id || item?.id) !== id);
+            await this.cacheSet(key, updated);
+          } else if (cached && Array.isArray(cached.rows)) {
+            const updatedRows = cached.rows.filter((item: any) => (item?.$id || item?.id) !== id);
+            await this.cacheSet(key, { ...cached, rows: updatedRows, total: updatedRows.length });
+          }
+        } catch {}
+      })
+    );
 
     try {
       const db = await getRxDB().catch(() => null);
