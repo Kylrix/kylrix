@@ -624,20 +624,52 @@ export async function upsertVaultItemTurso(data: any) {
   }
 }
 
-export const listVaultItemsTurso = cache(async function listVaultItemsTurso(userId: string) {
-  const cacheKey = `vault:${userId}`;
+export const listVaultItemsTurso = cache(async function listVaultItemsTurso(userId: string, workspaceId?: string | null) {
+  const wsKey = workspaceId && workspaceId !== 'personal' && workspaceId !== userId ? workspaceId : 'personal';
+  const cacheKey = `vault:${userId}:${wsKey}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
 
   try {
-    const allUserIds = await resolveAllUserIds(userId);
+    let rows: any[] = [];
+    if (wsKey !== 'personal') {
+      const attachedObjects = await db
+        .select({ entityId: schema.workspaceObjects.entityId })
+        .from(schema.workspaceObjects)
+        .where(
+          and(
+            eq(schema.workspaceObjects.workspaceId, wsKey),
+            or(
+              eq(schema.workspaceObjects.entityKind, 'credential'),
+              eq(schema.workspaceObjects.entityKind, 'vault_item')
+            )
+          )
+        );
+      const attachedItemIds = attachedObjects.map((o) => o.entityId).filter(Boolean);
 
-    const rows = await db
-      .select()
-      .from(schema.vaultItems)
-      .where(and(inArray(schema.vaultItems.userId, allUserIds), eq(schema.vaultItems.isTrashed, false)));
+      const conditions = [eq(schema.vaultItems.workspaceId, wsKey)];
+      if (attachedItemIds.length > 0) {
+        conditions.push(inArray(schema.vaultItems.id, attachedItemIds));
+      }
+
+      rows = await db
+        .select()
+        .from(schema.vaultItems)
+        .where(
+          and(
+            eq(schema.vaultItems.isTrashed, false),
+            or(...conditions)
+          )
+        );
+    } else {
+      const allUserIds = await resolveAllUserIds(userId);
+      rows = await db
+        .select()
+        .from(schema.vaultItems)
+        .where(and(inArray(schema.vaultItems.userId, allUserIds), eq(schema.vaultItems.isTrashed, false)));
+    }
     const normalizedRows = rows.map((row: any) => {
       let nested = row.metadata;
       for (let i = 0; i < 3 && typeof nested === 'string'; i += 1) {
@@ -763,20 +795,43 @@ export async function upsertTotpSecretTurso(data: any) {
   }
 }
 
-export const listTotpSecretsTurso = cache(async function listTotpSecretsTurso(userId: string) {
-  const cacheKey = `totp:${userId}`;
+export const listTotpSecretsTurso = cache(async function listTotpSecretsTurso(userId: string, workspaceId?: string | null) {
+  const wsKey = workspaceId && workspaceId !== 'personal' && workspaceId !== userId ? workspaceId : 'personal';
+  const cacheKey = `totp:${userId}:${wsKey}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
 
   try {
-    const allUserIds = await resolveAllUserIds(userId);
+    let rows: any[] = [];
+    if (wsKey !== 'personal') {
+      const attachedObjects = await db
+        .select({ entityId: schema.workspaceObjects.entityId })
+        .from(schema.workspaceObjects)
+        .where(
+          and(
+            eq(schema.workspaceObjects.workspaceId, wsKey),
+            eq(schema.workspaceObjects.entityKind, 'totp')
+          )
+        );
+      const attachedItemIds = attachedObjects.map((o) => o.entityId).filter(Boolean);
 
-    const rows = await db
-      .select()
-      .from(schema.totpSecrets)
-      .where(inArray(schema.totpSecrets.userId, allUserIds));
+      if (attachedItemIds.length > 0) {
+        rows = await db
+          .select()
+          .from(schema.totpSecrets)
+          .where(inArray(schema.totpSecrets.id, attachedItemIds));
+      } else {
+        rows = [];
+      }
+    } else {
+      const allUserIds = await resolveAllUserIds(userId);
+      rows = await db
+        .select()
+        .from(schema.totpSecrets)
+        .where(inArray(schema.totpSecrets.userId, allUserIds));
+    }
     const normalizedRows = rows.map((row: any) => {
       let meta: any = {};
       try {

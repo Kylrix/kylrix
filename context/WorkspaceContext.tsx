@@ -688,49 +688,71 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }, 800);
   }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, user?.prefs?.tier, updatePreferences]);
 
-  // Debounced background prewarming for active workspace objects to avoid parallel bursts on rapid navigation
+  // Immediate hydration from LocalEngine and single background warm for active workspace objects
   useEffect(() => {
     if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
     const targetId = activeWorkspaceId;
     let cancelled = false;
 
+    const dispatchWarmedEntities = (tagged: any) => {
+      if (!tagged || typeof window === 'undefined') return;
+      if (Array.isArray(tagged.notes) && tagged.notes.length > 0) {
+        for (const note of tagged.notes) {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:live-note-saved', {
+              detail: { note: { ...note, projectId: targetId, isWorkspace: true } },
+            })
+          );
+        }
+      }
+      if (Array.isArray(tagged.tasks) && tagged.tasks.length > 0) {
+        for (const task of tagged.tasks) {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:live-task-saved', {
+              detail: { task: { ...task, projectId: targetId, isWorkspace: true } },
+            })
+          );
+        }
+      }
+    };
+
+    // 1. Immediately hydrate from LocalEngine cache if available for sub-100ms loading
+    void (async () => {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<any>(`ws_items_${targetId}`);
+        if (cached && !cancelled) {
+          dispatchWarmedEntities(cached);
+        }
+      } catch {}
+    })();
+
+    // 2. Debounced background prewarming: single listTaggedResources call warms notes, goals, and vault items
     const timer = setTimeout(() => {
       void (async () => {
-        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
-        for (const kind of kinds) {
-          if (cancelled) break;
-          try {
-            const { LocalEngine } = await import('@/lib/services/LocalEngine');
-            const cacheKey = projectObjectsKindCacheKey(targetId, kind);
-            const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
-            const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
-            if (rows.length > 0 && !cancelled) {
-              await LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
-            }
-          } catch {
-            /* optional background warm */
-          }
-        }
-
-        // Fetch and warm actual workspace entities (notes, goals, events, forms)
         try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+
+          // Fetch workspace tagged resources in one batch
           const tagged = await ProjectsService.listTaggedResources(targetId).catch(() => null);
           if (tagged && !cancelled) {
-            if (Array.isArray(tagged.notes) && tagged.notes.length > 0) {
-              for (const note of tagged.notes) {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', { detail: { note: { ...note, projectId: targetId, isWorkspace: true } } }));
-                }
-              }
-            }
-            if (Array.isArray(tagged.tasks) && tagged.tasks.length > 0) {
-              for (const task of tagged.tasks) {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', { detail: { task: { ...task, projectId: targetId, isWorkspace: true } } }));
-                }
-              }
-            }
+            await LocalEngine.cacheSet(`ws_items_${targetId}`, tagged).catch(() => {});
+            dispatchWarmedEntities(tagged);
           }
+
+          // Prewarm projectObjects cache by kind in parallel
+          const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
+          await Promise.allSettled(
+            kinds.map(async (kind) => {
+              if (cancelled) return;
+              const cacheKey = projectObjectsKindCacheKey(targetId, kind);
+              const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
+              const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
+              if (rows.length > 0 && !cancelled) {
+                await LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
+              }
+            })
+          );
         } catch {}
       })();
     }, 500);

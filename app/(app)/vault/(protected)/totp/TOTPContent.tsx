@@ -545,9 +545,10 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
     const handleVaultChange = async () => {
       const userId = user?.id || user?.$id;
+      const wsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
       if (userId) {
         import('@/lib/actions/turso-ops').then(({ listTotpSecretsTurso }) =>
-          listTotpSecretsTurso(userId).then((res) =>
+          listTotpSecretsTurso(userId, wsId).then((res) =>
             setTotpCodes((res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }))),
           ),
         ).catch(() => {});
@@ -560,13 +561,14 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       window.removeEventListener('vault-unlocked', handleVaultChange);
       window.removeEventListener('vault-locked', handleVaultChange);
     };
-  }, [user?.id, user?.$id]);
+  }, [user?.id, user?.$id, activeWorkspace?.id, activeWorkspace?.isPersonal]);
 
   useEffect(() => {
     const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '') || 'guest';
+    const wsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
     let isCancelled = false;
-    const cacheKey = `vault_totp_${activeUserId}`;
-    const guestFallbackKey = 'vault_totp_guest';
+    const cacheKey = `vault_totp_${activeUserId}_${wsId || 'personal'}`;
+    const guestFallbackKey = `vault_totp_guest_${wsId || 'personal'}`;
 
     (async () => {
       try {
@@ -577,7 +579,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             cacheKey,
             async () => {
               const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listTotpSecretsTurso(activeUserId);
+              const res = await listTotpSecretsTurso(activeUserId, wsId);
               return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
             },
             {
@@ -601,7 +603,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     return () => {
       isCancelled = true;
     };
-  }, [user?.id, user?.$id]);
+  }, [user?.id, user?.$id, activeWorkspace?.id, activeWorkspace?.isPersonal]);
 
   useEffect(() => {
     if (unlockOnDemand) {
