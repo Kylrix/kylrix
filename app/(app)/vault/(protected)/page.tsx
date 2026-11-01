@@ -173,14 +173,17 @@ function DashboardPageContent() {
     if (!background && !cursorToUse) setLoading(true);
     if (cursorToUse) setLoadingMore(true);
 
-    const cacheKey = `vault_credentials_${activeUserId}`;
-    const guestFallbackKey = 'vault_credentials_guest';
+    const currentWsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
+    const cacheKey = `vault_credentials_${activeUserId}_${currentWsId || 'personal'}`;
+    const guestFallbackKey = `vault_credentials_guest_${currentWsId || 'personal'}`;
 
     // Instant local copy read on mount (dedupe — stale cache may contain twin rows)
     if (!cursorToUse && !force) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cachedRows = (await LocalEngine.cacheGet<any[]>(cacheKey)) || (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(guestFallbackKey) : null);
+        const cachedRows = (await LocalEngine.cacheGet<any[]>(cacheKey)) ||
+          (await LocalEngine.cacheGet<any[]>(`vault_credentials_${activeUserId}`)) ||
+          (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(guestFallbackKey) : null);
         if (cachedRows && Array.isArray(cachedRows) && cachedRows.length > 0) {
           const unique = dedupeCredentialsById(cachedRows as Credentials[]);
           setAllCredentials(unique);
@@ -202,7 +205,7 @@ function DashboardPageContent() {
             cacheKey,
             async () => {
               const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listVaultItemsTurso(activeUserId);
+              const res = await listVaultItemsTurso(activeUserId, currentWsId);
               return dedupeCredentialsById((res.rows || []).map((row: any) => ({
                 ...row,
                 $id: row.$id || row.id,
@@ -231,7 +234,7 @@ function DashboardPageContent() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [user?.$id]);
+  }, [user?.$id, activeWorkspace?.id, activeWorkspace?.isPersonal]);
 
   const openPorter = useOpenEcosystemPorter({
     surface: activeTab === 'totp' ? 'vault-totp' : 'vault-secrets',

@@ -804,6 +804,8 @@ export function getKylrixPulse(): any {
   return null;
 }
 
+const inflightTagged = new Map<string, { promise: Promise<any>; timestamp: number }>();
+
 export const ProjectsService = {
   async listUserProjects(): Promise<{ rows: any[]; total: number }> {
     const rows = await this.fetchRemoteProjects();
@@ -867,7 +869,12 @@ export const ProjectsService = {
     }
   },
   async listTaggedResources(wsId: string): Promise<any> {
-    try {
+    const cached = inflightTagged.get(wsId);
+    if (cached && Date.now() - cached.timestamp < 5000) {
+      return cached.promise;
+    }
+
+    const promise = (async () => {
       const { db } = await import('@/lib/db');
       const schema = await import('@/lib/db/schema');
       const { eq, inArray, or } = await import('drizzle-orm');
@@ -946,9 +953,14 @@ export const ProjectsService = {
         forms: formRows.map((r: any) => ({ ...r, $id: r.id, projectId: wsId, isWorkspace: true })),
         credentials: parsedCreds,
       };
-    } catch {
+    })().catch((err) => {
+      inflightTagged.delete(wsId);
+      console.warn('[ProjectsService] listTaggedResources failed:', err);
       return { totps: [], notes: [], tasks: [], events: [], forms: [], credentials: [] };
-    }
+    });
+
+    inflightTagged.set(wsId, { promise, timestamp: Date.now() });
+    return promise;
   },
   async addObjectToProject(projectId: string, entityKind: string, entityId: string, role?: string, metadata?: any): Promise<any> {
     const { addObjectToProjectSecure } = await import('@/lib/actions/secure-ops/projects');
@@ -1011,16 +1023,16 @@ export const VaultService = {
   async updateTOTPSecret(id: string, data: any): Promise<any> {
     return updateTotpSecret(id, data);
   },
-  async listAllCredentials(userId?: string): Promise<any[]> {
+  async listAllCredentials(userId?: string, workspaceId?: string | null): Promise<any[]> {
     if (!userId) return [];
     const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
-    const result = await listVaultItemsTurso(userId);
+    const result = await listVaultItemsTurso(userId, workspaceId);
     return (result.rows || []).map((row: any) => ({ ...row, $id: row.id }));
   },
-  async listTOTPSecrets(userId?: string): Promise<any[]> {
+  async listTOTPSecrets(userId?: string, workspaceId?: string | null): Promise<any[]> {
     if (!userId) return [];
     const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-    const result = await listTotpSecretsTurso(userId);
+    const result = await listTotpSecretsTurso(userId, workspaceId);
     return (result.rows || []).map((row: any) => ({ ...row, $id: row.id }));
   },
   async getCredential(_id: string): Promise<any> { return null; },
