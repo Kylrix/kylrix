@@ -157,13 +157,16 @@ export function HangoutsDrawer({
       const patches = new Map<string, { name?: string; lastMessageText?: string }>();
       await Promise.allSettled(
         rows
-          .filter((conv) => conv?.isEncrypted)
+          .filter((conv) => conv?.isEncrypted || conv?.is_encrypted)
           .map(async (conv) => {
             const id = conv.$id || conv.id;
             if (!id) return;
             try {
               const decrypted = await (ChatService as any)._decryptConversation({ ...conv }, user.$id);
-              if (!decrypted) return;
+              if (!decrypted) {
+                patches.set(id, { lastMessageText: conv.lastMessageText || '[Encrypted Message]' });
+                return;
+              }
               const patch: { name?: string; lastMessageText?: string } = {};
               if (
                 decrypted.name &&
@@ -179,9 +182,12 @@ export function HangoutsDrawer({
               ) {
                 patch.lastMessageText = decrypted.lastMessageText;
               }
-              if (Object.keys(patch).length) patches.set(id, patch);
+              patches.set(id, {
+                ...patch,
+                lastMessageText: patch.lastMessageText || conv.lastMessageText || '[Encrypted Message]',
+              });
             } catch {
-              /* keep masked preview */
+              patches.set(id, { lastMessageText: conv.lastMessageText || '[Encrypted Message]' });
             }
           }),
       );

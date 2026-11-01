@@ -1804,41 +1804,51 @@ export async function getConversationTurso(conversationId: string) {
 
 export async function listConversationsTurso(userId: string) {
   try {
+    const allUserIds = await resolveAllUserIds(userId);
+
     const memberRows = await db
       .select({ conversationId: schema.conversationMembers.conversationId })
       .from(schema.conversationMembers)
-      .where(eq(schema.conversationMembers.userId, userId));
-    const memberConvIds = memberRows.map((r) => r.conversationId);
+      .where(inArray(schema.conversationMembers.userId, allUserIds));
+    const memberConvIds = memberRows.map((r) => r.conversationId).filter(Boolean);
 
+    const combinedMap = new Map<string, any>();
+
+    // Conversations where creator is in allUserIds
     const createdRows = await db
       .select()
       .from(schema.conversations)
-      .where(eq(schema.conversations.creatorId, userId));
-
-    const combinedMap = new Map<string, any>();
+      .where(inArray(schema.conversations.creatorId, allUserIds))
+      .orderBy(desc(schema.conversations.updatedAt));
     for (const c of createdRows) {
       combinedMap.set(c.id, c);
     }
 
+    // Conversations where user is a registered member
     if (memberConvIds.length > 0) {
-      const { inArray } = await import('drizzle-orm');
       const convs = await db
         .select()
         .from(schema.conversations)
-        .where(inArray(schema.conversations.id, memberConvIds));
+        .where(inArray(schema.conversations.id, memberConvIds))
+        .orderBy(desc(schema.conversations.updatedAt));
       for (const c of convs) {
         combinedMap.set(c.id, c);
       }
     }
 
+    // Conversations where participants contains any of allUserIds
     const { like } = await import('drizzle-orm');
-    const participantMatches = await db
-      .select()
-      .from(schema.conversations)
-      .where(like(schema.conversations.participants, `%${userId}%`))
-      .limit(100);
-    for (const c of participantMatches) {
-      combinedMap.set(c.id, c);
+    const participantConditions = allUserIds.map((uid) => like(schema.conversations.participants, `%${uid}%`));
+    if (participantConditions.length > 0) {
+      const participantMatches = await db
+        .select()
+        .from(schema.conversations)
+        .where(participantConditions.length === 1 ? participantConditions[0] : or(...participantConditions))
+        .orderBy(desc(schema.conversations.updatedAt))
+        .limit(100);
+      for (const c of participantMatches) {
+        combinedMap.set(c.id, c);
+      }
     }
 
     const rows = Array.from(combinedMap.values());
