@@ -13,17 +13,20 @@ const mockUsersGet = vi.fn(async (id: string) => ({
 }));
 const mockUpdateStatus = vi.fn(async (_id: string, _status: boolean) => ({}));
 
+const mockDbSelect = vi.fn();
+
 // Mock dependencies
 vi.mock('@/lib/db', () => ({
   db: {
-    select: vi.fn(() => ({
-      from: vi.fn(() => ({
-        where: vi.fn(() => ({
-          limit: vi.fn().mockResolvedValue([]),
-        })),
-      })),
-    })),
+    select: (...args: any[]) => mockDbSelect(...args),
   },
+}));
+
+vi.mock('@/lib/actions/turso-ops', () => ({
+  resolveAllUserIds: vi.fn(async (id: string) => {
+    if (id === 'user_session_ulid') return ['user_session_ulid', 'user_legacy_appwrite'];
+    return [id];
+  }),
 }));
 
 vi.mock('@/lib/actions/contributor-ops', () => ({
@@ -54,11 +57,65 @@ describe('Subscription Entitlement & Fraud Suspension', () => {
   beforeEach(() => {
     invalidateEntitlementCache();
     vi.clearAllMocks();
+    mockDbSelect.mockImplementation(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn((_cond: any) => {
+          const promise = Promise.resolve([]) as any;
+          promise.limit = vi.fn().mockResolvedValue([]);
+          return promise;
+        }),
+      })),
+    }));
     mockUsersGet.mockImplementation(async (id: string) => ({
       $id: id,
       prefs: { subscriptionTier: 'FREE' },
     }));
     mockListRows.mockResolvedValue({ rows: [] });
+  });
+
+  it('resolves CONTRIBUTOR tier when bridged legacy ID has isContributor: true', async () => {
+    mockDbSelect.mockImplementation(() => ({
+      from: vi.fn((_table: any) => ({
+        where: vi.fn((_cond: any) => {
+          // If querying schema.user, return matching user with isContributor = true on legacy id
+          return Promise.resolve([
+            { id: 'user_legacy_appwrite', email: 'contributor@example.com', isContributor: true },
+          ]);
+        }),
+      })),
+    }));
+
+    const entitlement = await getVerifiedProEntitlementForUser('user_session_ulid');
+    expect(entitlement.active).toBe(true);
+    expect(entitlement.uiTier).toBe('CONTRIBUTOR');
+    expect(entitlement.source).toBe('subscription_row');
+  });
+
+  it('resolves PRO tier when bridged legacy ID has an active PRO subscription row', async () => {
+    mockDbSelect.mockImplementation(() => ({
+      from: vi.fn((_table: any) => ({
+        where: vi.fn((_cond: any) => {
+          // First query is schema.user (no contributor)
+          // Second query is schema.subscriptions (with limit)
+          const promise = Promise.resolve([]) as any;
+          promise.limit = vi.fn().mockResolvedValue([
+            {
+              id: 'sub_123',
+              userId: 'user_legacy_appwrite',
+              tier: 'PRO',
+              status: 'active',
+              currentPeriodEnd: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
+            },
+          ]);
+          return promise;
+        }),
+      })),
+    }));
+
+    const entitlement = await getVerifiedProEntitlementForUser('user_session_ulid');
+    expect(entitlement.active).toBe(true);
+    expect(entitlement.uiTier).toBe('PRO');
+    expect(entitlement.source).toBe('subscription_row');
   });
 
   it('assumes FREE plan instantly for user without subscription rows or paid prefs with zero-trip caching', async () => {

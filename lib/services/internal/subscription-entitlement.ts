@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { inArray } from 'drizzle-orm';
 import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { type BillingUiTier } from '@/lib/subscription/tier-resolution';
 import { verifySubscriptionSig } from './subscription-prefs-merge';
@@ -63,48 +63,32 @@ export const getVerifiedProEntitlementForUser = cache(async function getVerified
 
   // 1. Resolve user email and check matching account IDs for subscriptions or contributor flag
   try {
-    let targetUser = await db
+    const { resolveAllUserIds } = await import('@/lib/actions/turso-ops');
+    const resolvedIds = await resolveAllUserIds(cleanUserId).catch(() => [cleanUserId]);
+    const allUserIds = Array.from(new Set([cleanUserId, ...resolvedIds]));
+
+    const matchingUsers = await db
       .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
       .from(schema.user)
-      .where(eq(schema.user.id, cleanUserId))
-      .limit(1);
+      .where(inArray(schema.user.id, allUserIds));
 
-    if (!targetUser.length && cleanUserId.includes('@')) {
-      targetUser = await db
-        .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
-        .from(schema.user)
-        .where(eq(schema.user.email, cleanUserId.toLowerCase()))
-        .limit(1);
+    if (matchingUsers.some((u) => Boolean(u.isContributor))) {
+      const res: EntitlementResult = {
+        active: true,
+        expiresAt: null,
+        source: 'subscription_row',
+        uiTier: 'CONTRIBUTOR',
+      };
+      entitlementCache.set(cleanUserId, { data: res, expiresAt: Date.now() + ENTITLEMENT_TTL_MS });
+      return res;
     }
 
-    if (!targetUser.length) {
-      targetUser = await db
-        .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
-        .from(schema.user)
-        .where(eq(schema.user.appwriteAccountId, cleanUserId))
-        .limit(1);
-    }
-
-    const u = targetUser[0];
-    let targetUserIds = [cleanUserId];
-    if (u) {
-      if (u.id) targetUserIds.push(u.id);
-      if (u.isContributor) {
-        const res: EntitlementResult = {
-          active: true,
-          expiresAt: null,
-          source: 'subscription_row',
-          uiTier: 'CONTRIBUTOR',
-        };
-        entitlementCache.set(cleanUserId, { data: res, expiresAt: Date.now() + ENTITLEMENT_TTL_MS });
-        return res;
-      }
-    }
+    const targetUserIds = Array.from(new Set([...allUserIds, ...matchingUsers.map((u) => u.id).filter(Boolean)]));
 
     const tursoSub = await db
       .select()
       .from(schema.subscriptions)
-      .where(inArray(schema.subscriptions.userId, Array.from(new Set(targetUserIds))))
+      .where(inArray(schema.subscriptions.userId, targetUserIds))
       .limit(10);
 
     for (const sub of tursoSub) {
