@@ -29,7 +29,7 @@ describe('Sub-Project & Workspace Classifier', () => {
   });
 
   it('classifies legacy and imported Turso workspaces where title, kind, and summary are null', () => {
-    // Legacy workspaces from user 67ffb09c00197408cc0e
+    const ownerId = 'usr_test_owner_123';
     const legacyWorkspaces = [
       {
         id: 'ws_dev_1',
@@ -38,7 +38,7 @@ describe('Sub-Project & Workspace Classifier', () => {
         kind: null,
         summary: null,
         parentProjectId: null,
-        ownerId: '67ffb09c00197408cc0e',
+        ownerId,
       },
       {
         id: 'ws_noun_2',
@@ -47,7 +47,7 @@ describe('Sub-Project & Workspace Classifier', () => {
         kind: null,
         summary: null,
         parentProjectId: '',
-        ownerId: '67ffb09c00197408cc0e',
+        ownerId,
       },
       {
         id: 'ws_nova_3',
@@ -56,7 +56,7 @@ describe('Sub-Project & Workspace Classifier', () => {
         kind: null,
         summary: null,
         parentProjectId: null,
-        ownerId: '67ffb09c00197408cc0e',
+        ownerId,
       },
       {
         id: 'ws_randd_4',
@@ -65,7 +65,7 @@ describe('Sub-Project & Workspace Classifier', () => {
         kind: null,
         summary: null,
         parentProjectId: null,
-        ownerId: '67ffb09c00197408cc0e',
+        ownerId,
       },
       {
         id: 'ws_cowry_5',
@@ -74,7 +74,7 @@ describe('Sub-Project & Workspace Classifier', () => {
         kind: null,
         summary: null,
         parentProjectId: null,
-        ownerId: '67ffb09c00197408cc0e',
+        ownerId,
       },
     ];
 
@@ -101,7 +101,7 @@ describe('Workspace Cache Poisoning & Recovery Invariants', () => {
   });
 
   it('does not overwrite populated localStorage when writing personal workspace only', () => {
-    const uid = '67ffb09c00197408cc0e';
+    const uid = 'usr_test_user_456';
     const populated = [
       { id: uid, title: 'My Workspace', ownerId: uid, isPersonal: true },
       { id: 'ws_dev_1', title: 'Kylrix dev', ownerId: uid, isPersonal: false },
@@ -143,7 +143,7 @@ describe('Workspace Cache Poisoning & Recovery Invariants', () => {
   });
 
   it('allows personal workspace overwrite on explicit logout event', () => {
-    const uid = '67ffb09c00197408cc0e';
+    const uid = 'usr_test_user_456';
     const populated = [
       { id: uid, title: 'My Workspace', ownerId: uid, isPersonal: true },
       { id: 'ws_dev_1', title: 'Kylrix dev', ownerId: uid, isPersonal: false },

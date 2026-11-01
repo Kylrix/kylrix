@@ -46,9 +46,11 @@ async function main() {
   await turso.execute('DELETE FROM vault_items');
   console.log('Cleared existing vault_items in Turso.');
 
+  const defaultFallbackUserId = process.env.MIGRATION_FALLBACK_USER_ID || Array.from(knownUserIds)[0] || 'system';
+
   let credsInserted = 0;
   for (const r of credsRows) {
-    const ownerId = knownUserIds.has(r.userId) ? r.userId : '67ffb09c00197408cc0e';
+    const ownerId = (r.userId && knownUserIds.has(r.userId)) ? r.userId : defaultFallbackUserId;
     const metadataObj = {
       name: r.name || '',
       username: r.username || '',
@@ -134,7 +136,7 @@ async function main() {
       const r = runCliJson(
         `appwrite tablesdb get-row --database-id passwordManagerDb --table-id totpSecrets --row-id ${id} --raw --show-secrets`
       );
-      const ownerId = knownUserIds.has(r.userId) ? r.userId : '67ffb09c00197408cc0e';
+      const ownerId = (r.userId && knownUserIds.has(r.userId)) ? r.userId : defaultFallbackUserId;
       const metadataObj = {
         issuer: r.issuer || '',
         accountName: r.accountName || '',
@@ -249,7 +251,7 @@ async function main() {
     }
 
     // Insert into workspace_objects
-    const poUserId = (po.userId && knownUserIds.has(po.userId)) ? po.userId : '67ffb09c00197408cc0e';
+    const poUserId = (po.userId && knownUserIds.has(po.userId)) ? po.userId : defaultFallbackUserId;
     try {
       await turso.execute({
         sql: `INSERT OR REPLACE INTO workspace_objects (id, workspace_id, entity_kind, entity_id, user_id, created_at, role, is_public, is_guest, is_general, updated_at)

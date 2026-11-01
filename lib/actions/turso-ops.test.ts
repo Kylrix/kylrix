@@ -45,8 +45,8 @@ describe('Workspace Discovery & User ID Aliasing', () => {
 
   it('resolves legacy Appwrite user IDs and accounts via email alias matching', async () => {
     const sessionUserId = 'usr_ulid_session_123';
-    const legacyAppwriteId = '67ffb09c00197408cc0e';
-    const email = 'alex@kylrix.space';
+    const legacyAppwriteId = 'usr_test_legacy_appwrite_456';
+    const email = 'test-user@example.com';
 
     // Mock db.select for user lookups and account lookups
     vi.spyOn(db, 'select').mockImplementation((_fields?: any) => {
