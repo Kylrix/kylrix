@@ -1626,6 +1626,19 @@ export const ApiResources = {
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
+
+    try {
+      const { listEventsTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listEventsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        let rows = tursoRes.rows;
+        if (wsId) {
+          rows = rows.filter((e: any) => e.workspaceId === wsId || e.projectId === wsId);
+        }
+        return rows.slice(0, Math.min(100, Math.max(1, limit))).map(shapeEventListItem);
+      }
+    } catch {}
+
     const tables = systemTables();
 
     if (wsId) {
@@ -1667,6 +1680,19 @@ export const ApiResources = {
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
+
+    try {
+      const { listFormsTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listFormsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        let rows = tursoRes.rows;
+        if (wsId) {
+          rows = rows.filter((f: any) => f.workspaceId === wsId || f.projectId === wsId);
+        }
+        return rows.slice(0, Math.min(100, Math.max(1, limit))).map(shapeFormListItem);
+      }
+    } catch {}
+
     const tables = systemTables();
 
     if (wsId) {

@@ -275,7 +275,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       ];
 
       // Cache recovery / auto-healing:
-      // If candidateRows produces empty results, bypass the poisoned local cache and re-fetch from listWorkspacesTurso(userId) directly.
+      // If local cached candidates are empty, bypass cache and fetch directly from listWorkspacesTurso.
       if (rawCandidates.length === 0 || mapProjectRows(rawCandidates).length === 0) {
         const directTurso = await listWorkspacesTurso(userId || 'guest').catch(() => ({ success: false, rows: [] }));
         if (directTurso?.rows && directTurso.rows.length > 0) {
