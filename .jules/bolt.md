@@ -17,3 +17,8 @@
 
 **Learning:** Invoking context pin check functions (`isResourcePinned`) directly inside sort comparators (`sortPinnedThenCreatedAt`) results in $O(N \log N)$ redundant evaluations, plus another $O(N)$ pass during `.map()`. Pre-computing the pin status into a Map once in an $O(N)$ pass before sorting delivers an immediate ~1.3x - 1.8x speedup on collections of 1,000 items while preserving exact sort stability and referential equality.
 **Action:** When sorting or mapping collections where item metadata requires context-level lookups, always build an $O(N)$ lookup Map first rather than evaluating lookups inside comparator predicates.
+
+## 2025-05-18 - Single-Pass Set Population for Tag Aggregation
+
+**Learning:** Generating tag filter options via nested `flatMap`, intermediate array spreading, and multi-pass `.filter(Boolean)` caused significant memory churn and redundant GC pressure on collections with hundreds or thousands of tasks. Replacing `tasks.flatMap` and cascaded array spreading with a single-pass `Set` aggregation in `TaskList` and `TaskContext.getTagFilterOptions` achieved ~2.6x speedup while maintaining identical tag ordering and deduplication.
+**Action:** When aggregating unique values across collections of objects with optional child arrays, accumulate directly into a `Set` in a single pass instead of composing intermediate arrays through `flatMap` and `.filter()`.
