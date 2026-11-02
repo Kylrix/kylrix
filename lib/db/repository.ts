@@ -72,7 +72,7 @@ function generateDefaultIvHex(): string {
   return '000000000000000000000000';
 }
 
-function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
+export function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
   if (!data || typeof data !== 'object') return {};
 
   const titleVal = data.title || data.name || 'Untitled Secret';

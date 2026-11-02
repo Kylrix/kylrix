@@ -96,48 +96,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
-      normalizeProjectsList(rows)
-        .filter((p: any) => isWorkspaceRecord(p))
-        .map((p: any) => {
-          const id = String(p.$id || p.id || '').trim();
-          const ownerId = p.ownerId || p.owner_id || p.creatorId || p.creator_id || p.userId || userId;
-          const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
-          const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
-          const externalClient = p.externalClient || null;
-          const isOwned = !ownerId || ownerId === userId || userId === 'guest';
-          const isShared =
-            Boolean(p.isShared === true && !isOwned) ||
-            Boolean(!isOwned && !isAgentic && !isExternal) ||
-            Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
-          let privacyMode = false;
-          try {
-            if (p.metadata) {
-              const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
-              privacyMode = Boolean(meta?.privacyMode);
-            }
-          } catch {}
-          if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
-
-          const title = (p.title || p.name || 'Untitled Workspace').trim();
-
-          return {
-            id,
-            title,
-            ownerId: ownerId || userId,
-            isPersonal: false as const,
-            isShared: Boolean(isShared && !isAgentic && !isExternal),
-            isAgentic,
-            isExternal,
-            externalClient,
-            agentId: p.agentId || null,
-            isPublic: !!p.isPublic,
-            role: p.role || (isOwned ? 'owner' : 'viewer'),
-            inviteCode: p.inviteCode || null,
-            privacyMode,
-            metadata: p.metadata || null,
-          };
-        })
-        .filter((w) => w.id && w.id !== personalWorkspace.id),
+      mapWorkspaceProjectRows(rows, userId, personalWorkspace.id),
     [personalWorkspace.id, userId],
   );
 
@@ -179,56 +138,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 
   const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string, allowSinglePersonal = false) => {
-    // Prevent cache poisoning: Never overwrite existing non-empty cached list with single personal workspace
-    // unless explicitly allowed (e.g. on explicit logout)
-    if (items.length <= 1 && !allowSinglePersonal) {
-      if (typeof window !== 'undefined') {
-        const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
-        for (const k of existingKeys) {
-          const existing = localStorage.getItem(k);
-          if (existing) {
-            try {
-              const parsed = JSON.parse(existing);
-              const list = Array.isArray(parsed) ? parsed : (parsed?.rows || parsed?.workspaces || []);
-              if (Array.isArray(list) && list.length >= 2) {
-                return; // Abort the overwrite if current localStorage already has 2 or more cached workspaces
-              }
-            } catch {}
-          }
-        }
-      }
-    }
-
-    const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
-    if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
-      if (typeof window !== 'undefined') {
-        const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
-        for (const k of existingKeys) {
-          const existing = localStorage.getItem(k);
-          if (existing) {
-            try {
-              const parsed = JSON.parse(existing);
-              if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
-                return; // Guard against overwriting existing workspaces with personal-only array
-              }
-            } catch {}
-          }
-        }
-      }
-    }
-
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
-        localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
-      }
-      // Never write WorkspaceItem[] into f_projects_list — that pollutes project rows and
-      // can cascade-filter the switcher down to personal-only after a bad refresh.
-      import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-        LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
-        LocalEngine.cacheSet('kylrix_all_cached_workspaces', items).catch(() => {});
-      }).catch(() => {});
-    } catch {}
+    return persistWorkspacesOfflineStore(items, uid, allowSinglePersonal);
   }, []);
 
   const refreshWorkspaces = useCallback(async () => {
@@ -1144,6 +1054,111 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   setEntityPersonalWorkspaceState: async () => {},
   isEntityPendingInActiveWorkspace: () => false,
 };
+
+export function mapWorkspaceProjectRows(
+  rows: unknown,
+  userId = 'guest',
+  personalWorkspaceId = userId,
+): WorkspaceItem[] {
+  return normalizeProjectsList(rows)
+    .filter((p: any) => isWorkspaceRecord(p))
+    .map((p: any) => {
+      const id = String(p.$id || p.id || '').trim();
+      const ownerId = p.ownerId || p.owner_id || p.creatorId || p.creator_id || p.userId || userId;
+      const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
+      const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
+      const externalClient = p.externalClient || null;
+      const isOwned = !ownerId || ownerId === userId || userId === 'guest';
+      const isShared =
+        Boolean(p.isShared === true && !isOwned) ||
+        Boolean(!isOwned && !isAgentic && !isExternal) ||
+        Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
+      let privacyMode = false;
+      try {
+        if (p.metadata) {
+          const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+          privacyMode = Boolean(meta?.privacyMode);
+        }
+      } catch {}
+      if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
+
+      const title = (p.title || p.name || 'Untitled Workspace').trim();
+
+      return {
+        id,
+        title,
+        ownerId: ownerId || userId,
+        isPersonal: false as const,
+        isShared: Boolean(isShared && !isAgentic && !isExternal),
+        isAgentic,
+        isExternal,
+        externalClient,
+        agentId: p.agentId || null,
+        isPublic: !!p.isPublic,
+        role: p.role || (isOwned ? 'owner' : 'viewer'),
+        inviteCode: p.inviteCode || null,
+        privacyMode,
+        metadata: p.metadata || null,
+      };
+    })
+    .filter((w) => w.id && w.id !== personalWorkspaceId);
+}
+
+export function persistWorkspacesOfflineStore(
+  items: WorkspaceItem[],
+  uid: string,
+  allowSinglePersonal = false,
+): boolean {
+  if (items.length <= 1 && !allowSinglePersonal) {
+    if (typeof window !== 'undefined') {
+      const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
+      for (const k of existingKeys) {
+        const existing = localStorage.getItem(k);
+        if (existing) {
+          try {
+            const parsed = JSON.parse(existing);
+            const list = Array.isArray(parsed) ? parsed : (parsed?.rows || parsed?.workspaces || []);
+            if (Array.isArray(list) && list.length >= 2) {
+              return false;
+            }
+          } catch {}
+        }
+      }
+    }
+  }
+
+  const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
+  if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
+    if (typeof window !== 'undefined') {
+      const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
+      for (const k of existingKeys) {
+        const existing = localStorage.getItem(k);
+        if (existing) {
+          try {
+            const parsed = JSON.parse(existing);
+            if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
+              return false;
+            }
+          } catch {}
+        }
+      }
+    }
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
+      localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
+    }
+    import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+      LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
+      LocalEngine.cacheSet('kylrix_all_cached_workspaces', items).catch(() => {});
+    }).catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function useWorkspace() {
   const context = useContext(WorkspaceContext);
