@@ -233,6 +233,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
       {/* Dialog Pane */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-event-dialog-title"
         className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[10000] ${
           isFullscreen
             ? 'inset-0 h-[100dvh] max-h-[100dvh] w-full rounded-none border-0'
@@ -248,7 +251,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               <Video className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
+              <h3 id="create-event-dialog-title" className="text-lg font-black font-clash text-white tracking-tight leading-tight">
                 Create New Event
               </h3>
               <p className="text-xs text-[#8E8A86] font-semibold font-satoshi mt-0.5">
@@ -262,8 +265,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               <button
                 type="button"
                 onClick={handleMorphToDetail}
-                className="p-1.5 rounded-lg text-[#F59E0B] hover:text-white hover:bg-[#1C1A18] transition-colors cursor-pointer animate-pulse"
+                className="p-1.5 rounded-lg text-[#F59E0B] hover:text-white hover:bg-[#1C1A18] focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:outline-none transition-colors cursor-pointer animate-pulse"
                 title="Go Full Detail"
+                aria-label="Go to full event details"
               >
                 <ArrowUpRight className="w-5 h-5" />
               </button>
@@ -272,7 +276,8 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1.5 rounded-lg text-[#8E8A86] hover:text-[#F5F2ED] hover:bg-[#1C1A18] transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-[#8E8A86] hover:text-[#F5F2ED] hover:bg-[#1C1A18] focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-colors cursor-pointer"
+                aria-label={isExpanded ? 'Collapse event modal' : 'Expand event modal'}
               >
                 {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
               </button>
@@ -280,7 +285,8 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#1C1A18] transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-[#8E8A86] hover:text-white hover:bg-[#1C1A18] focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-colors cursor-pointer"
+              aria-label="Close dialog"
             >
               <X className="w-5 h-5" />
             </button>
@@ -399,8 +405,11 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={autoCreateCall}
+              aria-label="Create Kylrix Connect Call"
               onClick={() => setAutoCreateCall(!autoCreateCall)}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1C1A18] ${
                 autoCreateCall ? 'bg-[#6366F1]' : 'bg-[#34322F]'
               }`}
             >
@@ -414,10 +423,10 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
           {/* Event Visibility */}
           <div className="space-y-2">
-            <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase block font-satoshi">
+            <span id="event-visibility-label" className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase block font-satoshi">
               Event Visibility
             </span>
-            <div className="flex gap-2 w-full">
+            <div role="tablist" aria-labelledby="event-visibility-label" className="flex gap-2 w-full">
               {(['public', 'private'] as const).map((v) => {
                 const isActive = visibility === v;
                 let Icon = Globe;
@@ -426,9 +435,11 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                 return (
                   <button
                     key={v}
+                    role="tab"
+                    aria-selected={isActive}
                     type="button"
                     onClick={() => setVisibility(v)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border font-bold text-xs transition-all cursor-pointer capitalize font-satoshi ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border font-bold text-xs transition-all cursor-pointer capitalize font-satoshi focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none ${
                       isActive
                         ? 'bg-[#1C1A18] border-[#6366F1] text-[#6366F1]'
                         : 'bg-black border-[#34322F] text-[#8E8A86] hover:bg-[#1C1A18] hover:text-white'
