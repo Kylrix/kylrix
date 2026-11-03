@@ -139,73 +139,14 @@ export async function listUserIdentitiesAction(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor) return { identities: [], externals: [] };
 
-  const identities: any[] = [];
-  const externals: any[] = [];
+  const { ApiResources } = await import('@/lib/api/resources');
+  const identities = await ApiResources.listIdentities({
+    userId: actor.$id,
+    scopes: ['profile:read'],
+    kind: 'user',
+  } as any);
 
-  try {
-    const { db } = await import('@/lib/db');
-    const { account: accountTable, oauthConsent, oauthClient } = await import('@/lib/db/schema');
-    const { eq, inArray } = await import('drizzle-orm');
-    const { resolveAllUserIds } = await import('@/lib/actions/turso-ops');
-
-    const resolvedUserIds = await resolveAllUserIds(actor.$id);
-    const allUserIds = Array.from(new Set([actor.$id, ...resolvedUserIds])).filter(Boolean);
-
-    const accounts = await db
-      .select()
-      .from(accountTable)
-      .where(inArray(accountTable.userId, allUserIds));
-
-    const seenProviders = new Set<string>();
-    for (const a of accounts) {
-      const providerKey = (a.providerId || '').toLowerCase();
-      if (seenProviders.has(providerKey)) continue;
-      seenProviders.add(providerKey);
-
-      identities.push({
-        $id: a.id,
-        $createdAt: a.createdAt ? new Date(a.createdAt).toISOString() : new Date().toISOString(),
-        provider: (a.providerId || '').toLowerCase(),
-        providerUid: a.accountId,
-        providerEmail: actor.email,
-      });
-    }
-
-    const consents = await db
-      .select({
-        id: oauthConsent.id,
-        clientId: oauthConsent.clientId,
-        scopes: oauthConsent.scopes,
-        createdAt: oauthConsent.createdAt,
-        clientName: oauthClient.name,
-        clientUri: oauthClient.uri,
-        clientIcon: oauthClient.icon,
-      })
-      .from(oauthConsent)
-      .leftJoin(oauthClient, eq(oauthConsent.clientId, oauthClient.clientId))
-      .where(inArray(oauthConsent.userId, allUserIds));
-
-    for (const c of consents) {
-      externals.push({
-        identity: {
-          $id: c.id,
-          $createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
-          provider: `oauth2:${c.clientId}`,
-        },
-        appId: c.clientId,
-        app: {
-          id: c.clientId,
-          name: c.clientName || c.clientId,
-          logoUri: c.clientIcon || null,
-          homepageUri: c.clientUri || null,
-        },
-      });
-    }
-  } catch (err: any) {
-    console.warn('[listUserIdentitiesAction] Turso accounts query warning:', err.message);
-  }
-
-  return { identities, externals };
+  return { identities, externals: [] };
 }
 
 export async function unlinkUserIdentityAction(identityId: string, jwt?: string) {

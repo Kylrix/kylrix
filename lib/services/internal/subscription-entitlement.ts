@@ -67,10 +67,21 @@ export const getVerifiedProEntitlementForUser = cache(async function getVerified
     const resolvedIds = await resolveAllUserIds(cleanUserId).catch(() => [cleanUserId]);
     const allUserIds = Array.from(new Set([cleanUserId, ...resolvedIds]));
 
+    const { or } = await import('drizzle-orm');
     const matchingUsers = await db
-      .select({ id: schema.user.id, email: schema.user.email, isContributor: schema.user.isContributor })
+      .select({
+        id: schema.user.id,
+        email: schema.user.email,
+        isContributor: schema.user.isContributor,
+        appwriteAccountId: schema.user.appwriteAccountId,
+      })
       .from(schema.user)
-      .where(inArray(schema.user.id, allUserIds));
+      .where(
+        or(
+          inArray(schema.user.id, allUserIds),
+          inArray(schema.user.appwriteAccountId, allUserIds)
+        )
+      );
 
     if (matchingUsers.some((u) => Boolean(u.isContributor))) {
       const res: EntitlementResult = {
