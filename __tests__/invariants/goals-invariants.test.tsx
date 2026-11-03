@@ -205,7 +205,7 @@ describe('Goals & Flow Invariants (goals-invariants.test.tsx)', () => {
 
     expect(container.textContent).toContain('Active Goals (1)');
     expect(container.textContent).toContain('Deploy Production Node');
-    expect(container.textContent).not.toContain('Completed (');
+    expect(container.textContent).toContain('Completed (0)');
 
     // Mark goal as complete
     await act(async () => {

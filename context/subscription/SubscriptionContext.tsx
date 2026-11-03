@@ -83,6 +83,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setExpiresAt(null);
         return;
       }
+      const isContributorUser = Boolean(
+        (user as any)?.isContributor ||
+        user?.prefs?.isContributor ||
+        user?.prefs?.tier === 'CONTRIBUTOR'
+      );
+      if (isContributorUser) {
+        setCurrentTier('CONTRIBUTOR');
+        setExpiresAt(null);
+        return;
+      }
       const ent = await BillingCacheService.getEntitlement(user.$id, force);
       const hasContributorHint = Boolean(
         (user as any)?.isContributor ||

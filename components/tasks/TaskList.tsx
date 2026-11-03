@@ -69,8 +69,12 @@ export default function TaskList() {
     taskPinMap.set(t.id, isResourcePinned('task', t.id, t.creatorId || t.userId, t.isPinned));
   }
 
-  const activeTasks = tasks.filter(t => t.status !== 'done');
-  const completedTasks = tasks.filter(t => t.status === 'done');
+  const isFinishedStatus = (status?: string | null) =>
+    status === 'done' || status === 'completed' || status === 'closed';
+  const isTaskCompleted = (t: any) =>
+    t.status === 'completed' || t.status === 'closed' || isFinishedStatus(t.status);
+  const activeTasks = tasks.filter((t) => !isTaskCompleted(t));
+  const completedTasks = tasks.filter(isTaskCompleted);
 
   const sortTasksByDeadline = (rows: typeof activeTasks) => {
     const order = sortByDeadlineThenUpdatedAt(
@@ -301,53 +305,51 @@ export default function TaskList() {
                 )}
 
                 {/* Completed Goals Section */}
-                {completedTasks.length > 0 && (
-                  <div className="space-y-4 pt-4">
-                    <div className="flex items-center justify-between px-1 mb-2">
-                      <button 
-                        onClick={() => setShowCompletedSection(!showCompletedSection)}
-                        className="flex items-center gap-2 group cursor-pointer"
-                      >
-                        <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-[0.2em] font-mono group-hover:text-white transition-colors">
-                          Completed ({completedTasks.length})
-                        </span>
-                        {showCompletedSection ? <ChevronUp size={12} className="text-[#9B9691]" /> : <ChevronDown size={12} className="text-[#9B9691]" />}
-                      </button>
-                      <div className="flex-1 mx-4 h-px bg-[#1C1A18]" />
-                    </div>
-
-                    {showCompletedSection && (
-                      <>
-                        {/* Cleanup Pulse Card */}
-                        <div className="bg-[#000000] border border-white/[0.08] rounded-[28px] p-5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:border-[#A855F7]/30 relative overflow-hidden group/cleanup">
-                           <div className="absolute top-0 right-0 w-32 h-32 bg-[#A855F7]/5 rounded-full blur-3xl pointer-events-none group-hover/cleanup:bg-[#A855F7]/10 transition-all duration-500" />
-                           <div className="flex items-center gap-4 relative z-10">
-                              <div className="w-12 h-12 rounded-xl bg-[#A855F7]/10 text-[#A855F7] flex items-center justify-center flex-shrink-0">
-                                  <Sparkles size={22} />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                  <h4 className="text-white font-black text-sm uppercase tracking-tight">Workspace Integrity</h4>
-                                  <p className="text-white opacity-80 text-[11px] font-bold uppercase tracking-wider mt-0.5 leading-normal">
-                                      Purge finished goals to maintain a lean, high-fidelity environment.
-                                  </p>
-                              </div>
-                           </div>
-                           <button
-                              onClick={handleBulkDeleteCompleted}
-                              className="relative z-10 px-5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all active:scale-[0.98] flex items-center gap-2"
-                           >
-                              <Trash2 size={14} />
-                              Purge All
-                           </button>
-                        </div>
-
-                        <div className="grid gap-4 items-stretch opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
-                          {sortedCompletedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
-                        </div>
-                      </>
-                    )}
+                <div className="space-y-4 pt-4">
+                  <div className="flex items-center justify-between px-1 mb-2">
+                    <button
+                      onClick={() => setShowCompletedSection(!showCompletedSection)}
+                      className="flex items-center gap-2 group cursor-pointer"
+                    >
+                      <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-[0.2em] font-mono group-hover:text-white transition-colors">
+                        Completed ({completedTasks.length})
+                      </span>
+                      {showCompletedSection ? <ChevronUp size={12} className="text-[#9B9691]" /> : <ChevronDown size={12} className="text-[#9B9691]" />}
+                    </button>
+                    <div className="flex-1 mx-4 h-px bg-[#1C1A18]" />
                   </div>
-                )}
+
+                  {showCompletedSection && completedTasks.length > 0 && (
+                    <>
+                      {/* Cleanup Pulse Card */}
+                      <div className="bg-[#000000] border border-white/[0.08] rounded-[28px] p-5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:border-[#A855F7]/30 relative overflow-hidden group/cleanup">
+                         <div className="absolute top-0 right-0 w-32 h-32 bg-[#A855F7]/5 rounded-full blur-3xl pointer-events-none group-hover/cleanup:bg-[#A855F7]/10 transition-all duration-500" />
+                         <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-xl bg-[#A855F7]/10 text-[#A855F7] flex items-center justify-center flex-shrink-0">
+                                <Sparkles size={22} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h4 className="text-white font-black text-sm uppercase tracking-tight">Workspace Integrity</h4>
+                                <p className="text-white opacity-80 text-[11px] font-bold uppercase tracking-wider mt-0.5 leading-normal">
+                                    Purge finished goals to maintain a lean, high-fidelity environment.
+                                </p>
+                            </div>
+                         </div>
+                         <button
+                            onClick={handleBulkDeleteCompleted}
+                            className="relative z-10 px-5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all active:scale-[0.98] flex items-center gap-2"
+                         >
+                            <Trash2 size={14} />
+                            Purge All
+                         </button>
+                      </div>
+
+                      <div className="grid gap-4 items-stretch opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))] sm:[grid-template-columns:repeat(auto-fill,minmax(280px,1fr))] xl:[grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
+                        {sortedCompletedTasks.map((task) => <GoalObjectRow key={task.id} task={task} />)}
+                      </div>
+                    </>
+                  )}
+                </div>
               </>
             )}
           </div>
