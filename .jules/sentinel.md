@@ -1,3 +1,8 @@
+## 2025-05-20 - Timing Side-Channels in Passkey Challenge Token Verification
+**Vulnerability:** In `lib/actions/auth-actions.ts`, passkey WebAuthn challenge tokens were verified by comparing user-supplied HMAC signatures against expected HMAC digests using an initial buffer length check (`sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)`). An unequal buffer length triggered an immediate early return, leaking HMAC length information and introducing measurable timing differences that could facilitate timing side-channel attacks.
+**Learning:** Checking buffer lengths prior to `timingSafeEqual` prevents crashes when lengths differ, but the length comparison itself leaks timing and structural details about the expected signature.
+**Prevention:** Always pre-hash both the user-supplied signature and the computed expected digest using SHA-256 (`createHash('sha256')`) prior to `timingSafeEqual(sigHash, expectedHash)`. This guarantees uniform 32-byte buffers, avoids early returns, and eliminates timing side channels.
+
 ## 2025-05-19 - Timing Attacks in Subscription HMAC Verification
 **Vulnerability:** Subscription tier HMAC signatures in `lib/services/internal/subscription-prefs-merge.ts` were verified using standard string equality (`expected === sig`), vulnerable to timing side-channel attacks that leak HMAC bytes incrementally to forge premium entitlements.
 **Learning:** `crypto.timingSafeEqual` throws an exception if buffer lengths differ; blindly passing arbitrary-length user input into `timingSafeEqual(Buffer.from(sig), Buffer.from(expected))` can crash or leak length information.
