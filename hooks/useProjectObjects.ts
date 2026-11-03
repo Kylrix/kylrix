@@ -53,27 +53,25 @@ export function useProjectObjects(
         return;
       }
 
-      // 1. Try local copy first (LocalEngine cache) for instant display
+      // 1. Try local copy first (LocalEngine cache) for instant 0ms display
+      const primaryKey = projectObjectsKindCacheKey(projectId, entityKind);
+      const fallbackKey = `project_objects_${projectId}_${entityKind}`;
       if (!force) {
         try {
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cached = await LocalEngine.cacheGet<any>(
-            projectObjectsKindCacheKey(projectId, entityKind),
-          );
+          const cached = (await LocalEngine.cacheGet<any>(primaryKey)) ||
+            (await LocalEngine.cacheGet<any>(fallbackKey));
           const cachedList = Array.isArray(cached) ? cached : Array.isArray(cached?.rows) ? cached.rows : [];
           if (cachedList.length > 0 && mountedRef.current) {
             setRows(cachedList);
             setLoading(false);
-            return;
           } else {
             if (mountedRef.current) {
-              setRows([]);
               setLoading(true);
             }
           }
         } catch {
           if (mountedRef.current) {
-            setRows([]);
             setLoading(true);
           }
         }
@@ -81,10 +79,12 @@ export function useProjectObjects(
         if (mountedRef.current) setLoading(true);
       }
 
-      // 2. Fetch project_objects via ProjectsService (backed by LocalEngine + Realtime)
+      // 2. Fetch project_objects via ProjectsService in background and merge into local state
       try {
-        const cacheKey = projectObjectsKindCacheKey(projectId, entityKind);
-        if (force) nexusInvalidate(cacheKey);
+        if (force) {
+          nexusInvalidate(primaryKey);
+          nexusInvalidate(fallbackKey);
+        }
         const result = await ProjectsService.listProjectObjectsByKind(projectId, entityKind);
         const remoteList: ProjectObjects[] = Array.isArray((result as any)?.rows)
           ? (result as any).rows
@@ -94,7 +94,8 @@ export function useProjectObjects(
         if (mountedRef.current) {
           setRows(remoteList);
           const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          void LocalEngine.cacheSet(cacheKey, remoteList);
+          void LocalEngine.cacheSet(primaryKey, remoteList);
+          void LocalEngine.cacheSet(fallbackKey, remoteList);
         }
       } catch (err) {
         console.warn('[useProjectObjects] remote fetch failed:', err);
@@ -172,15 +173,16 @@ export function useProjectObjects(
 
   const invalidate = useCallback(() => {
     if (!projectId) return;
-    nexusInvalidate(projectObjectsKindCacheKey(projectId, entityKind));
+    const primaryKey = projectObjectsKindCacheKey(projectId, entityKind);
+    const fallbackKey = `project_objects_${projectId}_${entityKind}`;
+    nexusInvalidate(primaryKey);
+    nexusInvalidate(fallbackKey);
     // Also bust the LocalEngine entry so next read hits remote
     void (async () => {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        await LocalEngine.cacheSet(
-          projectObjectsKindCacheKey(projectId, entityKind),
-          [],
-        );
+        await LocalEngine.cacheSet(primaryKey, []);
+        await LocalEngine.cacheSet(fallbackKey, []);
       } catch {}
     })();
   }, [projectId, entityKind, nexusInvalidate]);

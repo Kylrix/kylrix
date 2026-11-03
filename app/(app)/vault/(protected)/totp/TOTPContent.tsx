@@ -24,7 +24,8 @@ type TotpItem = any;
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
 
 
@@ -402,7 +403,25 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const { activeWorkspace } = useWorkspace();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
-  const { filteredItems: scopedTotpCodes } = useWorkspaceFilteredItems(totpCodes, 'totp');
+  const { rows: totpProjectObjects } = useProjectObjects(activeWorkspace?.isPersonal ? null : activeWorkspace?.id, 'totp');
+  const workspaceTotpIds = useMemo(() => new Set(totpProjectObjects.map((po) => po.entityId).filter(Boolean)), [totpProjectObjects]);
+
+  const scopedTotpCodes = useMemo(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      return totpCodes.filter(isDefaultWorkspaceObject);
+    }
+    const wsId = activeWorkspace.id;
+    return totpCodes.filter((t: any) => {
+      const id = t.$id || t.id;
+      return (
+        (id && workspaceTotpIds.has(id)) ||
+        t.projectId === wsId ||
+        t.workspaceId === wsId ||
+        t.project_id === wsId
+      );
+    });
+  }, [totpCodes, activeWorkspace, workspaceTotpIds]);
+
   const [folders, _setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);

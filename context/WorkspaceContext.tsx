@@ -651,15 +651,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Prewarm projectObjects cache by kind in parallel
-          const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
+          const kinds = ['goal', 'note', 'event', 'form', 'credential', 'password', 'totp', 'agent_session'];
           await Promise.allSettled(
             kinds.map(async (kind) => {
               if (cancelled) return;
-              const cacheKey = projectObjectsKindCacheKey(targetId, kind);
+              const primaryKey = projectObjectsKindCacheKey(targetId, kind);
+              const fallbackKey = `project_objects_${targetId}_${kind}`;
               const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
               const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
               if (rows.length > 0 && !cancelled) {
-                await LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
+                await LocalEngine.cacheSet(primaryKey, rows).catch(() => {});
+                await LocalEngine.cacheSet(fallbackKey, rows).catch(() => {});
               }
             })
           );

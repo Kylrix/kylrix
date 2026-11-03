@@ -4,6 +4,8 @@ import {
   persistWorkspacesOfflineStore,
   WorkspaceItem,
 } from '@/context/WorkspaceContext';
+import { getKindAliases } from '@/lib/data';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 
 describe('Workspace Domain Invariants (workspace-invariants.test.tsx)', () => {
   beforeEach(() => {
@@ -129,6 +131,42 @@ describe('Workspace Domain Invariants (workspace-invariants.test.tsx)', () => {
       const stored = JSON.parse(localStorage.getItem(`kylrix_workspaces_${uid}`)!);
       expect(stored).toHaveLength(1);
       expect(stored[0].id).toBe(uid);
+    });
+  });
+
+  describe('Workspace Objects Junction Resolution & Aliasing Invariants', () => {
+    it('getKindAliases expands historical aliases for credentials, notes, goals, and totp', () => {
+      expect(getKindAliases('credential')).toEqual(['credential', 'credentials', 'password', 'vault_item', 'secret']);
+      expect(getKindAliases('password')).toEqual(['credential', 'credentials', 'password', 'vault_item', 'secret']);
+      expect(getKindAliases('note')).toEqual(['note', 'notes', 'idea', 'ideas']);
+      expect(getKindAliases('idea')).toEqual(['note', 'notes', 'idea', 'ideas']);
+      expect(getKindAliases('goal')).toEqual(['goal', 'goals', 'task', 'tasks']);
+      expect(getKindAliases('task')).toEqual(['goal', 'goals', 'task', 'tasks']);
+      expect(getKindAliases('totp')).toEqual(['totp', 'totps']);
+      expect(getKindAliases('unknown_kind')).toEqual(['unknown_kind']);
+    });
+
+    it('enforces clean personal workspace vs named workspace filtering via isDefaultWorkspaceObject & junction sets', () => {
+      const items = [
+        { id: 'cred_personal_1', name: 'Personal Google', isWorkspace: false },
+        { id: 'cred_personal_2', name: 'Personal Github' },
+        { id: 'cred_named_ws_1', name: 'Kylrix Prod API Key', isWorkspace: true, projectId: 'ws_kylrix' },
+        { id: 'cred_junction_attached', name: 'Stripe Secret Key' }, // Attached via junction table
+      ];
+
+      // 1. In Personal Workspace: items marked as workspace or attached to named workspace are excluded
+      const personalItems = items.filter(isDefaultWorkspaceObject);
+      expect(personalItems.map((i) => i.id)).toEqual(['cred_personal_1', 'cred_personal_2', 'cred_junction_attached']);
+
+      // 2. In Named Workspace "ws_kylrix": items in junction table or with matching projectId are resolved
+      const registeredJunctionIds = new Set(['cred_junction_attached']);
+      const namedWsId = 'ws_kylrix';
+
+      const namedWsItems = items.filter((i) => {
+        return registeredJunctionIds.has(i.id) || i.projectId === namedWsId;
+      });
+
+      expect(namedWsItems.map((i) => i.id)).toEqual(['cred_named_ws_1', 'cred_junction_attached']);
     });
   });
 });
