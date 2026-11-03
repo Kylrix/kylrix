@@ -115,5 +115,30 @@ describe('REST-First Resource Discovery & Verification', () => {
         expect(Number.isNaN(Date.parse(evt.endTime))).toBe(false);
       }
     });
+
+    it('GET /api/v1/identities satisfies connected identities structure', { timeout: 15000 }, async (ctx) => {
+      if (!isServerReachable) {
+        ctx.skip();
+        return;
+      }
+
+      const res = await fetch(`${baseUrl}/api/v1/identities`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.ok).toBe(true);
+      expect(Array.isArray(json.data)).toBe(true);
+
+      for (const ident of json.data) {
+        expect(typeof ident.id).toBe('string');
+        expect(typeof ident.provider).toBe('string');
+        expect(ident.provider).toBe(ident.provider.toLowerCase());
+        expect(ident.connected).toBe(true);
+      }
+    });
   });
 });

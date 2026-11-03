@@ -106,11 +106,7 @@ export default function ConnectedIdentities() {
   }, [refresh]);
 
   const identityFor = (key: string) =>
-    identities.find(
-      (i) =>
-        i.provider?.toLowerCase() === key.toLowerCase() ||
-        i.providerUid?.toLowerCase() === key.toLowerCase()
-    );
+    identities.find((i) => i.provider?.toLowerCase() === key.toLowerCase());
 
   const linkProvider = async (providerKey: 'google' | 'github') => {
     setBusyId(providerKey);
@@ -189,10 +185,15 @@ export default function ConnectedIdentities() {
                   <ProviderMark name={p.name} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                    {linked && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    )}
+                  </div>
                   <p className="text-[11px] text-white/40 truncate">
                     {linked
-                      ? linked.providerEmail || (linked.providerUid ? `ID: ${linked.providerUid}` : 'Connected')
+                      ? (linked.providerUid ? `ID: ${linked.providerUid}` : linked.providerEmail || 'Connected')
                       : 'Not connected'}
                   </p>
                 </div>
