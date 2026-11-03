@@ -804,6 +804,29 @@ export function getKylrixPulse(): any {
   return null;
 }
 
+export function getKindAliases(kind: string): string[] {
+  const k = (kind || '').toLowerCase().trim();
+  if (k === 'credential' || k === 'credentials' || k === 'password' || k === 'vault_item' || k === 'secret') {
+    return ['credential', 'credentials', 'password', 'vault_item', 'secret'];
+  }
+  if (k === 'note' || k === 'notes' || k === 'idea' || k === 'ideas') {
+    return ['note', 'notes', 'idea', 'ideas'];
+  }
+  if (k === 'goal' || k === 'goals' || k === 'task' || k === 'tasks') {
+    return ['goal', 'goals', 'task', 'tasks'];
+  }
+  if (k === 'totp' || k === 'totps') {
+    return ['totp', 'totps'];
+  }
+  if (k === 'event' || k === 'events') {
+    return ['event', 'events'];
+  }
+  if (k === 'form' || k === 'forms') {
+    return ['form', 'forms'];
+  }
+  return [k];
+}
+
 const inflightTagged = new Map<string, { promise: Promise<any>; timestamp: number }>();
 
 export const ProjectsService = {
@@ -853,14 +876,15 @@ export const ProjectsService = {
     try {
       const { db } = await import('@/lib/db');
       const schema = await import('@/lib/db/schema');
-      const { eq, and } = await import('drizzle-orm');
+      const { eq, and, inArray } = await import('drizzle-orm');
+      const aliases = getKindAliases(entityKind);
       const rows = await db
         .select()
         .from(schema.projectObjects)
         .where(
           and(
             eq(schema.projectObjects.workspaceId, workspaceId),
-            eq(schema.projectObjects.entityKind, entityKind)
+            inArray(schema.projectObjects.entityKind, aliases)
           )
         );
       return rows.map((r) => ({ ...r, $id: r.id }));
