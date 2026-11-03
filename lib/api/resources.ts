@@ -4529,4 +4529,32 @@ export const ApiResources = {
     const res = await claimCouponAction(couponId);
     return shapeBillingCouponResult(res as any);
   },
+
+  async listIdentities(actor: ApiActor) {
+    const { resolveAllUserIds } = await import('@/lib/actions/turso-ops');
+    const { db } = await import('@/lib/db');
+    const { account: accountTable } = await import('@/lib/db/schema');
+    const { inArray } = await import('drizzle-orm');
+
+    const allUserIds = await resolveAllUserIds(actor.userId);
+    const accounts = await db
+      .select({
+        id: accountTable.id,
+        providerId: accountTable.providerId,
+        accountId: accountTable.accountId,
+        createdAt: accountTable.createdAt,
+      })
+      .from(accountTable)
+      .where(inArray(accountTable.userId, allUserIds));
+
+    return accounts
+      .filter((a) => a.providerId && a.providerId !== 'appwrite')
+      .map((a) => ({
+        id: a.id,
+        provider: (a.providerId || '').toLowerCase(),
+        accountId: a.accountId,
+        connected: true,
+        createdAt: a.createdAt,
+      }));
+  },
 };

@@ -470,7 +470,7 @@ export const resolveAllUserIds = cache(async function resolveAllUserIds(userId: 
       }
     }
 
-    // 3. Query schema.account for all account.userId rows matching ANY of those user IDs OR accountId matching any linked social provider ID
+    // 4. Query schema.account for all account.userId rows matching ANY of those user IDs OR accountId matching any linked social provider ID
     const currentResolved = Array.from(allUserIds).filter(Boolean);
     if (currentResolved.length > 0) {
       const accountRows = await db
@@ -487,6 +487,26 @@ export const resolveAllUserIds = cache(async function resolveAllUserIds(userId: 
       for (const acc of accountRows) {
         if (acc.userId) allUserIds.add(acc.userId);
         if (acc.accountId) allUserIds.add(acc.accountId);
+      }
+    }
+
+    // 5. Query user records for any account.userId values discovered that weren't in allUserIds yet
+    const afterAccountResolved = Array.from(allUserIds).filter(Boolean);
+    if (afterAccountResolved.length > currentResolved.length) {
+      const accountLinkedUsers = await db
+        .select({
+          id: schema.user.id,
+          appwriteAccountId: schema.user.appwriteAccountId,
+          email: schema.user.email,
+        })
+        .from(schema.user)
+        .where(inArray(schema.user.id, afterAccountResolved))
+        .limit(50);
+
+      for (const u of accountLinkedUsers) {
+        if (u.id) allUserIds.add(u.id);
+        if (u.appwriteAccountId) allUserIds.add(u.appwriteAccountId);
+        if (u.email?.trim()) emailsToQuery.add(u.email.trim().toLowerCase());
       }
     }
 
