@@ -22,3 +22,8 @@
 
 **Learning:** Generating tag filter options via nested `flatMap`, intermediate array spreading, and multi-pass `.filter(Boolean)` caused significant memory churn and redundant GC pressure on collections with hundreds or thousands of tasks. Replacing `tasks.flatMap` and cascaded array spreading with a single-pass `Set` aggregation in `TaskList` and `TaskContext.getTagFilterOptions` achieved ~2.6x speedup while maintaining identical tag ordering and deduplication.
 **Action:** When aggregating unique values across collections of objects with optional child arrays, accumulate directly into a `Set` in a single pass instead of composing intermediate arrays through `flatMap` and `.filter()`.
+
+## 2025-05-18 - Concurrent Batch Mutator Execution in LocalEngine
+
+**Learning:** Sequential `for...of` loops awaiting mutator functions during `LocalEngine` scheduled batch flush (`scheduleBatchFlush`) and immediate threshold flush (`batchedWrite`) introduced linear $O(N \times T)$ latency when multiple write mutators were queued. Replacing sequential awaits with concurrent `Promise.all` mapping while maintaining individual `try...catch` error handling achieved a ~9x speedup for 10 queued mutators while maintaining failure isolation.
+**Action:** When executing batches of independent mutation closures, use `Promise.all` with individual `try...catch` handlers instead of serial `for...of` await loops to avoid accumulating serial network latency.

@@ -23,9 +23,12 @@ function scheduleBatchFlush() {
     const entries = Array.from(batchQueue.entries());
     if (!entries.length) return;
     batchQueue.clear();
-    for (const [, { mutator }] of entries) {
-      try { await mutator(); } catch (e) { console.warn('[LocalEngine batch] mutator failed', e); }
-    }
+    // Bolt: Concurrent batch flush via Promise.all to eliminate O(N * T) serial latency across mutators
+    await Promise.all(
+      entries.map(async ([, { mutator }]) => {
+        try { await mutator(); } catch (e) { console.warn('[LocalEngine batch] mutator failed', e); }
+      })
+    );
   }, 2000);
 }
 
@@ -304,7 +307,12 @@ export const LocalEngine = {
     if (batchQueue.size >= 10) {
       if (batchTimer) { clearTimeout(batchTimer); batchTimer = null; }
       const entries = Array.from(batchQueue.entries()); batchQueue.clear();
-      for (const [, { mutator: m }] of entries) { try { await m(); } catch (e) { console.warn('[LocalEngine batch] failed', e); } }
+      // Bolt: Concurrent batch flush via Promise.all to eliminate O(N * T) serial latency across mutators
+      await Promise.all(
+        entries.map(async ([, { mutator: m }]) => {
+          try { await m(); } catch (e) { console.warn('[LocalEngine batch] failed', e); }
+        })
+      );
     } else scheduleBatchFlush();
     return data;
   },
