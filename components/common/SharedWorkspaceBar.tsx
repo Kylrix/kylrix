@@ -164,7 +164,7 @@ ${md}`;
 
   return (
     <>
-      <div className="w-full max-w-3xl mx-auto mb-6">
+      <div className="w-full max-w-3xl mx-auto mb-6" role="region" aria-label="Shared resource toolbar">
         <div className="relative overflow-hidden rounded-2xl border border-[#34322F] bg-[#161412] p-4 transition-all duration-300 hover:border-white/10">
           {/* Subtle ambient light */}
           <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#6366F1]/30 to-transparent pointer-events-none" />
@@ -191,7 +191,7 @@ ${md}`;
               <button
                 type="button"
                 onClick={handleCopyMarkdown}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0B0A09] border border-white/8 px-3 py-1.5 text-xs font-bold text-white/80 hover:text-white hover:bg-white/5 hover:border-white/15 transition-all font-satoshi"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0B0A09] border border-white/8 px-3 py-1.5 text-xs font-bold text-white/80 hover:text-white hover:bg-white/5 hover:border-white/15 focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all font-satoshi"
                 title="Copy context formatted as Markdown"
               >
                 {copiedField === 'markdown' ? (
@@ -211,7 +211,7 @@ ${md}`;
               <button
                 type="button"
                 onClick={() => setShowAgentModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/30 px-3 py-1.5 text-xs font-bold text-[#A855F7] hover:bg-[#6366F1]/20 hover:border-[#6366F1]/50 transition-all font-satoshi"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/30 px-3 py-1.5 text-xs font-bold text-[#A855F7] hover:bg-[#6366F1]/20 hover:border-[#6366F1]/50 focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all font-satoshi"
                 title="Format context for AI agents (Claude Code, Cursor, Codex)"
               >
                 <Bot className="w-3.5 h-3.5" />
@@ -222,7 +222,8 @@ ${md}`;
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0B0A09] border border-white/8 p-1.5 text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 transition-all"
+                aria-label="Copy share link"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#0B0A09] border border-white/8 p-1.5 text-xs font-bold text-white/70 hover:text-white hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all"
                 title="Copy share link"
               >
                 {copiedField === 'link' ? (
@@ -237,14 +238,14 @@ ${md}`;
                 isAuthenticated ? (
                   <Link
                     href="/app"
-                    className="inline-flex items-center justify-center rounded-xl bg-[#0B0A09] border border-white/8 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/5 hover:border-white/15 transition-all font-satoshi"
+                    className="inline-flex items-center justify-center rounded-xl bg-[#0B0A09] border border-white/8 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/5 hover:border-white/15 focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all font-satoshi"
                   >
                     Workspace
                   </Link>
                 ) : (
                   <Link
                     href="/app"
-                    className="inline-flex items-center justify-center rounded-xl bg-[#6366F1] px-3 py-1.5 text-xs font-black text-white hover:bg-[#5254E8] transition-all font-satoshi"
+                    className="inline-flex items-center justify-center rounded-xl bg-[#6366F1] px-3 py-1.5 text-xs font-black text-white hover:bg-[#5254E8] focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all font-satoshi"
                   >
                     Join Kylrix
                   </Link>
@@ -257,7 +258,12 @@ ${md}`;
 
       {/* Share with Agent Modal */}
       {showAgentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="share-agent-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        >
           <div
             className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-white/15 bg-[#161412] p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
@@ -269,7 +275,7 @@ ${md}`;
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white font-clash">
+                  <h3 id="share-agent-modal-title" className="text-base font-bold text-white font-clash">
                     Share Context with AI Agent
                   </h3>
                   <p className="text-xs text-white/50">
@@ -281,18 +287,22 @@ ${md}`;
               <button
                 type="button"
                 onClick={() => setShowAgentModal(false)}
-                className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white transition-all"
+                aria-label="Close modal"
+                title="Close modal"
+                className="rounded-lg p-1.5 text-white/50 hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Modal Tabs */}
-            <div className="flex items-center gap-2 mt-4 pb-3 border-b border-white/5 overflow-x-auto">
+            <div role="tablist" aria-label="Agent snippet formats" className="flex items-center gap-2 mt-4 pb-3 border-b border-white/5 overflow-x-auto">
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'claude'}
                 onClick={() => setActiveTab('claude')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all ${
                   activeTab === 'claude'
                     ? 'bg-[#6366F1] text-white'
                     : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
@@ -304,8 +314,10 @@ ${md}`;
 
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'cursor'}
                 onClick={() => setActiveTab('cursor')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all ${
                   activeTab === 'cursor'
                     ? 'bg-[#6366F1] text-white'
                     : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
@@ -317,8 +329,10 @@ ${md}`;
 
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'codex'}
                 onClick={() => setActiveTab('codex')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all ${
                   activeTab === 'codex'
                     ? 'bg-[#6366F1] text-white'
                     : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
@@ -330,8 +344,10 @@ ${md}`;
 
               <button
                 type="button"
+                role="tab"
+                aria-selected={activeTab === 'raw'}
                 onClick={() => setActiveTab('raw')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:outline-none transition-all ${
                   activeTab === 'raw'
                     ? 'bg-[#6366F1] text-white'
                     : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'
