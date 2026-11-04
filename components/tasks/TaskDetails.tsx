@@ -531,7 +531,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <button
               type="button"
               onClick={onBack}
-              className="p-2 text-white hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0"
+              aria-label="Back to goals"
+              className="p-2 text-white hover:text-white rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-colors shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -539,7 +540,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <button
               type="button"
               onClick={handleClose}
-              className="p-2 text-white hover:text-white rounded-xl hover:bg-white/5 transition-colors shrink-0 md:hidden"
+              aria-label="Close goal details"
+              className="p-2 text-white hover:text-white rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-colors shrink-0 md:hidden"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -553,8 +555,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 onClick={() => {
                   void navigator.clipboard.writeText(task.id);
                 }}
-                className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-[11px] font-mono text-white/70 hover:text-white focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-colors flex items-center gap-1 cursor-pointer"
                 title="Click to copy Goal ID"
+                aria-label={`Copy Goal ID: ${task.id}`}
               >
                 <span className="text-white/40 select-none">ID:</span>
                 <span className="truncate max-w-[90px]">{task.id}</span>
@@ -567,8 +570,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 onClick={() => {
                   void navigator.clipboard.writeText(task.projectId!);
                 }}
-                className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 transition-colors flex items-center gap-1 cursor-pointer"
+                className="px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-[11px] font-mono text-indigo-300 hover:text-indigo-200 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-colors flex items-center gap-1 cursor-pointer"
                 title="Click to copy Workspace ID"
+                aria-label={`Copy Workspace ID: ${task.projectId}`}
               >
                 <span className="text-indigo-400/50 select-none">WS:</span>
                 <span className="truncate max-w-[90px]">{task.projectId}</span>
@@ -579,12 +583,13 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               onClick={async () => {
                 await completeTask(task.id);
               }}
-              className={`p-2 rounded-xl transition-all cursor-pointer ${
+              className={`p-2 rounded-xl focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all cursor-pointer ${
                 task.status === 'done'
                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30'
                   : 'text-[#9B9691] hover:text-emerald-400 hover:bg-white/5'
               }`}
               title={task.status === 'done' ? 'Mark as Incomplete' : 'Mark as Done'}
+              aria-label={task.status === 'done' ? 'Mark as Incomplete' : 'Mark as Done'}
             >
               <Check className="w-4 h-4" strokeWidth={task.status === 'done' ? 3 : 2} />
             </button>
@@ -603,16 +608,18 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                   })
                 );
               }}
-              className="p-2 text-[#A855F7] hover:text-white rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 hover:bg-[#A855F7]/25 transition-all cursor-pointer"
+              className="p-2 text-[#A855F7] hover:text-white rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/25 hover:bg-[#A855F7]/25 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all cursor-pointer"
               title="Sidekick Companion"
+              aria-label="Open Sidekick Companion"
             >
               <Sparkles className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => setShowProjectLinker(true)}
-              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all cursor-pointer"
+              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all cursor-pointer"
               title="Link Workspace"
+              aria-label="Link Workspace"
             >
               <Activity className="w-4 h-4" />
             </button>
@@ -631,8 +638,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <button
               type="button"
               onClick={handleStartEditTitle}
-              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
+              className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all"
               title="Edit Title"
+              aria-label="Edit Title"
             >
               <Edit3 className="w-4 h-4" />
             </button>
@@ -640,8 +648,11 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               <button
                 type="button"
                 onClick={() => setIsExportOpen(!isExportOpen)}
-                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
+                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all"
                 title="Export Goal"
+                aria-label="Export Goal"
+                aria-haspopup="menu"
+                aria-expanded={isExportOpen}
               >
                 <FileText className="w-4 h-4" />
               </button>
@@ -686,8 +697,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                   }
                 });
               }}
-              className="p-2 text-[#9B9691] hover:text-red-400 rounded-xl hover:bg-white/5 transition-all"
+              className="p-2 text-[#9B9691] hover:text-red-400 rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none transition-all"
               title="Delete Goal"
+              aria-label="Delete Goal"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -695,8 +707,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               <button
                 type="button"
                 onClick={handleClose}
-                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-all"
+                className="p-2 text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all"
                 title="Close"
+                aria-label="Close goal details"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -832,8 +845,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                   e.stopPropagation();
                   navigator.clipboard.writeText(task.description || '');
                 }}
-                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-colors"
                 title="Copy details"
+                aria-label="Copy objective details"
               >
                 <Copy className="w-3.5 h-3.5" />
               </button>
@@ -896,7 +910,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                     <button
                       type="button"
                       onClick={() => deleteSubtask(task.id, subtask.id)}
-                      className="text-[#9B9691] hover:text-red-400 p-1 rounded transition-colors opacity-0 group-hover:opacity-100"
+                      className="text-[#9B9691] hover:text-red-400 p-1 rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:outline-none"
+                      title="Delete milestone"
+                      aria-label={`Delete milestone: ${subtask.title}`}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -1023,8 +1039,9 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <button
               type="button"
               onClick={() => setIsTagSelectorOpen(true)}
-              className="p-1 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 transition-colors flex shrink-0"
+              className="p-1 text-[#A855F7] hover:text-white rounded-lg hover:bg-[#A855F7]/10 focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-colors flex shrink-0"
               title="Edit Tags"
+              aria-label="Edit Tags"
             >
               <Plus size={14} strokeWidth={3} />
             </button>
@@ -1131,7 +1148,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                 <button
                   type="submit"
                   disabled={huddleSending || !newComment.trim()}
-                  className={`p-2 rounded-xl transition-all shrink-0 ${
+                  aria-label="Send discussion message"
+                  className={`p-2 rounded-xl focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:outline-none transition-all shrink-0 ${
                       newComment.trim() 
                         ? 'bg-[#A855F7] text-[#0A0908] shadow-[0_4px_12px_-4px_rgba(168,85,247,0.4)]' 
                         : 'text-white/10'
