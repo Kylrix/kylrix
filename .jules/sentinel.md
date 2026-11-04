@@ -1,3 +1,8 @@
+## 2025-05-21 - Timing Attack in Viewer Token Signature Verification
+**Vulnerability:** In `lib/actions/secure-ops/shared.ts`, `isViewerTokenValid` compared computed HMAC signatures against user-provided token signatures using standard string equality (`signViewerToken(payload) === parts[2]`), vulnerable to timing side-channel attacks that leak byte-by-byte match progress.
+**Learning:** Comparing cryptographic HMAC signatures directly with string equality or uneven buffers creates measurable timing differences that attackers can exploit to forge valid tokens.
+**Prevention:** Always pre-hash both the computed HMAC signature and the presented token signature with SHA-256 before comparing them with `timingSafeEqual(expectedHash, suppliedHash)` inside a defensive try/catch block.
+
 ## 2025-05-20 - Timing Side-Channels in Passkey Challenge Token Verification
 **Vulnerability:** In `lib/actions/auth-actions.ts`, passkey WebAuthn challenge tokens were verified by comparing user-supplied HMAC signatures against expected HMAC digests using an initial buffer length check (`sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)`). An unequal buffer length triggered an immediate early return, leaking HMAC length information and introducing measurable timing differences that could facilitate timing side-channel attacks.
 **Learning:** Checking buffer lengths prior to `timingSafeEqual` prevents crashes when lengths differ, but the length comparison itself leaks timing and structural details about the expected signature.
