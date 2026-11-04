@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Target, FormInput, Tag, Copy, FolderKanban, ShieldAlert, FileCode, Calendar, Bot, Layers, Trash2 } from 'lucide-react';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
@@ -30,8 +29,6 @@ type SidekickResult = {
 
 type ChatMsg = { id: string; role: 'user' | 'assistant'; content: string; at?: string };
 
-type PendingAttachment = { childId: string; childKind: string; name: string; bucketId?: string };
-
 function renderKindIcon(kind: string) {
   switch (kind) {
     case 'task': case 'goal': return <Target size={13} className="text-purple-400 shrink-0" />;
@@ -44,48 +41,6 @@ function renderKindIcon(kind: string) {
     case 'tag': return <Tag size={13} className="text-yellow-400 shrink-0" />;
     default: return <Layers size={13} className="text-purple-400 shrink-0" />;
   }
-}
-
-function deriveChildKind(bucketId?: string, mimeType?: string): string {
-  if (bucketId === 'ideas') return 'note';
-  if (bucketId === 'goals') return 'task';
-  if (bucketId === 'projects') return 'project';
-  if (bucketId === 'threads') return 'note';
-  if (bucketId === 'totps' || bucketId === 'vault') return 'vault';
-  if (bucketId === 'forms') return 'form';
-  if (bucketId === 'events') return 'event';
-  if (bucketId === 'sessions') return 'session';
-  if (bucketId === 'tags') return 'tag';
-  if (mimeType?.startsWith('image/')) return 'image';
-  if (mimeType) return 'file';
-  return 'note';
-}
-
-async function getRedactedObjectExcerpt(childId: string, _childKind: string): Promise<string> {
-  try {
-    const { LocalEngine } = await import('@/lib/services/LocalEngine');
-    const { redactSensitiveEnvContent } = await import('@/lib/unorganic-email-api');
-    const { redactPIIAndSensitiveFields } = await import('@/lib/tools/registry');
-
-    let text = '';
-    const note = await LocalEngine.cacheGet<any>(`note_${childId}`).catch(() => null);
-    if (note) {
-      text = `${note.title || ''}\n${note.content || ''}`.trim();
-    } else {
-      const task = await LocalEngine.cacheGet<any>(`task_${childId}`).catch(() => null);
-      if (task) {
-        text = `${task.title || ''}\n${task.description || ''}`.trim();
-      }
-    }
-
-    if (text) {
-      const step1 = redactSensitiveEnvContent(text);
-      const step2 = redactPIIAndSensitiveFields({ content: step1 });
-      const redacted = (step2 as any).content || step1;
-      return redacted.slice(0, 500);
-    }
-  } catch {}
-  return '';
 }
 
 function renderMessageContent(content?: string | null) {
@@ -183,7 +138,6 @@ export function SidekickDrawer({
   const { activeWorkspace } = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [] } = useTask();
-  const { openFileDrawer } = useUnifiedFileDrawer();
   const { open: openUnified } = useUnifiedDrawer();
 
   const [isMobile, setIsMobile] = useState(false);
@@ -228,7 +182,6 @@ export function SidekickDrawer({
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [attachedSessionObjects, setAttachedSessionObjects] = useState<any[]>([]);
   const [showAttachedObjectsDrawer, setShowAttachedObjectsDrawer] = useState(false);
   const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
@@ -286,7 +239,6 @@ export function SidekickDrawer({
       setResult(null);
       setMessages([]);
       setSessionId(null);
-      setPendingAttachments([]);
       setAttachedSessionObjects([]);
       try {
         const { account } = await import('@/lib/data');
@@ -459,30 +411,6 @@ export function SidekickDrawer({
     toast.success('Summary copied to clipboard');
   }, [result, target]);
 
-  const handleOpenAttachDrawer = () => {
-    openFileDrawer({
-      title: 'Attach Object to Sidekick',
-      initialTab: 'objects',
-      disabledTabs: ['synced', 'upload'],
-      onSelectFile: (file) => {
-        if (pendingAttachments.length >= 10) {
-          toast.error('Maximum 10 objects can be attached at once.');
-          return;
-        }
-        if (pendingAttachments.some((a) => a.childId === file.$id)) {
-          toast.error('Object already attached to message.');
-          return;
-        }
-        const childKind = deriveChildKind(file.bucketId, file.mimeType);
-        setPendingAttachments((prev) => [
-          ...prev,
-          { childId: file.$id, childKind, name: file.name, bucketId: file.bucketId },
-        ]);
-        toast.success(`Attached ${file.name}`);
-      },
-    });
-  };
-
   const handleDetachSessionObject = async (childId: string) => {
     const currentSessionId = sessionId;
     if (!currentSessionId) return;
@@ -504,25 +432,11 @@ export function SidekickDrawer({
 
   const handleSend = async () => {
     const trimmed = input.trim();
-    if ((!trimmed && pendingAttachments.length === 0) || !target || sending) return;
+    if (!trimmed || !target || sending) return;
     setSending(true);
     setError(null);
 
-    const attachmentsToProcess = [...pendingAttachments];
-    setPendingAttachments([]);
-
-    let promptWithAttachments = trimmed;
-    if (attachmentsToProcess.length > 0) {
-      const attachmentTexts = await Promise.all(
-        attachmentsToProcess.map(async (att) => {
-          const excerpt = await getRedactedObjectExcerpt(att.childId, att.childKind);
-          return `[Attached: ${att.name} (${att.childKind}) - ID: ${att.childId}]${excerpt ? `\nContent: ${excerpt}` : ''}`;
-        })
-      );
-      promptWithAttachments = trimmed ? `${trimmed}\n\n${attachmentTexts.join('\n\n')}` : attachmentTexts.join('\n\n');
-    }
-
-    const userMsg: ChatMsg = { id: `u_${Date.now()}`, role: 'user', content: promptWithAttachments };
+    const userMsg: ChatMsg = { id: `u_${Date.now()}`, role: 'user', content: trimmed };
     const next = [...messages, userMsg];
     setMessages(next);
     setInput('');
@@ -532,7 +446,7 @@ export function SidekickDrawer({
       const { account } = await import('@/lib/data');
       const jwt = await account.createJWT().then((r:any)=> r.jwt || '').catch(()=> undefined);
       const { executeSidekickChat } = await import('@/lib/actions/sidekick');
-      const res: any = await executeSidekickChat({ target, message: promptWithAttachments, sessionId: sessionId || undefined, jwt }).catch((err: any) => ({
+      const res: any = await executeSidekickChat({ target, message: trimmed, sessionId: sessionId || undefined, jwt }).catch((err: any) => ({
         success: false,
         error: getAgenticUserMessage(err),
       }));
@@ -609,35 +523,8 @@ export function SidekickDrawer({
         console.warn('Failed to parse or execute sidekick tool call:', toolErr);
       }
 
-      const activeSid = res?.sessionId || sessionId;
       if (res?.sessionId && !sessionId) setSessionId(res.sessionId);
 
-      // Persist attached objects to DB and local cache for sidekick session
-      if (activeSid && attachmentsToProcess.length > 0) {
-        try {
-          const { attachObject, getObjectsByParent } = await import('@/lib/actions/client-ops');
-          await Promise.all(
-            attachmentsToProcess.map((att) =>
-              attachObject({
-                parentId: activeSid,
-                parentKind: 'sidekick',
-                childId: att.childId,
-                childKind: att.childKind,
-                metadata: { name: att.name, bucketId: att.bucketId },
-              }).catch(() => {})
-            )
-          );
-          const updatedObjs = await getObjectsByParent(activeSid, 'sidekick').catch(() => []);
-          setAttachedSessionObjects(Array.isArray(updatedObjs) ? updatedObjs : updatedObjs?.rows || []);
-          const cacheKey = `sidekick:attachments:${activeSid}`;
-          LocalEngine.cacheSet(cacheKey, updatedObjs).catch(() => {});
-          if (target) {
-            LocalEngine.cacheSet(`sidekick:attachments:${target.type}:${target.id}`, updatedObjs).catch(() => {});
-          }
-        } catch (attachErr) {
-          console.warn('Failed to persist session attachments:', attachErr);
-        }
-      }
       // If response is new summary JSON, update result
       try {
         const parsed = JSON.parse(assistant.content);
@@ -919,40 +806,7 @@ export function SidekickDrawer({
 
       {/* Chat bar — plugged into LocalEngine with pending attachment pills */}
       <div className="p-4 border-t border-white/5 bg-[#0A0908] shrink-0 flex flex-col gap-2">
-        {/* Pending attachment pills directly above input bar */}
-        {pendingAttachments.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
-            {pendingAttachments.map((att) => (
-              <div
-                key={att.childId}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#161412] border border-[#A855F7]/30 text-xs text-white shrink-0 shadow-sm"
-              >
-                {renderKindIcon(att.childKind)}
-                <span className="truncate max-w-[120px] text-[11px] font-semibold">{att.name}</span>
-                <button
-                  type="button"
-                  onClick={() => setPendingAttachments((prev) => prev.filter((p) => p.childId !== att.childId))}
-                  aria-label={`Remove attachment ${att.name}`}
-                  className="p-0.5 rounded hover:bg-white/10 text-white/40 hover:text-white ml-0.5 cursor-pointer"
-                  title="Remove attachment"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleOpenAttachDrawer}
-            aria-label="Attach object"
-            className="p-3 rounded-xl bg-[#161412] border border-white/5 text-white/60 hover:text-[#A855F7] hover:border-[#A855F7]/30 transition-colors flex items-center justify-center cursor-pointer shrink-0"
-            title="Attach Object"
-          >
-            <Paperclip size={18} />
-          </button>
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -967,7 +821,7 @@ export function SidekickDrawer({
           />
           <button
             onClick={handleSend}
-            disabled={sending || (!input.trim() && pendingAttachments.length === 0)}
+            disabled={sending || !input.trim()}
             aria-label="Send message"
             className="px-4 py-3 rounded-xl bg-[#A855F7] hover:bg-[#9333EA] disabled:opacity-40 text-white font-black flex items-center justify-center shrink-0 cursor-pointer"
           >

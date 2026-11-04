@@ -34,7 +34,6 @@ import {
   Milestone,
   PenLine,
   Plus,
-  Paperclip,
   RefreshCw,
   Search,
   Send,
@@ -60,8 +59,7 @@ import {
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useUnifiedFileDrawer } from '@/context/UnifiedFileDrawerContext';
-import { parseChatAttachFile, type ChatPendingObject } from '@/lib/chat/pending-object';
+import { type ChatPendingObject } from '@/lib/chat/pending-object';
 import { ChatObjectPreview } from '@/components/chat/ChatObjectPreview';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSudo } from '@/context/SudoContext';
@@ -265,7 +263,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
   const { openOverlay } = useOverlay();
   const { openSidebar } = useDynamicSidebar();
   const { openProUpgrade } = useProUpgrade();
-  const { openFileDrawer } = useUnifiedFileDrawer();
   const pathname = usePathname() || '/';
   const router = useRouter();
   const isPro = userMayUsePaidAi(user);
@@ -1911,24 +1908,6 @@ export function AgenticPanelContent({ onClose, isDesktop }: AgenticPanelContentP
               onTouchEnd={handleComposerTouchEnd}
               onTouchCancel={handleComposerTouchEnd}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  openFileDrawer({
-                    title: 'Attach to Kylie',
-                    onSelectFile: (file: any) => {
-                      const parsed = parseChatAttachFile(file);
-                      if (parsed) setPendingObject(parsed);
-                    },
-                  });
-                }}
-                aria-label="Attach to chat"
-                title="Attach object, file, or media"
-                className="shrink-0 w-9 h-9 mb-0.5 rounded-full inline-flex items-center justify-center text-white/50 hover:text-white hover:bg-white/[0.08] transition-colors cursor-pointer"
-              >
-                <Paperclip size={18} strokeWidth={2} />
-              </button>
-
               <textarea
                 ref={textareaRef}
                 value={chatInput}
