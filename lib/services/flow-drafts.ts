@@ -81,11 +81,10 @@ export const FlowDraftsService = {
     if (typeof window === 'undefined') return [];
     const manifest = await this.getManifest();
     const ids = Object.keys(manifest);
-    const drafts: FlowDraft[] = [];
-    for (const id of ids) {
-      const d = await this.getDraft(id);
-      if (d) drafts.push(d);
-    }
+    // ⚡ Bolt Optimization: Fetch all drafts concurrently via Promise.all mapping
+    // instead of sequential for...of await loop, reducing latency from O(N * T) to O(T).
+    const results = await Promise.all(ids.map((id) => this.getDraft(id)));
+    const drafts = results.filter((d): d is FlowDraft => d !== null);
     drafts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return drafts;
   },
@@ -93,9 +92,11 @@ export const FlowDraftsService = {
   async clearAll(): Promise<void> {
     if (typeof window === 'undefined') return;
     const manifest = await this.getManifest();
-    for (const id of Object.keys(manifest)) {
-      await LocalEngine.cacheDelete(`${DRAFT_PREFIX}${id}`);
-    }
+    // ⚡ Bolt Optimization: Concurrently purge all draft items in parallel
+    // across LocalEngine cache rather than serially awaiting each deletion.
+    await Promise.all(
+      Object.keys(manifest).map((id) => LocalEngine.cacheDelete(`${DRAFT_PREFIX}${id}`))
+    );
     await LocalEngine.cacheDelete(MANIFEST_KEY);
   },
 };
