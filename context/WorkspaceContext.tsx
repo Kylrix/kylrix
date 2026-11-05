@@ -301,15 +301,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const filtered = existing.filter((w) => w.id !== workspaceId);
         await LocalEngine.cacheSet(cacheKey, filtered);
 
+        // Concurrently purge workspace details, objects, and kind-specific caches
+        // to eliminate O(K * T) serial eviction latency when removing shared workspaces
+        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
         await Promise.allSettled([
           LocalEngine.cacheDelete(`ws_details_${workspaceId}`),
           LocalEngine.cacheDelete(`project_objects_${workspaceId}`),
           LocalEngine.cacheDelete(`f_shared_ws_${workspaceId}`),
+          ...kinds.map((kind) => LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind))),
         ]);
-        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
-        for (const kind of kinds) {
-          await LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind)).catch(() => {});
-        }
       } catch (e) {
         console.warn('[WorkspaceContext] Failed to purge removed workspace cache:', e);
       }

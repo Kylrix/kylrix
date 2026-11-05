@@ -27,3 +27,8 @@
 
 **Learning:** Sequential `for...of` loops awaiting mutator functions during `LocalEngine` scheduled batch flush (`scheduleBatchFlush`) and immediate threshold flush (`batchedWrite`) introduced linear $O(N \times T)$ latency when multiple write mutators were queued. Replacing sequential awaits with concurrent `Promise.all` mapping while maintaining individual `try...catch` error handling achieved a ~9x speedup for 10 queued mutators while maintaining failure isolation.
 **Action:** When executing batches of independent mutation closures, use `Promise.all` with individual `try...catch` handlers instead of serial `for...of` await loops to avoid accumulating serial network latency.
+
+## 2025-05-18 - Concurrent Workspace Object Cache Eviction on Removal
+
+**Learning:** In `WorkspaceContext.removeSharedWorkspace`, sequential `for...of` loops awaiting per-kind cache deletion (`LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind))`) introduced linear $O(K \times T)$ latency across 7 object kinds on top of general workspace caches. Unifying cache deletion with `Promise.allSettled` across general keys and kind-specific keys achieved ~9.6x speedup (reducing eviction duration from ~153ms to ~16ms for 15ms latency) without risking unhandled rejections or partial state desync.
+**Action:** When invalidating multiple multi-kind caches or related sub-keys in `LocalEngine` during resource removal, always use `Promise.allSettled` mapping instead of serial `for...of` loops.
