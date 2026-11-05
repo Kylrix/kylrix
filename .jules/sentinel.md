@@ -1,3 +1,8 @@
+## 2025-05-22 - Timing Attacks in Personal Access Token (PAT) Verification
+**Vulnerability:** In `lib/services/pats.ts`, `PatService.verifyBearer` compared computed token hashes against stored database hashes using standard string equality (`hash !== row.key`), introducing timing side-channels that leak byte matching progress during token authentication.
+**Learning:** Even when hashing raw tokens with SHA-256 before database lookup, evaluating the final hash match via `===` or `!==` leaks timing information byte-by-byte.
+**Prevention:** Pre-hash both the computed SHA-256 token hash and the stored key with SHA-256 into uniform 32-byte buffers and compare using `timingSafeEqual(suppliedBuf, expectedBuf)`.
+
 ## 2025-05-21 - Timing Attack in Viewer Token Signature Verification
 **Vulnerability:** In `lib/actions/secure-ops/shared.ts`, `isViewerTokenValid` compared computed HMAC signatures against user-provided token signatures using standard string equality (`signViewerToken(payload) === parts[2]`), vulnerable to timing side-channel attacks that leak byte-by-byte match progress.
 **Learning:** Comparing cryptographic HMAC signatures directly with string equality or uneven buffers creates measurable timing differences that attackers can exploit to forge valid tokens.

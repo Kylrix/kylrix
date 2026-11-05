@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { formatPatToken, parsePatToken, PatService } from './pats';
+import { db } from '@/lib/db';
+import { vi } from 'vitest';
 import { bytesToBase64 } from '@/lib/security/zero-knowledge';
 
 describe('PatService and Token Utilities', () => {
@@ -131,5 +133,52 @@ describe('PatService and Token Utilities', () => {
         aetEnvelope: { v: 2 },
       })
     ).rejects.toThrowError(expect.objectContaining({ code: 'invalid_envelope' }));
+  });
+
+  describe('verifyBearer timing-safe constant-time comparison', () => {
+    it('authenticates valid token and rejects tampered or mismatched hash safely', async () => {
+      PatService.invalidateVerificationCache();
+      const rawToken = formatPatToken('testpfx1', 'supersecrettoken12345678', 'user_pat');
+      const parsed = parsePatToken(rawToken)!;
+      const { createHash } = await import('crypto');
+      const expectedKey = createHash('sha256').update(parsed.token).digest('hex');
+
+      const mockRow = {
+        id: 'pat_test_123',
+        userId: 'user_456',
+        name: 'Test PAT',
+        prefix: 'testpfx1',
+        start: 'testpfx1',
+        key: expectedKey,
+        enabled: true,
+        permissions: '["*"]',
+        expiresAt: null,
+        lastUsedAt: null,
+        isWorkspace: false,
+        workspaceId: null,
+        metadata: null,
+        category: 'user_pat',
+      };
+
+      const selectMock = vi.spyOn(db, 'select').mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([mockRow]),
+          }),
+        }),
+      } as any);
+
+      const verified = await PatService.verifyBearer(rawToken);
+      expect(verified).not.toBeNull();
+      expect(verified?.userId).toBe('user_456');
+
+      // Reject tampered token without timing leaks or errors
+      PatService.invalidateVerificationCache();
+      const tamperedToken = formatPatToken('testpfx1', 'wrongsecrettoken12345678', 'user_pat');
+      const failed = await PatService.verifyBearer(tamperedToken);
+      expect(failed).toBeNull();
+
+      selectMock.mockRestore();
+    });
   });
 });
