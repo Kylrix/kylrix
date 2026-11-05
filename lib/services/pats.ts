@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, or, desc, count } from 'drizzle-orm';
@@ -435,7 +435,11 @@ export const PatService = {
     const row = rows[0];
     if (!row) return null;
 
-    if (hash !== row.key) return null;
+    // Security: standard string equality !== leaks byte matching time.
+    // Pre-hash both token hashes with SHA-256 before timingSafeEqual to enforce uniform 32-byte buffers and prevent timing attacks or length errors.
+    const suppliedBuf = createHash('sha256').update(hash).digest();
+    const expectedBuf = createHash('sha256').update(String(row.key || '')).digest();
+    if (!timingSafeEqual(suppliedBuf, expectedBuf)) return null;
 
     if (row.expiresAt && row.expiresAt.getTime() < Date.now()) {
       return null;
