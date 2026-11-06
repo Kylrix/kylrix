@@ -32,3 +32,8 @@
 
 **Learning:** In `WorkspaceContext.removeSharedWorkspace`, sequential `for...of` loops awaiting per-kind cache deletion (`LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind))`) introduced linear $O(K \times T)$ latency across 7 object kinds on top of general workspace caches. Unifying cache deletion with `Promise.allSettled` across general keys and kind-specific keys achieved ~9.6x speedup (reducing eviction duration from ~153ms to ~16ms for 15ms latency) without risking unhandled rejections or partial state desync.
 **Action:** When invalidating multiple multi-kind caches or related sub-keys in `LocalEngine` during resource removal, always use `Promise.allSettled` mapping instead of serial `for...of` loops.
+
+## 2025-05-18 - Concurrent Message Dispatch in EcosystemSendDrawer
+
+**Learning:** In `EcosystemSendDrawer.handleSend`, serial `for...of` await loops across selected targets caused linear $O(N \times T)$ latency, making multi-target shares take upwards of 100ms+ for 5 targets with 20ms network latency. Pre-importing the thread message dispatcher once and mapping targets via `Promise.all` reduced the duration to $O(T)$ (~20ms), achieving an immediate ~5.0x speedup while eliminating duplicate dynamic imports.
+**Action:** In UI drawers and dispatchers that broadcast messages or shared objects to multiple selected destinations, execute dispatches concurrently with `Promise.all` and lift dynamic action imports outside the dispatch map.
