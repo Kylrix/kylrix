@@ -79,63 +79,46 @@ const ZupIcon = ({ size = 20, className }: { size?: number; className?: string }
 const SETTINGS_STORAGE_KEY = 'kylrix_share_preferences_v1';
 const PREFS_KEY = 'share_methods_order';
 
-async function updateLocalShareCache(resourceType: PublicResourceType, resourceId: string): Promise<void> {
+export async function updateLocalShareCache(resourceType: PublicResourceType, resourceId: string): Promise<void> {
   if (!resourceId || typeof window === 'undefined') return;
   const kind = String(resourceType);
+  const isNote = kind === 'note' || kind === 'idea';
+  const isGoal = resourceType === 'goal' || resourceType === 'task';
+  const isEvent = resourceType === 'event';
+
+  const cacheKeys = isNote
+    ? ['f_ideas_all', 'f_ideas_guest', 'f_notes_list', 'f_notes_list_guest']
+    : isGoal
+      ? ['f_goals_all', 'f_goals_list', 'f_goals_list_guest']
+      : isEvent
+        ? ['f_events_all', 'f_events_list', 'f_events_list_guest']
+        : [];
+
+  if (!cacheKeys.length) return;
+
+  // Bolt: Concurrently update relevant local cache stores via Promise.all to reduce latency from O(K * T) to O(T)
   try {
-    if (kind === 'note' || kind === 'idea') {
-      for (const key of ['f_ideas_all', 'f_ideas_guest', 'f_notes_list', 'f_notes_list_guest']) {
-        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
-        if (cached?.rows && Array.isArray(cached.rows)) {
-          let updated = false;
-          for (const row of cached.rows) {
-            if (row.$id === resourceId || row.id === resourceId) {
-              row.isPublic = true;
-              row.isGuest = true;
-              row.isPublished = true;
-              updated = true;
+    await Promise.all(
+      cacheKeys.map(async (key) => {
+        try {
+          const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
+          if (cached?.rows && Array.isArray(cached.rows)) {
+            let updated = false;
+            for (const row of cached.rows) {
+              if (row.$id === resourceId || row.id === resourceId) {
+                row.isPublic = true;
+                row.isGuest = true;
+                if (isNote) row.isPublished = true;
+                updated = true;
+              }
+            }
+            if (updated) {
+              await LocalEngine.cacheSet(key, cached);
             }
           }
-          if (updated) {
-            await LocalEngine.cacheSet(key, cached);
-          }
-        }
-      }
-    } else if (resourceType === 'goal' || resourceType === 'task') {
-      for (const key of ['f_goals_all', 'f_goals_list', 'f_goals_list_guest']) {
-        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
-        if (cached?.rows && Array.isArray(cached.rows)) {
-          let updated = false;
-          for (const row of cached.rows) {
-            if (row.$id === resourceId || row.id === resourceId) {
-              row.isPublic = true;
-              row.isGuest = true;
-              updated = true;
-            }
-          }
-          if (updated) {
-            await LocalEngine.cacheSet(key, cached);
-          }
-        }
-      }
-    } else if (resourceType === 'event') {
-      for (const key of ['f_events_all', 'f_events_list', 'f_events_list_guest']) {
-        const cached = await LocalEngine.cacheGet<{ rows: any[] }>(key);
-        if (cached?.rows && Array.isArray(cached.rows)) {
-          let updated = false;
-          for (const row of cached.rows) {
-            if (row.$id === resourceId || row.id === resourceId) {
-              row.isPublic = true;
-              row.isGuest = true;
-              updated = true;
-            }
-          }
-          if (updated) {
-            await LocalEngine.cacheSet(key, cached);
-          }
-        }
-      }
-    }
+        } catch {}
+      })
+    );
   } catch (err) {
     console.warn('[ShareContextDrawer] Local share cache update warning:', err);
   }
