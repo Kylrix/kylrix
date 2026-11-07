@@ -84,13 +84,23 @@ export function verifyDiscordSignature({
 }
 
 /**
- * SSRF guard: only allow verified Discord webhook endpoints.
+ * SSRF guard: strictly allow only legitimate Discord webhook endpoints.
+ * Guards against SSRF, internal port scanning, credential smuggling, and path traversal
+ * by enforcing HTTPS, standard port 443, no userinfo, allowed Discord domains, and
+ * valid Discord webhook snowflake ID and token path format (/api/webhooks/<id>/<token>).
  */
+const DISCORD_WEBHOOK_PATH_REGEX = /^\/api\/webhooks\/\d{15,21}\/[\w-]{20,100}\/?$/;
+
 export function isValidDiscordWebhookUrl(urlStr: string | null | undefined): boolean {
   if (!urlStr || typeof urlStr !== 'string') return false;
   try {
     const url = new URL(urlStr);
     if (url.protocol !== 'https:') return false;
+    // Block credential smuggling via userinfo
+    if (url.username || url.password) return false;
+    // Block internal port scanning and non-standard ports
+    if (url.port && url.port !== '443') return false;
+
     const hostname = url.hostname.toLowerCase();
     const isDiscordDomain =
       hostname === 'discord.com' ||
@@ -98,8 +108,9 @@ export function isValidDiscordWebhookUrl(urlStr: string | null | undefined): boo
       hostname.endsWith('.discord.com') ||
       hostname.endsWith('.discordapp.com');
     if (!isDiscordDomain) return false;
-    if (!url.pathname.startsWith('/api/webhooks/')) return false;
-    return true;
+
+    // Discord webhooks have the structure /api/webhooks/{webhook.id}/{webhook.token}
+    return DISCORD_WEBHOOK_PATH_REGEX.test(url.pathname);
   } catch {
     return false;
   }

@@ -119,29 +119,62 @@ vi.mock('@/lib/api/resources', () => ({
 describe('isValidDiscordWebhookUrl', () => {
   it('should accept valid Discord webhook URLs', () => {
     assert.equal(
-      isValidDiscordWebhookUrl('https://discord.com/api/webhooks/1234567890/abcdef'),
+      isValidDiscordWebhookUrl('https://discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
       true
     );
     assert.equal(
-      isValidDiscordWebhookUrl('https://discordapp.com/api/webhooks/1234567890/abcdef'),
+      isValidDiscordWebhookUrl('https://discordapp.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
       true
     );
     assert.equal(
-      isValidDiscordWebhookUrl('https://canary.discord.com/api/webhooks/1234567890/abcdef'),
+      isValidDiscordWebhookUrl('https://canary.discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
       true
     );
   });
 
   it('should reject non-https protocols', () => {
     assert.equal(
-      isValidDiscordWebhookUrl('http://discord.com/api/webhooks/1234567890/abcdef'),
+      isValidDiscordWebhookUrl('http://discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
       false
     );
   });
 
   it('should reject non-Discord domains (SSRF protection)', () => {
     assert.equal(
-      isValidDiscordWebhookUrl('https://evil.com/api/webhooks/123'),
+      isValidDiscordWebhookUrl('https://evil.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
+      false
+    );
+  });
+
+  it('should reject URLs with embedded credentials to prevent credential smuggling', () => {
+    assert.equal(
+      isValidDiscordWebhookUrl('https://user:pass@discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
+      false
+    );
+  });
+
+  it('should reject URLs with non-standard ports to prevent internal port scanning', () => {
+    assert.equal(
+      isValidDiscordWebhookUrl('https://discord.com:8443/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
+      false
+    );
+  });
+
+  it('should reject malformed or traversal webhook paths', () => {
+    assert.equal(
+      isValidDiscordWebhookUrl('https://discord.com/api/webhooks/'),
+      false
+    );
+    assert.equal(
+      isValidDiscordWebhookUrl('https://discord.com/api/webhooks/not-a-snowflake/token'),
+      false
+    );
+    assert.equal(
+      isValidDiscordWebhookUrl('https://discord.com/api/webhooks/12345678901234567/short'),
+      false
+    );
+    assert.equal(
+      isValidDiscordWebhookUrl('https://discord.com/api/webhooks/12345678901234567/token/extra/path'),
       false
     );
   });
