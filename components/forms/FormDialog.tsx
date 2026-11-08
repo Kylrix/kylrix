@@ -131,7 +131,8 @@ function SortableField({
         <button
           type="button"
           onClick={() => removeField(fIdx)}
-          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/20 transition-all shrink-0 cursor-pointer"
+          aria-label="Remove question"
+          className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl border border-transparent hover:border-red-500/20 transition-all shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
           title="Remove question"
         >
           <Trash2 size={16} />
@@ -145,6 +146,7 @@ function SortableField({
           <div className="relative">
             <select
               value={field.type}
+              aria-label="Question type"
               onChange={(e) => {
                 const val = e.target.value;
                 if (val === 'file' && !hasPaidKylrixPlan(user)) {
@@ -153,7 +155,7 @@ function SortableField({
                 }
                 updateField(fIdx, { type: val });
               }}
-              className="bg-[#161412] border border-white/10 hover:border-white/20 text-white font-satoshi text-xs font-bold rounded-xl px-3 py-2 pr-8 outline-none appearance-none cursor-pointer transition-all"
+              className="bg-[#161412] border border-white/10 hover:border-white/20 text-white font-satoshi text-xs font-bold rounded-xl px-3 py-2 pr-8 outline-none appearance-none cursor-pointer transition-all focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             >
               {FIELD_TYPES.map((t) => (
                 <option key={t.value} value={t.value} className="bg-[#161412] text-white">
@@ -165,9 +167,12 @@ function SortableField({
           </div>
 
           {/* Required Switch Toggle */}
-          <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/5 cursor-pointer select-none">
+          <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#161412] border border-white/5 cursor-pointer select-none focus-within:ring-2 focus-within:ring-[#6366F1]">
             <input
               type="checkbox"
+              role="switch"
+              aria-checked={Boolean(field.required)}
+              aria-label={`Mark "${field.label || 'question'}" as required`}
               checked={Boolean(field.required)}
               onChange={(e) => updateField(fIdx, { required: e.target.checked })}
               className="sr-only peer"
@@ -207,7 +212,8 @@ function SortableField({
                 <button
                   type="button"
                   onClick={() => removeOption(fIdx, oIdx)}
-                  className="p-1.5 text-white/30 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                  aria-label={`Remove option ${oIdx + 1}`}
+                  className="p-1.5 text-white/30 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                 >
                   <X size={14} />
                 </button>
@@ -644,8 +650,9 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             <button
               type="button"
               onClick={() => setAssistDrawerOpen(true)}
+              aria-label="Kylrix Assist — AI Auto-Creator"
               title="Kylrix Assist — AI Auto-Creator"
-              className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#EC4899] hover:from-[#5254E8] hover:to-[#DB2777] text-white flex items-center justify-center shrink-0 shadow-[0_4px_16px_rgba(99,102,241,0.3)] transition-all cursor-pointer"
+              className="w-9 h-9 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#EC4899] hover:from-[#5254E8] hover:to-[#DB2777] text-white flex items-center justify-center shrink-0 shadow-[0_4px_16px_rgba(99,102,241,0.3)] transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             >
               <Wand2 size={16} className="animate-pulse" />
             </button>
@@ -654,7 +661,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             <button
               type="button"
               onClick={addField}
-              className="px-3 py-1.5 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/30 text-[#6366F1] font-satoshi font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/30 text-[#6366F1] font-satoshi font-bold text-xs flex items-center gap-1 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             >
               <Plus size={14} />
               <span className="hidden sm:inline">Add Question</span>
@@ -665,7 +672,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
               type="button"
               onClick={() => void handleSave()}
               disabled={loading || !title.trim()}
-              className="px-4 py-1.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-clash font-black text-xs transition-all shadow-[0_4px_16px_rgba(99,102,241,0.3)] cursor-pointer disabled:opacity-40"
+              className="px-4 py-1.5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-clash font-black text-xs transition-all shadow-[0_4px_16px_rgba(99,102,241,0.3)] cursor-pointer disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             >
               {loading ? 'Saving...' : form ? 'Save Form' : 'Create Form'}
             </button>
@@ -674,7 +681,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer"
+              aria-label="Close form editor"
+              className="p-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white/70 hover:text-white transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             >
               <X size={18} />
             </button>
@@ -729,8 +737,11 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={isMultiple}
+                  aria-label="Allow multiple submissions per user"
                   onClick={() => setIsMultiple(!isMultiple)}
-                  className={`px-3 py-1 rounded-xl border text-xs font-satoshi font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  className={`px-3 py-1 rounded-xl border text-xs font-satoshi font-bold flex items-center gap-1.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] ${
                     !isMultiple
                       ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
                       : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
@@ -887,7 +898,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             <button
               type="button"
               onClick={() => setGhostDrawerOpen(false)}
-              className="p-1.5 rounded-xl bg-white/5 text-white/70 hover:text-white"
+              aria-label="Close ghost fields drawer"
+              className="p-1.5 rounded-xl bg-white/5 text-white/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
             >
               <X size={16} />
             </button>
@@ -992,7 +1004,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 <button
                   type="button"
                   onClick={() => setSettingsOpen(false)}
-                  className="p-1.5 rounded-xl bg-white/5 text-white/70 hover:text-white"
+                  aria-label="Close field rules drawer"
+                  className="p-1.5 rounded-xl bg-white/5 text-white/70 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
                 >
                   <X size={16} />
                 </button>
