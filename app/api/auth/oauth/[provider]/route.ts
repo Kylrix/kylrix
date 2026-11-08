@@ -31,11 +31,19 @@ export function sanitizeCallbackUrl(url: string | null | undefined): string {
   }
 
   try {
-    const parsed = new URL(trimmed, 'https://dummy-base.local');
-    if (parsed.origin !== 'https://dummy-base.local' || parsed.pathname.startsWith('//')) {
+    const dummyOrigin = 'https://kylrix.local';
+    const parsed = new URL(trimmed, dummyOrigin);
+
+    // Defense-in-depth: Ensure origin matches dummy origin and pathname starts with '/' without backslashes
+    if (
+      parsed.origin !== dummyOrigin ||
+      !parsed.pathname.startsWith('/') ||
+      parsed.pathname.includes('\\')
+    ) {
       return '/app';
     }
-    return parsed.pathname + parsed.search + parsed.hash;
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return '/app';
   }
