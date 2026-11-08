@@ -15,6 +15,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { NoteDetailSidebar, NoteAccessRole } from '@/components/ui/NoteDetailSidebar';
 import { SharedWorkspaceBar } from '@/components/common/SharedWorkspaceBar';
@@ -147,6 +148,7 @@ function computeRole(note: Notes, userId?: string): NoteAccessRole | 'none' {
 
 export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: IdeaPageClientProps) {
   const router = useRouter();
+  const { open: openDrawer } = useUnifiedDrawer();
   const { user, isAuthenticated } = useAuth();
   const { setCachedData, invalidate } = useDataNexus();
 
@@ -392,13 +394,12 @@ export default function IdeaPageClient({ noteId, decryptionKey, initialNote }: I
             {needsLogin && (
               <button
                 onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    router.push(
-                      `/?source=${encodeURIComponent(window.location.href)}`
-                    );
-                  }
+                  openDrawer('login', {
+                    title: 'Sign In to Access Idea',
+                    subtitle: 'Log in or create an account to view this private idea.',
+                  });
                 }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#6366F1]/90 text-white text-sm font-bold transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6366F1] hover:bg-[#6366F1]/90 text-white text-sm font-bold transition-all cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
                 Sign in

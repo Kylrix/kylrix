@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { writeSurfaceForeground } from '@/lib/ui/surface-memory';
 import { hasPaidKylrixPlan } from '@/lib/utils';
@@ -49,6 +49,16 @@ export function UnifiedDrawerProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [activeContent, setActiveContent] = useState<DrawerContent>('navbar');
   const [drawerData, setDrawerData] = useState<any>(null);
+
+  useEffect(() => {
+    const handleOpenAuth = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setActiveContent('login');
+      setDrawerData(customEvent.detail || null);
+    };
+    window.addEventListener('kylrix:auth:open-drawer', handleOpenAuth);
+    return () => window.removeEventListener('kylrix:auth:open-drawer', handleOpenAuth);
+  }, []);
 
   const open = useCallback(
     (content: DrawerContent, data?: any) => {

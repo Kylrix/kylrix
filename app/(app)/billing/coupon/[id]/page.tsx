@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { claimCouponAction } from '@/lib/actions/billing/billing';
 import { account } from '@/lib/data';
 
@@ -52,6 +53,7 @@ function formatFriendlyError(error: any): string {
 export default function CouponLandingPage(props: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const params = use(props.params);
+  const { open: openDrawer } = useUnifiedDrawer();
   const { user, isLoading: isAuthLoading } = useAuth();
   const rawId = useMemo(() => (params.id || '').trim(), [params.id]);
   const [couponId, setCouponId] = useState(rawId);
@@ -89,17 +91,17 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
   useEffect(() => {
     if (isAuthLoading) return;
     if (!user) {
-      const url = new URL('/', window.location.origin);
-      url.searchParams.set('source', window.location.href);
-      url.searchParams.set('return_to', `/billing/coupon/${encodeURIComponent(rawId)}`);
-      router.push(url.toString());
+      openDrawer('login', {
+        title: 'Sign In to Redeem Pass',
+        subtitle: 'Log in or create an account to claim your pass.',
+      });
       return;
     }
 
     if (checkedRef.current === rawId) return;
     checkedRef.current = rawId;
     void checkCoupon(rawId);
-  }, [rawId, isAuthLoading, user, router]);
+  }, [rawId, isAuthLoading, user, openDrawer]);
 
   const handleClaim = async () => {
     if (!couponId || isClaiming) return;
@@ -141,8 +143,42 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
     <div className="min-h-screen bg-[#000000] text-[#F5F2ED] flex items-center justify-center p-4 selection:bg-[#6366F1]/30">
       <div className="w-full max-w-md bg-[#161412] border border-white/5 rounded-[28px] p-6 sm:p-8 flex flex-col items-center text-center shadow-2xl relative overflow-hidden">
         
+        {/* Unauthenticated Sign-in State */}
+        {!isAuthLoading && !user && (
+          <div className="w-full flex flex-col items-center py-6 space-y-6 animate-fadeIn">
+            <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-[#6366F1]">
+              <Ticket className="w-7 h-7 text-[#6366F1]" />
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white/40">
+                Kylrix Access Pass
+              </span>
+              <h1 className="font-clash text-2xl font-bold text-white tracking-tight">
+                Sign In to Claim
+              </h1>
+              <p className="font-satoshi text-xs text-white/50 max-w-xs">
+                Log in to link and activate pass <span className="font-mono text-white/80">{rawId}</span> to your account.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => openDrawer('login', {
+                title: 'Sign In to Redeem Pass',
+                subtitle: 'Log in or create an account to claim your pass.',
+              })}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-satoshi font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shadow-lg"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Open Sign In</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Loading State */}
-        {state === 'loading' && (
+        {user && state === 'loading' && (
           <div className="w-full flex flex-col items-center py-6 space-y-5 animate-fadeIn">
             <div className="w-12 h-12 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-[#6366F1]">
               <Loader2 className="w-6 h-6 animate-spin text-[#6366F1]" />
@@ -173,7 +209,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
         )}
 
         {/* Ready to Claim State */}
-        {state === 'ready' && (
+        {user && state === 'ready' && (
           <div className="w-full flex flex-col items-center space-y-6 animate-fadeIn">
             <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-[#6366F1]">
               <Sparkles className="w-7 h-7 text-[#6366F1]" />
@@ -251,7 +287,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
         )}
 
         {/* Claimed / Active State */}
-        {state === 'claimed' && (
+        {user && state === 'claimed' && (
           <div className="w-full flex flex-col items-center space-y-6 animate-fadeIn">
             <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <CheckCircle2 className="w-7 h-7 text-emerald-400" />
@@ -293,7 +329,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
         )}
 
         {/* Error / Unavailable State */}
-        {state === 'error' && (
+        {user && state === 'error' && (
           <div className="w-full flex flex-col items-center space-y-6 animate-fadeIn">
             <div className="w-14 h-14 rounded-2xl bg-[#0A0908] border border-white/5 flex items-center justify-center text-amber-400">
               <AlertCircle className="w-7 h-7 text-amber-400" />

@@ -5,7 +5,6 @@ import {
   isValidAppResumePath,
   LAST_ROUTE_COOKIE,
 } from '@/lib/ecosystem/resume-route';
-import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 import {
   enforceApiIpShield,
   enforceCrawlerShield,
@@ -35,7 +34,7 @@ const MAX_RAPID_RELOADS = 30;         // Max page loads within the window
 const RELOAD_WINDOW_MS = 5_000;       // 5-second sliding window
 const MAX_REDIRECT_DEPTH = 5;         // Max chained redirects before circuit-breaker fires
 
-function hasAuthSessionHint(request: NextRequest): boolean {
+function _hasAuthSessionHint(request: NextRequest): boolean {
   if (request.cookies.get('kylrix_pulse_v2')) return true;
   return request.cookies.getAll().some((cookie) => cookie.name.startsWith('a_session_'));
 }
@@ -177,26 +176,18 @@ export function middleware(request: NextRequest) {
     return response;
   };
 
-  // Handle Root URL ('/')
+  // Handle Root URL ('/') - always redirect directly to /app (or resume path), no landing page
   if (pathname === '/' || pathname === '') {
-    const isSelfHosted = isSelfHostedDeployment();
-
-    if (isSelfHosted || hasAuthSessionHint(request)) {
-      const lastRoute = readResumePathFromCookie(request);
-      const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/' && lastRoute !== '/landing')
-        ? lastRoute
-        : DEFAULT_AUTHENTICATED_ROUTE;
-      return attachAttribution(NextResponse.redirect(new URL(target, request.url)));
-    }
-
-    if (ref) {
-      // Guest: landing + auth open; cookie persists for claim after sign-in
-      const landingWithAuth = new URL('/', request.url);
-      landingWithAuth.searchParams.set('auth', 'open');
-      return attachAttribution(NextResponse.redirect(landingWithAuth));
-    }
-
-    // Natural landing behavior: unauthenticated guests stay on /
+    const lastRoute = readResumePathFromCookie(request);
+    const target = (lastRoute && lastRoute.startsWith('/') && lastRoute !== '/' && lastRoute !== '/landing')
+      ? lastRoute
+      : DEFAULT_AUTHENTICATED_ROUTE;
+    const redirectUrl = new URL(target, request.url);
+    // Forward existing search params (e.g. ?auth=..., ?ref=...) to /app
+    request.nextUrl.searchParams.forEach((value, key) => {
+      redirectUrl.searchParams.set(key, value);
+    });
+    return attachAttribution(NextResponse.redirect(redirectUrl));
   }
 
   // Handle deep link ?ref= query parameter stripping (URL hygiene)

@@ -30,7 +30,7 @@ type InvitePreview = {
 
 export default function HangoutInvitePage() {
   const params = useParams();
-  const router = useRouter();
+  const _router = useRouter();
   const conversationId = params.conversationId as string;
   const { user, isLoading } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
@@ -57,12 +57,9 @@ export default function HangoutInvitePage() {
   }, [conversationId]);
 
   useEffect(() => {
-    if (isLoading || user || !inviteUrl) return;
-
-    const loginUrl = new URL('/', window.location.origin);
-    loginUrl.searchParams.set('source', inviteUrl);
-    router.replace(loginUrl.toString());
-  }, [inviteUrl, isLoading, user, router]);
+    // If unauthenticated guest loads the invite, do not redirect to /
+    // They can view the preview and the request action will open the auth drawer
+  }, [inviteUrl, isLoading, user]);
 
   useEffect(() => {
     if (!conversationId || isLoading) return;
@@ -110,6 +107,14 @@ export default function HangoutInvitePage() {
 
   const handleRequestJoin = async () => {
     if (!conversationId) return;
+
+    if (!user) {
+      openUnified('login', {
+        title: 'Sign In to Join Hangout',
+        subtitle: 'Log in or create an account to request access to this hangout.',
+      });
+      return;
+    }
 
     setRequestState('loading');
     setError(null);
