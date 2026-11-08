@@ -15,7 +15,10 @@
     "build:vscode": "pnpm --filter kylrix-vscode build",
     "start": "next start",
     "lint": "eslint . --ignore-pattern '.agents' --max-warnings 50",
-    "test": "echo \"No unit tests specified\" && exit 0"
+    "test": "vitest run",
+    "test:invariants": "vitest run __tests__/invariants/",
+    "verify:ota": "ota up --workflow verify --agent 2>/dev/null || pnpm run test && pnpm run lint && pnpm run build",
+    "verify": "ota up --workflow verify --agent 2>/dev/null || pnpm run test && pnpm run lint && pnpm run build"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.56",

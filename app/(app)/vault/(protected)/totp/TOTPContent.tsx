@@ -24,7 +24,8 @@ type TotpItem = any;
 import { looksEncrypted } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
-import { useWorkspaceFilteredItems } from '@/hooks/useWorkspaceFilteredItems';
+import { useProjectObjects } from '@/hooks/useProjectObjects';
+import { isDefaultWorkspaceObject } from '@/lib/workspaces/is-default-workspace-object';
 import { getWorkflowSubmenuItems } from '@/components/workflows/workflow-submenu';
 
 
@@ -402,7 +403,25 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
   const { activeWorkspace } = useWorkspace();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
-  const { filteredItems: scopedTotpCodes } = useWorkspaceFilteredItems(totpCodes, 'totp');
+  const { rows: totpProjectObjects } = useProjectObjects(activeWorkspace?.isPersonal ? null : activeWorkspace?.id, 'totp');
+  const workspaceTotpIds = useMemo(() => new Set(totpProjectObjects.map((po) => po.entityId).filter(Boolean)), [totpProjectObjects]);
+
+  const scopedTotpCodes = useMemo(() => {
+    if (!activeWorkspace || activeWorkspace.isPersonal) {
+      return totpCodes.filter(isDefaultWorkspaceObject);
+    }
+    const wsId = activeWorkspace.id;
+    return totpCodes.filter((t: any) => {
+      const id = t.$id || t.id;
+      return (
+        (id && workspaceTotpIds.has(id)) ||
+        t.projectId === wsId ||
+        t.workspaceId === wsId ||
+        t.project_id === wsId
+      );
+    });
+  }, [totpCodes, activeWorkspace, workspaceTotpIds]);
+
   const [folders, _setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -545,9 +564,10 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
     const handleVaultChange = async () => {
       const userId = user?.id || user?.$id;
+      const wsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
       if (userId) {
         import('@/lib/actions/turso-ops').then(({ listTotpSecretsTurso }) =>
-          listTotpSecretsTurso(userId).then((res) =>
+          listTotpSecretsTurso(userId, wsId).then((res) =>
             setTotpCodes((res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }))),
           ),
         ).catch(() => {});
@@ -560,13 +580,14 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       window.removeEventListener('vault-unlocked', handleVaultChange);
       window.removeEventListener('vault-locked', handleVaultChange);
     };
-  }, [user?.id, user?.$id]);
+  }, [user?.id, user?.$id, activeWorkspace?.id, activeWorkspace?.isPersonal]);
 
   useEffect(() => {
     const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '') || 'guest';
+    const wsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
     let isCancelled = false;
-    const cacheKey = `vault_totp_${activeUserId}`;
-    const guestFallbackKey = 'vault_totp_guest';
+    const cacheKey = `vault_totp_${activeUserId}_${wsId || 'personal'}`;
+    const guestFallbackKey = `vault_totp_guest_${wsId || 'personal'}`;
 
     (async () => {
       try {
@@ -577,7 +598,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             cacheKey,
             async () => {
               const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listTotpSecretsTurso(activeUserId);
+              const res = await listTotpSecretsTurso(activeUserId, wsId);
               return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
             },
             {
@@ -601,7 +622,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
     return () => {
       isCancelled = true;
     };
-  }, [user?.id, user?.$id]);
+  }, [user?.id, user?.$id, activeWorkspace?.id, activeWorkspace?.isPersonal]);
 
   useEffect(() => {
     if (unlockOnDemand) {

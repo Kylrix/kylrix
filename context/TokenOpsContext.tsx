@@ -164,6 +164,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
      */
     if (pendingTransfers.length === 0) return;
     const timer = window.setInterval(async () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       const due = loadPendingTransfers().filter((row) => row.dueAt <= nowMs());
       if (!due.length) return;
       let working = loadPendingTransfers();

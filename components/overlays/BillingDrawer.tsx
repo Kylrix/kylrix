@@ -112,7 +112,7 @@ export function BillingContent() {
     }
   }, [giftUsername, openUnified]);
 
-  const isContributor = currentTier === 'CONTRIBUTOR';
+  const isContributor = currentTier === 'CONTRIBUTOR' || Boolean((user as any)?.isContributor);
   const isPro = currentTier === 'PRO' || currentTier === 'LIFETIME' || currentTier === 'ORG' || isContributor;
   const isTeams = currentTier === 'TEAMS';
 

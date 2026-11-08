@@ -1626,6 +1626,19 @@ export const ApiResources = {
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
+
+    try {
+      const { listEventsTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listEventsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        let rows = tursoRes.rows;
+        if (wsId) {
+          rows = rows.filter((e: any) => e.workspaceId === wsId || e.projectId === wsId);
+        }
+        return rows.slice(0, Math.min(100, Math.max(1, limit))).map(shapeEventListItem);
+      }
+    } catch {}
+
     const tables = systemTables();
 
     if (wsId) {
@@ -1667,6 +1680,19 @@ export const ApiResources = {
     if (!wsId && isWorkspaceJailed(actor)) {
       throw new WorkspaceJailError('Personal workspace access is forbidden for jailed workspace actors');
     }
+
+    try {
+      const { listFormsTurso } = await import('@/lib/actions/turso-ops');
+      const tursoRes = await listFormsTurso(actor.userId);
+      if (tursoRes.success && tursoRes.rows && tursoRes.rows.length > 0) {
+        let rows = tursoRes.rows;
+        if (wsId) {
+          rows = rows.filter((f: any) => f.workspaceId === wsId || f.projectId === wsId);
+        }
+        return rows.slice(0, Math.min(100, Math.max(1, limit))).map(shapeFormListItem);
+      }
+    } catch {}
+
     const tables = systemTables();
 
     if (wsId) {
@@ -4502,5 +4528,33 @@ export const ApiResources = {
     const { claimCouponAction } = await import('@/lib/actions/billing/billing');
     const res = await claimCouponAction(couponId);
     return shapeBillingCouponResult(res as any);
+  },
+
+  async listIdentities(actor: ApiActor) {
+    const { resolveAllUserIds } = await import('@/lib/actions/turso-ops');
+    const { db } = await import('@/lib/db');
+    const { account: accountTable } = await import('@/lib/db/schema');
+    const { inArray } = await import('drizzle-orm');
+
+    const allUserIds = await resolveAllUserIds(actor.userId);
+    const accounts = await db
+      .select({
+        id: accountTable.id,
+        providerId: accountTable.providerId,
+        accountId: accountTable.accountId,
+        createdAt: accountTable.createdAt,
+      })
+      .from(accountTable)
+      .where(inArray(accountTable.userId, allUserIds));
+
+    return accounts
+      .filter((a) => a.providerId && a.providerId !== 'appwrite')
+      .map((a) => ({
+        id: a.id,
+        provider: (a.providerId || '').toLowerCase(),
+        accountId: a.accountId,
+        connected: true,
+        createdAt: a.createdAt,
+      }));
   },
 };

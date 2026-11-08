@@ -469,8 +469,9 @@ export default function CredentialDetail({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-full bg-black border border-white/20 text-white hover:border-white/40 transition-colors shrink-0"
-              title="Back"
+              aria-label={isMobile ? 'Back' : 'Close'}
+              className="p-2 rounded-full bg-black border border-white/20 text-white hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors shrink-0"
+              title={isMobile ? 'Back' : 'Close'}
             >
               {isMobile ? <ArrowLeft className="w-4 h-4" /> : <X className="w-4 h-4" />}
             </button>
@@ -485,7 +486,8 @@ export default function CredentialDetail({
                   e.stopPropagation();
                   handleCopy(liveCredential.$id, 'header-id');
                 }}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border font-mono text-[0.65rem] transition-colors shrink-0 ${
+                aria-label={copied === 'header-id' ? 'Copied ID' : 'Copy full ID'}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border font-mono text-[0.65rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors shrink-0 ${
                   copied === 'header-id'
                     ? 'bg-black border-[#10B981] text-white'
                     : 'bg-black border-white/20 text-white hover:border-white/40'
@@ -517,7 +519,8 @@ export default function CredentialDetail({
                   })
                 );
               }}
-              className="p-2 rounded-xl text-purple-400 bg-purple-500/15 border border-purple-500/25 hover:bg-purple-500/25 transition-colors cursor-pointer"
+              aria-label="Sidekick Companion"
+              className="p-2 rounded-xl text-purple-400 bg-purple-500/15 border border-purple-500/25 hover:bg-purple-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/50 transition-colors cursor-pointer"
               title="Sidekick Companion"
             >
               <Sparkles className="w-4 h-4" />
@@ -526,7 +529,8 @@ export default function CredentialDetail({
               <button
                 type="button"
                 onClick={handleCopyAllEnvs}
-                className={`p-2 rounded-xl border transition-colors ${
+                aria-label={copied === 'all-envs' ? 'Copied .env' : 'Copy .env'}
+                className={`p-2 rounded-xl border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/50 transition-colors ${
                   copied === 'all-envs'
                     ? 'text-[#10B981] bg-black border-[#10B981]'
                     : 'text-white bg-black border-white/20 hover:border-white/40'
@@ -543,7 +547,8 @@ export default function CredentialDetail({
             <button
               type="button"
               onClick={handleShareLink}
-              className={`p-2 rounded-xl border transition-colors ${
+              aria-label={isPublic ? 'Copy share link' : 'Publish & share'}
+              className={`p-2 rounded-xl border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors ${
                 isPublic
                   ? 'text-white bg-black border-[#10B981]/50'
                   : 'text-white bg-black border-white/20 hover:border-white/40'
@@ -555,7 +560,8 @@ export default function CredentialDetail({
             <button
               type="button"
               onClick={() => setShowProjectLinker(true)}
-              className="p-2 rounded-xl text-white bg-black border border-white/20 hover:border-white/40 transition-colors"
+              aria-label="Link project"
+              className="p-2 rounded-xl text-white bg-black border border-white/20 hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors"
               title="Link project"
             >
               <Folder className="w-4 h-4" />
@@ -573,7 +579,8 @@ export default function CredentialDetail({
                   },
                 });
               }}
-              className="p-2 text-white hover:bg-black rounded-xl border border-transparent hover:border-white/20 transition-colors"
+              aria-label="Delete"
+              className="p-2 text-white hover:bg-black rounded-xl border border-transparent hover:border-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 transition-colors"
               title="Delete"
             >
               <Trash2 className="w-4 h-4" />
@@ -630,8 +637,9 @@ export default function CredentialDetail({
               <a
                 href={liveCredential.url}
                 target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:underline"
+                rel="noopener noreferrer"
+                aria-label="Open website"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 rounded"
               >
                 <Globe className="w-3.5 h-3.5 text-[#10B981]" />
                 <span className="truncate">
@@ -782,7 +790,8 @@ export default function CredentialDetail({
                                     e.stopPropagation();
                                     handleCopy(code, fieldId, 'Recovery code copied');
                                   }}
-                                  className="p-1 rounded text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                                  aria-label={isFieldCopied ? 'Recovery code copied' : 'Copy recovery code'}
+                                  className="p-1 rounded text-white/70 hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 transition-colors"
                                   title="Copy recovery code"
                                 >
                                   {isFieldCopied ? (
@@ -863,8 +872,9 @@ export default function CredentialDetail({
                       <a
                         href={fileUrl}
                         target="_blank"
-                        rel="noreferrer"
-                        className="p-1 rounded-md text-[#10B981] hover:bg-[#161412] shrink-0"
+                        rel="noopener noreferrer"
+                        aria-label={`Open attachment: ${att.name}`}
+                        className="p-1 rounded-md text-[#10B981] hover:bg-[#161412] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/50 shrink-0"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>

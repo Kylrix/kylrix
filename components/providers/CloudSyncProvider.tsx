@@ -54,8 +54,9 @@ export function CloudSyncProvider({ children }: { children: React.ReactNode }) {
     // Initial check on mount
     void checkAndTriggerSync('mount');
 
-    // Interval checker: check every 15 minutes when idle
+    // Interval checker: check every 15 minutes when idle, pause when hidden
     syncTimerRef.current = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       void checkAndTriggerSync('timer');
     }, 15 * 60 * 1000);
 

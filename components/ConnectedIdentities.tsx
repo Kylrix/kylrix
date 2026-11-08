@@ -20,11 +20,15 @@ export const PROJECT_SIGN_IN_PROVIDERS: {
 const OAUTH2_PREFIX = 'oauth2:';
 
 type Identity = {
-  $id: string;
-  $createdAt: string;
+  $id?: string;
+  id?: string;
+  $createdAt?: string;
+  createdAt?: string | Date;
   provider: string;
   providerEmail?: string;
   providerUid?: string;
+  accountId?: string;
+  connected?: boolean;
 };
 
 type ExternalRow = {
@@ -106,11 +110,7 @@ export default function ConnectedIdentities() {
   }, [refresh]);
 
   const identityFor = (key: string) =>
-    identities.find(
-      (i) =>
-        i.provider?.toLowerCase() === key.toLowerCase() ||
-        i.providerUid?.toLowerCase() === key.toLowerCase()
-    );
+    identities.find((i) => i.provider?.toLowerCase() === key.toLowerCase());
 
   const linkProvider = async (providerKey: 'google' | 'github') => {
     setBusyId(providerKey);
@@ -189,10 +189,19 @@ export default function ConnectedIdentities() {
                   <ProviderMark name={p.name} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                    {linked && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    )}
+                  </div>
                   <p className="text-[11px] text-white/40 truncate">
                     {linked
-                      ? linked.providerEmail || linked.providerUid || 'Connected'
+                      ? (linked.providerUid
+                          ? `ID: ${linked.providerUid}`
+                          : linked.accountId
+                            ? `ID: ${linked.accountId}`
+                            : linked.providerEmail || 'Connected')
                       : 'Not connected'}
                   </p>
                 </div>
@@ -200,7 +209,7 @@ export default function ConnectedIdentities() {
                   <button
                     type="button"
                     disabled={!!busy}
-                    onClick={() => void unlinkProvider(linked.$id)}
+                    onClick={() => void unlinkProvider(linked.$id || linked.id || '')}
                     className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold border-2 border-red-500/40 hover:border-red-500/60 bg-red-500/10 text-red-300 cursor-pointer disabled:opacity-40 transition-all"
                   >
                     {busy ? '…' : 'Disconnect'}
@@ -260,7 +269,7 @@ export default function ConnectedIdentities() {
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => void revokeExternal(row.identity.$id)}
+                    onClick={() => void revokeExternal(row.identity.$id || row.identity.id || '')}
                     className="px-3.5 py-1.5 rounded-xl text-[11px] font-extrabold border-2 border-red-500/40 hover:border-red-500/60 bg-red-500/10 text-red-300 cursor-pointer disabled:opacity-40 transition-all"
                   >
                     {busy ? '…' : 'Revoke'}

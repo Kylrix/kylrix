@@ -209,10 +209,13 @@ export async function getConversationsAction(payload: {
 
   const { getActor } = await import('./secure-ops');
   const actor = await getActor(validatedJwt);
-  
-  if (!actor?.$id || actor.$id !== validatedUserId) {
+
+  const { resolveAllUserIds } = await import('./turso-ops');
+  const actorIds = actor?.$id ? await resolveAllUserIds(actor.$id) : [];
+
+  if (!actorIds.includes(validatedUserId)) {
     // Never return an empty success — callers treat empty as "no chats" and may create duplicates.
-    console.warn('[getConversationsAction] Actor mismatch or not found.');
+    console.warn('[getConversationsAction] Actor mismatch or not found.', { actorId: actor?.$id, validatedUserId });
     throw new Error('UNAUTHORIZED_CONVERSATIONS_LIST');
   }
 

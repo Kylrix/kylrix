@@ -83,9 +83,29 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setExpiresAt(null);
         return;
       }
+      const isContributorUser = Boolean(
+        (user as any)?.isContributor ||
+        user?.prefs?.isContributor ||
+        user?.prefs?.tier === 'CONTRIBUTOR'
+      );
+      if (isContributorUser) {
+        setCurrentTier('CONTRIBUTOR');
+        setExpiresAt(null);
+        return;
+      }
       const ent = await BillingCacheService.getEntitlement(user.$id, force);
-      setCurrentTier(ent.uiTier);
-      setExpiresAt(ent.expiresAt);
+      const hasContributorHint = Boolean(
+        (user as any)?.isContributor ||
+        user?.prefs?.isContributor ||
+        user?.prefs?.tier === 'CONTRIBUTOR'
+      );
+      if (ent.uiTier === 'FREE' && hasContributorHint) {
+        setCurrentTier('CONTRIBUTOR');
+        setExpiresAt(null);
+      } else {
+        setCurrentTier(ent.uiTier);
+        setExpiresAt(ent.expiresAt);
+      }
     } catch (err) {
       console.warn('[SubscriptionContext] Failed to refresh entitlement:', err);
     } finally {
@@ -162,15 +182,22 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         return;
       }
 
+      const hasContributorHint = Boolean(
+        (user as any)?.isContributor ||
+        user?.prefs?.isContributor ||
+        user?.prefs?.tier === 'CONTRIBUTOR'
+      );
+
       // Try server hydration first for initial load or forced refresh
       if (force) {
         const serverData = await BillingCacheService.hydrateFromServer();
         if (serverData?.billing) {
             setTokenBalance({ amount: serverData.billing.balance.amount, symbol: serverData.billing.balance.symbol });
             setWallets(serverData.billing.wallets);
-            setCurrentTier(serverData.billing.tier);
+            const resolvedTier = (serverData.billing.tier === 'FREE' && hasContributorHint) ? 'CONTRIBUTOR' : serverData.billing.tier;
+            setCurrentTier(resolvedTier);
             setExpiresAt(serverData.billing.expiresAt);
-            void checkSubscriptionExpiry(serverData.billing.expiresAt, serverData.billing.active);
+            void checkSubscriptionExpiry(serverData.billing.expiresAt, serverData.billing.active || hasContributorHint);
             return;
         }
       }
@@ -178,16 +205,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       const [bal, w, ent] = await BillingCacheService.hydrate(user.$id, force);
       setTokenBalance(bal);
       setWallets(w);
-      setCurrentTier(ent.uiTier);
+      const resolvedTier = (ent.uiTier === 'FREE' && hasContributorHint) ? 'CONTRIBUTOR' : ent.uiTier;
+      setCurrentTier(resolvedTier);
       setExpiresAt(ent.expiresAt);
-      void checkSubscriptionExpiry(ent.expiresAt, ent.active);
+      void checkSubscriptionExpiry(ent.expiresAt, ent.active || hasContributorHint);
     } catch (err) {
       console.warn('[SubscriptionContext] Failed to hydrate subscription state:', err);
     } finally {
       setTierLoading(false);
       setBalanceLoading(false);
     }
-  }, [user?.$id, authLoading, checkSubscriptionExpiry]);
+  }, [user, authLoading, checkSubscriptionExpiry]);
 
   useEffect(() => {
     void hydrateSubscriptionState();

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeCallbackUrl } from './route';
+import { sanitizeCallbackUrl } from './[provider]/route';
 
 describe('sanitizeCallbackUrl', () => {
   it('allows valid relative paths', () => {
@@ -29,6 +29,14 @@ describe('sanitizeCallbackUrl', () => {
 
   it('rejects backslash evasion attempts', () => {
     expect(sanitizeCallbackUrl('/\\evil.com')).toBe('/app');
+    expect(sanitizeCallbackUrl('/\\/evil.com')).toBe('/app');
+  });
+
+  it('rejects whitespace and tab evasion attempts', () => {
+    expect(sanitizeCallbackUrl('/\t/evil.com')).toBe('/app');
+    expect(sanitizeCallbackUrl('/\r/evil.com')).toBe('/app');
+    expect(sanitizeCallbackUrl('/\n/evil.com')).toBe('/app');
+    expect(sanitizeCallbackUrl('/ /evil.com')).toBe('/app');
   });
 
   it('rejects URLs without a leading slash', () => {

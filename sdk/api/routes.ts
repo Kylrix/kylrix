@@ -23,6 +23,7 @@ export const API_V1_SEGMENTS = {
   pairing: 'pairing',
   auth: 'auth',
   billing: 'billing',
+  identities: 'identities',
 } as const;
 
 /** Nested path segments reused across REST handlers. */

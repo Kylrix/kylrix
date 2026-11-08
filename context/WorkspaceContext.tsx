@@ -96,46 +96,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   const mapProjectRows = useCallback(
     (rows: unknown): WorkspaceItem[] =>
-      normalizeProjectsList(rows)
-        .filter((p: any) => isWorkspaceRecord(p))
-        .map((p: any) => {
-          const id = String(p.$id || p.id || '').trim();
-          const ownerId = p.ownerId || p.userId || p.creatorId || '';
-          const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
-          const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
-          const externalClient = p.externalClient || null;
-          const isOwned = !ownerId || ownerId === userId || userId === 'guest';
-          const isShared =
-            Boolean(p.isShared === true && !isOwned) ||
-            Boolean(!isOwned && !isAgentic && !isExternal) ||
-            Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
-          let privacyMode = false;
-          try {
-            if (p.metadata) {
-              const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
-              privacyMode = Boolean(meta?.privacyMode);
-            }
-          } catch {}
-          if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
-
-          return {
-            id,
-            title: p.title || p.name || 'Untitled Workspace',
-            ownerId: ownerId || userId,
-            isPersonal: false as const,
-            isShared: Boolean(isShared && !isAgentic && !isExternal),
-            isAgentic,
-            isExternal,
-            externalClient,
-            agentId: p.agentId || null,
-            isPublic: !!p.isPublic,
-            role: p.role || (isOwned ? 'owner' : 'viewer'),
-            inviteCode: p.inviteCode || null,
-            privacyMode,
-            metadata: p.metadata || null,
-          };
-        })
-        .filter((w) => w.id && w.id !== personalWorkspace.id),
+      mapWorkspaceProjectRows(rows, userId, personalWorkspace.id),
     [personalWorkspace.id, userId],
   );
 
@@ -177,38 +138,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loadingWorkspaces, setLoadingWorkspaces] = useState(false);
 
   const persistWorkspacesOffline = useCallback((items: WorkspaceItem[], uid: string, allowSinglePersonal = false) => {
-    // Prevent cache poisoning: Never overwrite existing non-empty cached list with single personal workspace
-    // unless explicitly allowed (e.g. on explicit logout)
-    const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
-    if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
-      if (typeof window !== 'undefined') {
-        const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
-        for (const k of existingKeys) {
-          const existing = localStorage.getItem(k);
-          if (existing) {
-            try {
-              const parsed = JSON.parse(existing);
-              if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
-                return; // Guard against overwriting existing workspaces with personal-only array
-              }
-            } catch {}
-          }
-        }
-      }
-    }
-
-    try {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
-        localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
-      }
-      // Never write WorkspaceItem[] into f_projects_list — that pollutes project rows and
-      // can cascade-filter the switcher down to personal-only after a bad refresh.
-      import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
-        LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
-        LocalEngine.cacheSet('kylrix_all_cached_workspaces', items).catch(() => {});
-      }).catch(() => {});
-    } catch {}
+    return persistWorkspacesOfflineStore(items, uid, allowSinglePersonal);
   }, []);
 
   const refreshWorkspaces = useCallback(async () => {
@@ -246,13 +176,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Combine direct Turso workspace rows with warmProjectsList and local caches
-      const rawCandidates = [
+      let rawCandidates = [
         ...(Array.isArray(tursoRows) ? tursoRows : []),
         ...(Array.isArray(rows) ? rows : []),
         ...(Array.isArray(directUserProjects) ? directUserProjects : []),
         ...(Array.isArray(globalProjects) ? globalProjects : []),
         ...(Array.isArray(customCached) ? customCached : []),
       ];
+
+      // Cache recovery / auto-healing:
+      // If local cached candidates are empty, bypass cache and fetch directly from listWorkspacesTurso.
+      if (rawCandidates.length === 0 || mapProjectRows(rawCandidates).length === 0) {
+        const directTurso = await listWorkspacesTurso(userId || 'guest').catch(() => ({ success: false, rows: [] }));
+        if (directTurso?.rows && directTurso.rows.length > 0) {
+          rawCandidates = directTurso.rows;
+        }
+      }
 
       const mapped = mapProjectRows(rawCandidates);
       const mappedLocal = Array.isArray(localShared)
@@ -362,15 +301,15 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const filtered = existing.filter((w) => w.id !== workspaceId);
         await LocalEngine.cacheSet(cacheKey, filtered);
 
+        // Concurrently purge workspace details, objects, and kind-specific caches
+        // to eliminate O(K * T) serial eviction latency when removing shared workspaces
+        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
         await Promise.allSettled([
           LocalEngine.cacheDelete(`ws_details_${workspaceId}`),
           LocalEngine.cacheDelete(`project_objects_${workspaceId}`),
           LocalEngine.cacheDelete(`f_shared_ws_${workspaceId}`),
+          ...kinds.map((kind) => LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind))),
         ]);
-        const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
-        for (const kind of kinds) {
-          await LocalEngine.cacheDelete(projectObjectsKindCacheKey(workspaceId, kind)).catch(() => {});
-        }
       } catch (e) {
         console.warn('[WorkspaceContext] Failed to purge removed workspace cache:', e);
       }
@@ -659,53 +598,80 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }, 800);
   }, [ACTIVE_WORKSPACE_CACHE_KEY, user?.$id, user?.prefs?.tier, updatePreferences]);
 
-  // High-performance background prewarming for active workspace objects
+  // Immediate hydration from LocalEngine and single background warm for active workspace objects
   useEffect(() => {
     if (!activeWorkspaceId || activeWorkspaceId === userId || activeWorkspaceId === 'guest') return;
     const targetId = activeWorkspaceId;
     let cancelled = false;
 
-    void (async () => {
-      const kinds = ['goal', 'note', 'event', 'form', 'password', 'totp', 'agent_session'];
-      for (const kind of kinds) {
-        if (cancelled) break;
-        try {
-          const { LocalEngine } = await import('@/lib/services/LocalEngine');
-          const cacheKey = projectObjectsKindCacheKey(targetId, kind);
-          const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
-          const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
-          if (rows.length > 0 && !cancelled) {
-            await LocalEngine.cacheSet(cacheKey, rows).catch(() => {});
-          }
-        } catch {
-          /* optional background warm */
+    const dispatchWarmedEntities = (tagged: any) => {
+      if (!tagged || typeof window === 'undefined') return;
+      if (Array.isArray(tagged.notes) && tagged.notes.length > 0) {
+        for (const note of tagged.notes) {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:live-note-saved', {
+              detail: { note: { ...note, projectId: targetId, isWorkspace: true } },
+            })
+          );
         }
       }
+      if (Array.isArray(tagged.tasks) && tagged.tasks.length > 0) {
+        for (const task of tagged.tasks) {
+          window.dispatchEvent(
+            new CustomEvent('kylrix:live-task-saved', {
+              detail: { task: { ...task, projectId: targetId, isWorkspace: true } },
+            })
+          );
+        }
+      }
+    };
 
-      // Fetch and warm actual workspace entities (notes, goals, events, forms)
+    // 1. Immediately hydrate from LocalEngine cache if available for sub-100ms loading
+    void (async () => {
       try {
-        const tagged = await ProjectsService.listTaggedResources(targetId).catch(() => null);
-        if (tagged && !cancelled) {
-          if (Array.isArray(tagged.notes) && tagged.notes.length > 0) {
-            for (const note of tagged.notes) {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', { detail: { note: { ...note, projectId: targetId, isWorkspace: true } } }));
-              }
-            }
-          }
-          if (Array.isArray(tagged.tasks) && tagged.tasks.length > 0) {
-            for (const task of tagged.tasks) {
-              if (typeof window !== 'undefined') {
-                window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', { detail: { task: { ...task, projectId: targetId, isWorkspace: true } } }));
-              }
-            }
-          }
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = await LocalEngine.cacheGet<any>(`ws_items_${targetId}`);
+        if (cached && !cancelled) {
+          dispatchWarmedEntities(cached);
         }
       } catch {}
     })();
 
+    // 2. Debounced background prewarming: single listTaggedResources call warms notes, goals, and vault items
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const { LocalEngine } = await import('@/lib/services/LocalEngine');
+
+          // Fetch workspace tagged resources in one batch
+          const tagged = await ProjectsService.listTaggedResources(targetId).catch(() => null);
+          if (tagged && !cancelled) {
+            await LocalEngine.cacheSet(`ws_items_${targetId}`, tagged).catch(() => {});
+            dispatchWarmedEntities(tagged);
+          }
+
+          // Prewarm projectObjects cache by kind in parallel
+          const kinds = ['goal', 'note', 'event', 'form', 'credential', 'password', 'totp', 'agent_session'];
+          await Promise.allSettled(
+            kinds.map(async (kind) => {
+              if (cancelled) return;
+              const primaryKey = projectObjectsKindCacheKey(targetId, kind);
+              const fallbackKey = `project_objects_${targetId}_${kind}`;
+              const res = await ProjectsService.listProjectObjectsByKind(targetId, kind).catch(() => null);
+              const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : [];
+              if (rows.length > 0 && !cancelled) {
+                await LocalEngine.cacheSet(primaryKey, rows).catch(() => {});
+                await LocalEngine.cacheSet(fallbackKey, rows).catch(() => {});
+              }
+            })
+          );
+        } catch {}
+      })();
+    }, 500);
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [activeWorkspaceId, userId]);
 
@@ -1090,6 +1056,111 @@ const fallbackWorkspaceContext: WorkspaceContextType = {
   setEntityPersonalWorkspaceState: async () => {},
   isEntityPendingInActiveWorkspace: () => false,
 };
+
+export function mapWorkspaceProjectRows(
+  rows: unknown,
+  userId = 'guest',
+  personalWorkspaceId = userId,
+): WorkspaceItem[] {
+  return normalizeProjectsList(rows)
+    .filter((p: any) => isWorkspaceRecord(p))
+    .map((p: any) => {
+      const id = String(p.$id || p.id || '').trim();
+      const ownerId = p.ownerId || p.owner_id || p.creatorId || p.creator_id || p.userId || userId;
+      const isAgentic = p.isAgentic === true || String(p.isAgentic) === 'true';
+      const isExternal = p.isExternal === true || String(p.isExternal) === 'true';
+      const externalClient = p.externalClient || null;
+      const isOwned = !ownerId || ownerId === userId || userId === 'guest';
+      const isShared =
+        Boolean(p.isShared === true && !isOwned) ||
+        Boolean(!isOwned && !isAgentic && !isExternal) ||
+        Boolean(p.collabStatus && p.collabStatus !== 'owner' && !isOwned);
+      let privacyMode = false;
+      try {
+        if (p.metadata) {
+          const meta = typeof p.metadata === 'string' ? JSON.parse(p.metadata) : p.metadata;
+          privacyMode = Boolean(meta?.privacyMode);
+        }
+      } catch {}
+      if (p.privacyMode !== undefined) privacyMode = Boolean(p.privacyMode);
+
+      const title = (p.title || p.name || 'Untitled Workspace').trim();
+
+      return {
+        id,
+        title,
+        ownerId: ownerId || userId,
+        isPersonal: false as const,
+        isShared: Boolean(isShared && !isAgentic && !isExternal),
+        isAgentic,
+        isExternal,
+        externalClient,
+        agentId: p.agentId || null,
+        isPublic: !!p.isPublic,
+        role: p.role || (isOwned ? 'owner' : 'viewer'),
+        inviteCode: p.inviteCode || null,
+        privacyMode,
+        metadata: p.metadata || null,
+      };
+    })
+    .filter((w) => w.id && w.id !== personalWorkspaceId);
+}
+
+export function persistWorkspacesOfflineStore(
+  items: WorkspaceItem[],
+  uid: string,
+  allowSinglePersonal = false,
+): boolean {
+  if (items.length <= 1 && !allowSinglePersonal) {
+    if (typeof window !== 'undefined') {
+      const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
+      for (const k of existingKeys) {
+        const existing = localStorage.getItem(k);
+        if (existing) {
+          try {
+            const parsed = JSON.parse(existing);
+            const list = Array.isArray(parsed) ? parsed : (parsed?.rows || parsed?.workspaces || []);
+            if (Array.isArray(list) && list.length >= 2) {
+              return false;
+            }
+          } catch {}
+        }
+      }
+    }
+  }
+
+  const nonPersonalItems = items.filter((w) => !w.isPersonal && w.id !== uid);
+  if (nonPersonalItems.length === 0 && !allowSinglePersonal) {
+    if (typeof window !== 'undefined') {
+      const existingKeys = [`kylrix_workspaces_${uid}`, 'kylrix_all_cached_workspaces'];
+      for (const k of existingKeys) {
+        const existing = localStorage.getItem(k);
+        if (existing) {
+          try {
+            const parsed = JSON.parse(existing);
+            if (Array.isArray(parsed) && parsed.filter((w: any) => !w.isPersonal && w.id !== uid).length > 0) {
+              return false;
+            }
+          } catch {}
+        }
+      }
+    }
+  }
+
+  try {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`kylrix_workspaces_${uid}`, JSON.stringify(items));
+      localStorage.setItem('kylrix_all_cached_workspaces', JSON.stringify(items));
+    }
+    import('@/lib/services/LocalEngine').then(({ LocalEngine }) => {
+      LocalEngine.cacheSet(`kylrix_workspaces_${uid}`, items).catch(() => {});
+      LocalEngine.cacheSet('kylrix_all_cached_workspaces', items).catch(() => {});
+    }).catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export function useWorkspace() {
   const context = useContext(WorkspaceContext);

@@ -365,7 +365,7 @@ export async function normalizeKeychainRow(row: any): Promise<any> {
  * Resolves canonical user IDs for a user using indexed lookups (id PK, email index, account userId)
  * to bridge fragmented user accounts across OAuth providers and legacy Appwrite migrations.
  */
-export async function resolveAllUserIds(userId: string): Promise<string[]> {
+export const resolveAllUserIds = cache(async function resolveAllUserIds(userId: string): Promise<string[]> {
   const cleanId = String(userId || '').trim();
   if (!cleanId) return [];
 
@@ -470,7 +470,7 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
       }
     }
 
-    // 3. Query schema.account for all account.userId rows matching ANY of those user IDs OR accountId matching any linked social provider ID
+    // 4. Query schema.account for all account.userId rows matching ANY of those user IDs OR accountId matching any linked social provider ID
     const currentResolved = Array.from(allUserIds).filter(Boolean);
     if (currentResolved.length > 0) {
       const accountRows = await db
@@ -487,6 +487,26 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
       for (const acc of accountRows) {
         if (acc.userId) allUserIds.add(acc.userId);
         if (acc.accountId) allUserIds.add(acc.accountId);
+      }
+    }
+
+    // 5. Query user records for any account.userId values discovered that weren't in allUserIds yet
+    const afterAccountResolved = Array.from(allUserIds).filter(Boolean);
+    if (afterAccountResolved.length > currentResolved.length) {
+      const accountLinkedUsers = await db
+        .select({
+          id: schema.user.id,
+          appwriteAccountId: schema.user.appwriteAccountId,
+          email: schema.user.email,
+        })
+        .from(schema.user)
+        .where(inArray(schema.user.id, afterAccountResolved))
+        .limit(50);
+
+      for (const u of accountLinkedUsers) {
+        if (u.id) allUserIds.add(u.id);
+        if (u.appwriteAccountId) allUserIds.add(u.appwriteAccountId);
+        if (u.email?.trim()) emailsToQuery.add(u.email.trim().toLowerCase());
       }
     }
 
@@ -518,7 +538,7 @@ export async function resolveAllUserIds(userId: string): Promise<string[]> {
   }
 
   return Array.from(allUserIds).filter(Boolean);
-}
+});
 
 export async function listKeychainTurso(userId: string) {
   try {
@@ -624,20 +644,52 @@ export async function upsertVaultItemTurso(data: any) {
   }
 }
 
-export const listVaultItemsTurso = cache(async function listVaultItemsTurso(userId: string) {
-  const cacheKey = `vault:${userId}`;
+export const listVaultItemsTurso = cache(async function listVaultItemsTurso(userId: string, workspaceId?: string | null) {
+  const wsKey = workspaceId && workspaceId !== 'personal' && workspaceId !== userId ? workspaceId : 'personal';
+  const cacheKey = `vault:${userId}:${wsKey}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
 
   try {
-    const allUserIds = await resolveAllUserIds(userId);
+    let rows: any[] = [];
+    if (wsKey !== 'personal') {
+      const attachedObjects = await db
+        .select({ entityId: schema.workspaceObjects.entityId })
+        .from(schema.workspaceObjects)
+        .where(
+          and(
+            eq(schema.workspaceObjects.workspaceId, wsKey),
+            or(
+              eq(schema.workspaceObjects.entityKind, 'credential'),
+              eq(schema.workspaceObjects.entityKind, 'vault_item')
+            )
+          )
+        );
+      const attachedItemIds = attachedObjects.map((o) => o.entityId).filter(Boolean);
 
-    const rows = await db
-      .select()
-      .from(schema.vaultItems)
-      .where(and(inArray(schema.vaultItems.userId, allUserIds), eq(schema.vaultItems.isTrashed, false)));
+      const conditions = [eq(schema.vaultItems.workspaceId, wsKey)];
+      if (attachedItemIds.length > 0) {
+        conditions.push(inArray(schema.vaultItems.id, attachedItemIds));
+      }
+
+      rows = await db
+        .select()
+        .from(schema.vaultItems)
+        .where(
+          and(
+            eq(schema.vaultItems.isTrashed, false),
+            or(...conditions)
+          )
+        );
+    } else {
+      const allUserIds = await resolveAllUserIds(userId);
+      rows = await db
+        .select()
+        .from(schema.vaultItems)
+        .where(and(inArray(schema.vaultItems.userId, allUserIds), eq(schema.vaultItems.isTrashed, false)));
+    }
     const normalizedRows = rows.map((row: any) => {
       let nested = row.metadata;
       for (let i = 0; i < 3 && typeof nested === 'string'; i += 1) {
@@ -763,20 +815,43 @@ export async function upsertTotpSecretTurso(data: any) {
   }
 }
 
-export const listTotpSecretsTurso = cache(async function listTotpSecretsTurso(userId: string) {
-  const cacheKey = `totp:${userId}`;
+export const listTotpSecretsTurso = cache(async function listTotpSecretsTurso(userId: string, workspaceId?: string | null) {
+  const wsKey = workspaceId && workspaceId !== 'personal' && workspaceId !== userId ? workspaceId : 'personal';
+  const cacheKey = `totp:${userId}:${wsKey}`;
   const cached = resourceCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.data;
   }
 
   try {
-    const allUserIds = await resolveAllUserIds(userId);
+    let rows: any[] = [];
+    if (wsKey !== 'personal') {
+      const attachedObjects = await db
+        .select({ entityId: schema.workspaceObjects.entityId })
+        .from(schema.workspaceObjects)
+        .where(
+          and(
+            eq(schema.workspaceObjects.workspaceId, wsKey),
+            eq(schema.workspaceObjects.entityKind, 'totp')
+          )
+        );
+      const attachedItemIds = attachedObjects.map((o) => o.entityId).filter(Boolean);
 
-    const rows = await db
-      .select()
-      .from(schema.totpSecrets)
-      .where(inArray(schema.totpSecrets.userId, allUserIds));
+      if (attachedItemIds.length > 0) {
+        rows = await db
+          .select()
+          .from(schema.totpSecrets)
+          .where(inArray(schema.totpSecrets.id, attachedItemIds));
+      } else {
+        rows = [];
+      }
+    } else {
+      const allUserIds = await resolveAllUserIds(userId);
+      rows = await db
+        .select()
+        .from(schema.totpSecrets)
+        .where(inArray(schema.totpSecrets.userId, allUserIds));
+    }
     const normalizedRows = rows.map((row: any) => {
       let meta: any = {};
       try {
@@ -833,12 +908,21 @@ export async function deleteTotpSecretTurso(id: string) {
   }
 }
 
-export async function upsertProjectTurso(data: Partial<typeof schema.projects.$inferInsert> & { id: string; creatorId: string; name?: string; title?: string }) {
+export async function upsertProjectTurso(data: Partial<typeof schema.projects.$inferInsert> & { id: string; creatorId: string; name?: string; title?: string; isExternal?: boolean; externalClient?: string | null }) {
   try {
     invalidateResourceCache('workspaces', data.creatorId);
     const now = new Date().toISOString();
     const nameVal = data.name || data.title || 'Workspace';
     const titleVal = data.title || data.name || nameVal;
+
+    let metaObj: Record<string, any> = {};
+    if (data.metadata) {
+      try {
+        metaObj = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : (data.metadata as Record<string, any> || {});
+      } catch {}
+    }
+    if (data.isExternal !== undefined) metaObj.isExternal = Boolean(data.isExternal);
+    if (data.externalClient !== undefined) metaObj.externalClient = data.externalClient;
 
     const payload: typeof schema.projects.$inferInsert = {
       id: data.id,
@@ -857,11 +941,9 @@ export async function upsertProjectTurso(data: Partial<typeof schema.projects.$i
       dek: data.dek || null,
       isPublic: Boolean(data.isPublic),
       isAgentic: Boolean(data.isAgentic),
-      isExternal: Boolean(data.isExternal),
-      externalClient: data.externalClient || null,
       isLocked: Boolean(data.isLocked),
       privacyMode: Boolean(data.privacyMode),
-      metadata: data.metadata || null,
+      metadata: Object.keys(metaObj).length > 0 ? JSON.stringify(metaObj) : (data.metadata || null),
       createdAt: data.createdAt || now,
       updatedAt: data.updatedAt || now,
     };
@@ -907,6 +989,7 @@ export const listWorkspacesTurso = cache(async function listWorkspacesTurso(user
   try {
     const allUserIds = await resolveAllUserIds(userId);
 
+    // Ensure schema.projects (workspaces) matches all resolved user IDs across owner_id or creator_id
     const [ownedRows, projectObjMemberships, wsMemberships, collabMemberships, publicAgenticRows] = await Promise.all([
       db
         .select()
@@ -1424,7 +1507,13 @@ export const listFormsTurso = cache(async function listFormsTurso(userId: string
       ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
       : [];
 
-    const conditions = [inArray(schema.forms.userId, allUserIds)];
+    // Map queries to check or(inArray(schema.forms.userId, allUserIds), inArray(schema.forms.creatorId, allUserIds))
+    const conditions = [
+      or(
+        inArray(schema.forms.userId, allUserIds),
+        inArray(schema.forms.creatorId, allUserIds)
+      ),
+    ];
     if (workspaceIds.length > 0) {
       conditions.push(inArray(schema.forms.workspaceId, workspaceIds));
     }
@@ -1432,7 +1521,8 @@ export const listFormsTurso = cache(async function listFormsTurso(userId: string
     const rows = await db
       .select()
       .from(schema.forms)
-      .where(or(...conditions));
+      .where(or(...conditions))
+      .orderBy(desc(schema.forms.createdAt));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
@@ -1480,7 +1570,13 @@ export const listEventsTurso = cache(async function listEventsTurso(userId: stri
       ? wsRes.rows.map((w: any) => w.id).filter(Boolean)
       : [];
 
-    const conditions = [inArray(schema.events.userId, allUserIds)];
+    // Map queries to check or(inArray(schema.events.userId, allUserIds), inArray(schema.events.creatorId, allUserIds))
+    const conditions = [
+      or(
+        inArray(schema.events.userId, allUserIds),
+        inArray(schema.events.creatorId, allUserIds)
+      ),
+    ];
     if (workspaceIds.length > 0) {
       conditions.push(inArray(schema.events.workspaceId, workspaceIds));
     }
@@ -1488,7 +1584,8 @@ export const listEventsTurso = cache(async function listEventsTurso(userId: stri
     const rows = await db
       .select()
       .from(schema.events)
-      .where(or(...conditions));
+      .where(or(...conditions))
+      .orderBy(desc(schema.events.createdAt));
     const result = { success: true, rows };
     resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
     return result;
@@ -1727,41 +1824,51 @@ export async function getConversationTurso(conversationId: string) {
 
 export async function listConversationsTurso(userId: string) {
   try {
+    const allUserIds = await resolveAllUserIds(userId);
+
     const memberRows = await db
       .select({ conversationId: schema.conversationMembers.conversationId })
       .from(schema.conversationMembers)
-      .where(eq(schema.conversationMembers.userId, userId));
-    const memberConvIds = memberRows.map((r) => r.conversationId);
+      .where(inArray(schema.conversationMembers.userId, allUserIds));
+    const memberConvIds = memberRows.map((r) => r.conversationId).filter(Boolean);
 
+    const combinedMap = new Map<string, any>();
+
+    // Conversations where creator is in allUserIds
     const createdRows = await db
       .select()
       .from(schema.conversations)
-      .where(eq(schema.conversations.creatorId, userId));
-
-    const combinedMap = new Map<string, any>();
+      .where(inArray(schema.conversations.creatorId, allUserIds))
+      .orderBy(desc(schema.conversations.updatedAt));
     for (const c of createdRows) {
       combinedMap.set(c.id, c);
     }
 
+    // Conversations where user is a registered member
     if (memberConvIds.length > 0) {
-      const { inArray } = await import('drizzle-orm');
       const convs = await db
         .select()
         .from(schema.conversations)
-        .where(inArray(schema.conversations.id, memberConvIds));
+        .where(inArray(schema.conversations.id, memberConvIds))
+        .orderBy(desc(schema.conversations.updatedAt));
       for (const c of convs) {
         combinedMap.set(c.id, c);
       }
     }
 
+    // Conversations where participants contains any of allUserIds
     const { like } = await import('drizzle-orm');
-    const participantMatches = await db
-      .select()
-      .from(schema.conversations)
-      .where(like(schema.conversations.participants, `%${userId}%`))
-      .limit(100);
-    for (const c of participantMatches) {
-      combinedMap.set(c.id, c);
+    const participantConditions = allUserIds.map((uid) => like(schema.conversations.participants, `%${uid}%`));
+    if (participantConditions.length > 0) {
+      const participantMatches = await db
+        .select()
+        .from(schema.conversations)
+        .where(participantConditions.length === 1 ? participantConditions[0] : or(...participantConditions))
+        .orderBy(desc(schema.conversations.updatedAt))
+        .limit(100);
+      for (const c of participantMatches) {
+        combinedMap.set(c.id, c);
+      }
     }
 
     const rows = Array.from(combinedMap.values());

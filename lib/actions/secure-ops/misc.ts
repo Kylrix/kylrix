@@ -288,13 +288,11 @@ export async function toggleResourcePublicGuestSecure(params: {
     } else if (kind === 'form') {
       await db.update(schema.forms).set({
         isPublic,
-        isGuest,
         updatedAt: now,
       }).where(eq(schema.forms.id, resourceId));
     } else if (kind === 'event') {
       await db.update(schema.events).set({
         isPublic,
-        isGuest,
         updatedAt: now,
       }).where(eq(schema.events.id, resourceId));
     } else if (kind === 'project' || kind === 'workspace') {
@@ -387,7 +385,7 @@ export async function getResourcePublicGuestSecure(params: {
         const row = rows[0];
         return {
           isPublic: Boolean(row.isPublic),
-          isGuest: Boolean(row.isGuest),
+          isGuest: Boolean(row.isPublic),
           isPinned: Boolean(row.isPinned),
           userId: row.userId,
         };
@@ -398,7 +396,7 @@ export async function getResourcePublicGuestSecure(params: {
         const row = rows[0];
         return {
           isPublic: Boolean(row.isPublic),
-          isGuest: Boolean(row.isGuest),
+          isGuest: Boolean(row.isPublic),
           isPinned: Boolean(row.isPinned),
           userId: row.userId,
         };

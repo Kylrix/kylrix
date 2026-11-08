@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { isSelfHostedDeployment } from '@/lib/deployment/surface';
 import {
   isEmailPasswordSignupEnabled,
@@ -56,10 +56,12 @@ function verifyChallengeToken(challengeToken: string): { valid: boolean; challen
 
   const expectedSig = createHmac('sha256', secret).update(payloadB64).digest('base64url');
 
-  const sigBuf = Buffer.from(sig, 'utf8');
-  const expectedBuf = Buffer.from(expectedSig, 'utf8');
+  // Security: Pre-hash user input and computed digest with SHA-256 to guarantee constant 32-byte buffers.
+  // This prevents timing leaks from unequal length checks and protects timingSafeEqual from length-mismatch errors.
+  const sigHash = createHash('sha256').update(sig).digest();
+  const expectedHash = createHash('sha256').update(expectedSig).digest();
 
-  if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) {
+  if (!timingSafeEqual(sigHash, expectedHash)) {
     return { valid: false };
   }
 

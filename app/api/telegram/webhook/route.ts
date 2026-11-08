@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'node:crypto';
 import { APPWRITE_CONFIG } from '@/lib/data';
 import { ulid } from '@/lib/utils/ulid';
 import { systemTables } from '@/lib/data/system-tables';
@@ -7,6 +8,22 @@ import type { ApiActor } from '@/lib/api/guard';
 import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { eq as eqOp, and as andOp } from 'drizzle-orm';
+
+/**
+ * Verifies the incoming Telegram secret token header against configured secret.
+ * Pre-hashes both inputs with SHA-256 before timingSafeEqual to prevent timing attacks
+ * and length-mismatch buffer errors.
+ */
+export function verifyTelegramSecretToken(headerToken: string | null | undefined, secret: string): boolean {
+  if (!headerToken || !secret) return false;
+  try {
+    const headerHash = crypto.createHash('sha256').update(headerToken).digest();
+    const secretHash = crypto.createHash('sha256').update(secret).digest();
+    return crypto.timingSafeEqual(headerHash, secretHash);
+  } catch {
+    return false;
+  }
+}
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -409,6 +426,7 @@ export async function syncTelegramBot(appUrl?: string) {
   if (targetUrl.startsWith('https://')) {
     const cleanUrl = targetUrl.replace(/\/+$/, '');
     const webhookUrl = `${cleanUrl}/api/telegram/webhook`;
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
     try {
       const whRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
         method: 'POST',
@@ -417,6 +435,7 @@ export async function syncTelegramBot(appUrl?: string) {
           url: webhookUrl,
           allowed_updates: ['message', 'callback_query'],
           drop_pending_updates: false,
+          ...(webhookSecret ? { secret_token: webhookSecret } : {}),
         }),
       });
       const whJson = await whRes.json().catch(() => ({}));
@@ -1231,6 +1250,14 @@ export async function handleTelegramUpdate(body: any): Promise<{
 
 export async function POST(req: NextRequest) {
   try {
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const secretHeader = req.headers.get('x-telegram-bot-api-secret-token');
+      if (!secretHeader || !verifyTelegramSecretToken(secretHeader, webhookSecret)) {
+        return NextResponse.json({ error: 'Unauthorized webhook request' }, { status: 401 });
+      }
+    }
+
     const body = await req.json().catch(() => null);
     if (!body) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });

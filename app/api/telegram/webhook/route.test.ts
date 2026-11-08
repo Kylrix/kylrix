@@ -1,7 +1,7 @@
 import { describe, it, vi, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS } from './route';
+import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS, verifyTelegramSecretToken } from './route';
 import { createSystemClient } from '@/lib/data';
 import { ApiResources } from '@/lib/api/resources';
 
@@ -64,11 +64,59 @@ describe('Telegram Webhook Route Handler - Interactive Menus & 1:1 Parity', () =
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.TELEGRAM_BOT_TOKEN = 'test-bot-token';
+    delete process.env.TELEGRAM_WEBHOOK_SECRET;
     (createSystemClient as any).mockReturnValue({ databases: mockDatabases });
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       text: async () => 'ok',
     });
+  });
+
+  it('verifies telegram secret token using timing safe comparison', () => {
+    assert.equal(verifyTelegramSecretToken('secret123', 'secret123'), true);
+    assert.equal(verifyTelegramSecretToken('wrong', 'secret123'), false);
+    assert.equal(verifyTelegramSecretToken('', 'secret123'), false);
+    assert.equal(verifyTelegramSecretToken(null, 'secret123'), false);
+    assert.equal(verifyTelegramSecretToken('secret123', ''), false);
+  });
+
+  it('rejects requests with 401 when TELEGRAM_WEBHOOK_SECRET is set and token header is missing or invalid', async () => {
+    process.env.TELEGRAM_WEBHOOK_SECRET = 'configured-secret';
+
+    const reqNoHeader = new NextRequest('http://localhost:3005/api/telegram/webhook', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: { chat: { id: 123 }, text: 'hi' } }),
+    });
+    const resNoHeader = await POST(reqNoHeader);
+    assert.equal(resNoHeader.status, 401);
+
+    const reqInvalidHeader = new NextRequest('http://localhost:3005/api/telegram/webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-telegram-bot-api-secret-token': 'wrong-secret',
+      },
+      body: JSON.stringify({ message: { chat: { id: 123 }, text: 'hi' } }),
+    });
+    const resInvalidHeader = await POST(reqInvalidHeader);
+    assert.equal(resInvalidHeader.status, 401);
+  });
+
+  it('accepts requests when TELEGRAM_WEBHOOK_SECRET is set and token header matches', async () => {
+    process.env.TELEGRAM_WEBHOOK_SECRET = 'configured-secret';
+
+    const reqValidHeader = new NextRequest('http://localhost:3005/api/telegram/webhook', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-telegram-bot-api-secret-token': 'configured-secret',
+      },
+      body: JSON.stringify({}),
+    });
+    const resValidHeader = await POST(reqValidHeader);
+    // Passes secret verification, fails at payload validation (400)
+    assert.equal(resValidHeader.status, 400);
   });
 
   it('rejects payloads without valid chat or message', async () => {
@@ -194,6 +242,7 @@ describe('Telegram Webhook Route Handler - Interactive Menus & 1:1 Parity', () =
   });
 
   it('syncTelegramBot registers commands and sets webhook for https target', async () => {
+    process.env.TELEGRAM_WEBHOOK_SECRET = 'configured-secret';
     (global.fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({ ok: true, result: true }),
@@ -211,6 +260,8 @@ describe('Telegram Webhook Route Handler - Interactive Menus & 1:1 Parity', () =
     const whCall = fetchCalls.find((call: any[]) => call[0].includes('setWebhook'));
     assert.ok(cmdCall, 'setMyCommands was called');
     assert.ok(whCall, 'setWebhook was called');
+    const whBody = JSON.parse(whCall[1].body);
+    assert.equal(whBody.secret_token, 'configured-secret');
   });
 
   it('GET returns status and command list', async () => {

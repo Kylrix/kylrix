@@ -15,6 +15,11 @@ export async function dispatchV1(req: NextRequest, parts: string[], actor: ApiAc
     return jsonOk(await ApiResources.me(actor));
   }
 
+  // Connected Identities
+  if (a === S.identities && !b && method === 'GET') {
+    return jsonOk(await ApiResources.listIdentities(actor));
+  }
+
   // Cloud & Node Sync Handshake / Account Replication
   if (a === 'sync') {
     if ((b === 'handshake' || !b) && (method === 'GET' || method === 'POST')) {

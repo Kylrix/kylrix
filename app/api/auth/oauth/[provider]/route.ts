@@ -13,10 +13,12 @@ export function sanitizeCallbackUrl(url: string | null | undefined): string {
 
   const trimmed = url.trim();
 
-  // Reject absolute URLs, protocol-relative URLs, control characters, or backslash evasion attempts
+  // Reject absolute URLs, protocol-relative URLs, control characters, whitespace at head, or backslash evasion attempts
   if (
     trimmed.startsWith('//') ||
     trimmed.startsWith('/\\') ||
+    /^\/[/\\]/.test(trimmed) ||
+    /^\/\s/.test(trimmed) ||
     /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ||
     /[\x00-\x1F\x7F]/.test(trimmed)
   ) {

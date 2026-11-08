@@ -64,8 +64,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           emailVerified: Boolean(bUser.emailVerified),
           authProvider: 'better-auth',
         };
+        const previousId = lastSeenUserIdRef.current;
         lastSeenUserIdRef.current = bUser.id;
         setUser(userObj);
+
+        if (typeof window !== 'undefined' && previousId !== bUser.id) {
+          window.dispatchEvent(new CustomEvent('kylrix:auth:login', { detail: { user: userObj } }));
+        }
 
         // Check for auth=success redirect
         if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {

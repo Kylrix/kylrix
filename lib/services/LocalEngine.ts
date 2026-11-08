@@ -23,9 +23,12 @@ function scheduleBatchFlush() {
     const entries = Array.from(batchQueue.entries());
     if (!entries.length) return;
     batchQueue.clear();
-    for (const [, { mutator }] of entries) {
-      try { await mutator(); } catch (e) { console.warn('[LocalEngine batch] mutator failed', e); }
-    }
+    // Bolt: Concurrent batch flush via Promise.all to eliminate O(N * T) serial latency across mutators
+    await Promise.all(
+      entries.map(async ([, { mutator }]) => {
+        try { await mutator(); } catch (e) { console.warn('[LocalEngine batch] mutator failed', e); }
+      })
+    );
   }, 2000);
 }
 
@@ -93,19 +96,22 @@ export const LocalEngine = {
       `initial_notes_${uid}`,
     ];
 
-    for (const key of listKeys) {
-      try {
-        const cached = await this.cacheGet<any>(key);
-        if (!cached) continue;
-        if (Array.isArray(cached)) {
-          const updated = cached.filter((item: any) => (item?.$id || item?.id) !== id);
-          await this.cacheSet(key, updated);
-        } else if (cached && Array.isArray(cached.rows)) {
-          const updatedRows = cached.rows.filter((item: any) => (item?.$id || item?.id) !== id);
-          await this.cacheSet(key, { ...cached, rows: updatedRows, total: updatedRows.length });
-        }
-      } catch {}
-    }
+    // Bolt: Invalidate and filter cached list collections concurrently to eliminate O(N * T) serial latency across 9 cache keys
+    await Promise.all(
+      listKeys.map(async (key) => {
+        try {
+          const cached = await this.cacheGet<any>(key);
+          if (!cached) return;
+          if (Array.isArray(cached)) {
+            const updated = cached.filter((item: any) => (item?.$id || item?.id) !== id);
+            await this.cacheSet(key, updated);
+          } else if (cached && Array.isArray(cached.rows)) {
+            const updatedRows = cached.rows.filter((item: any) => (item?.$id || item?.id) !== id);
+            await this.cacheSet(key, { ...cached, rows: updatedRows, total: updatedRows.length });
+          }
+        } catch {}
+      })
+    );
 
     try {
       const db = await getRxDB().catch(() => null);
@@ -301,7 +307,12 @@ export const LocalEngine = {
     if (batchQueue.size >= 10) {
       if (batchTimer) { clearTimeout(batchTimer); batchTimer = null; }
       const entries = Array.from(batchQueue.entries()); batchQueue.clear();
-      for (const [, { mutator: m }] of entries) { try { await m(); } catch (e) { console.warn('[LocalEngine batch] failed', e); } }
+      // Bolt: Concurrent batch flush via Promise.all to eliminate O(N * T) serial latency across mutators
+      await Promise.all(
+        entries.map(async ([, { mutator: m }]) => {
+          try { await m(); } catch (e) { console.warn('[LocalEngine batch] failed', e); }
+        })
+      );
     } else scheduleBatchFlush();
     return data;
   },

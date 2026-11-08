@@ -80,15 +80,18 @@ function ValueRow({
 function ImportToggle({
   enabled,
   onToggle,
+  ariaLabel,
 }: {
   enabled: boolean;
   onToggle: () => void;
+  ariaLabel?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={enabled}
+      aria-label={ariaLabel}
       onClick={onToggle}
       className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors ${
         enabled ? 'bg-[#10B981] border-[#10B981]' : 'bg-black border-white/30'
@@ -182,6 +185,7 @@ export default function PorterSkippedReview({ discerned, onChange, onDone }: Por
           <button
             key={t.id}
             type="button"
+            aria-pressed={tab === t.id}
             onClick={() => setTab(t.id)}
             className={`shrink-0 px-3 py-2 rounded-xl text-[0.7rem] font-bold uppercase tracking-[0.06em] border transition-colors ${
               tab === t.id
@@ -226,6 +230,7 @@ export default function PorterSkippedReview({ discerned, onChange, onDone }: Por
                   <ImportToggle
                     enabled={Boolean(c._forceImport)}
                     onToggle={() => setCredForce(c._idx, !c._forceImport)}
+                    ariaLabel={`Enable import for secret: ${c.name || 'Untitled secret'}`}
                   />
                   <span className="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-[#A3A3A3]">
                     Import
@@ -273,6 +278,7 @@ export default function PorterSkippedReview({ discerned, onChange, onDone }: Por
                   <ImportToggle
                     enabled={Boolean(t._forceImport)}
                     onToggle={() => setTotpForce(t._idx, !t._forceImport)}
+                    ariaLabel={`Enable import for smart code: ${t.issuer || 'Smart code'} - ${t.accountName || 'Account'}`}
                   />
                   <span className="text-[0.6rem] font-bold uppercase tracking-[0.08em] text-[#A3A3A3]">
                     Import

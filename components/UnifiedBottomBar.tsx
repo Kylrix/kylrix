@@ -162,12 +162,13 @@ export function UnifiedBottomBar() {
               <Link
                 key={item.key}
                 href={item.route}
+                aria-current={isSelected ? 'page' : undefined}
                 onClick={(e) => {
                   if (pathname === item.route) {
                     e.preventDefault();
                   }
                 }}
-                className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
+                className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
                 style={{
                   color: isSelected ? itemColor : '#FFFFFF',
                   opacity: 1,
@@ -211,7 +212,7 @@ export function UnifiedBottomBar() {
               onClick={handleFabClick}
               aria-label="Create new item"
               title="Create new item"
-              className="flex items-center justify-center w-12 h-12 rounded-2xl text-black shadow-lg transition-all duration-300 active:scale-90 border border-black/20 cursor-pointer"
+              className="flex items-center justify-center w-12 h-12 rounded-2xl text-black shadow-lg transition-all duration-300 active:scale-90 border border-black/20 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
               style={{
                 backgroundColor: primarySurfaceColor,
                 boxShadow: `0 6px 20px ${primarySurfaceColor}66`,
@@ -230,12 +231,13 @@ export function UnifiedBottomBar() {
               <Link
                 key={item.key}
                 href={item.route}
+                aria-current={isSelected ? 'page' : undefined}
                 onClick={(e) => {
                   if (pathname === item.route) {
                     e.preventDefault();
                   }
                 }}
-                className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group"
+                className="flex flex-col items-center justify-center flex-1 h-full py-1 rounded-xl transition-transform active:scale-95 cursor-pointer no-underline group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
                 style={{
                   color: isSelected ? itemColor : '#FFFFFF',
                   opacity: 1,

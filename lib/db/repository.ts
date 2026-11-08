@@ -72,7 +72,7 @@ function generateDefaultIvHex(): string {
   return '000000000000000000000000';
 }
 
-function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
+export function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
   if (!data || typeof data !== 'object') return {};
 
   const titleVal = data.title || data.name || 'Untitled Secret';
@@ -141,6 +141,30 @@ function normalizeTotpSecretData(data: Record<string, any>): Record<string, any>
     account: accountVal,
     encryptedSecret: encryptedSecretVal,
     metadata: JSON.stringify(metaObj),
+  };
+}
+
+function normalizeFormSubmissionData(data: Record<string, any>): Record<string, any> {
+  if (!data || typeof data !== 'object') return {};
+
+  const payloadVal = typeof data.payload === 'object' && data.payload !== null
+    ? JSON.stringify(data.payload)
+    : String(data.payload || data.responses || '{}');
+
+  const metadataVal = typeof data.metadata === 'object' && data.metadata !== null
+    ? JSON.stringify(data.metadata)
+    : (data.metadata || null);
+
+  return {
+    formId: String(data.formId || data.form_id || '').trim(),
+    submitterId: data.submitterId || data.submitter_id || data.userId || null,
+    payload: payloadVal,
+    status: String(data.status || 'unread'),
+    metadata: metadataVal,
+    isPublic: Boolean(data.isPublic ?? data.is_public ?? true),
+    isGuest: Boolean(data.isGuest ?? data.is_guest ?? true),
+    source: data.source || null,
+    isTrash: Boolean(data.isTrash ?? data.is_trash ?? false),
   };
 }
 
@@ -657,6 +681,14 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
       delete insertData.itemType;
       delete insertData.accountName;
       delete insertData.secretKey;
+    } else if (table === schema.formSubmissions) {
+      Object.assign(insertData, normalizeFormSubmissionData(data as any));
+      delete insertData.form_id;
+      delete insertData.submitter_id;
+      delete insertData.is_public;
+      delete insertData.is_guest;
+      delete insertData.is_trash;
+      delete insertData.responses;
     }
 
     try {
@@ -729,6 +761,45 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
       delete updateData.itemType;
       delete updateData.accountName;
       delete updateData.secretKey;
+    } else if (table === schema.formSubmissions) {
+      const rawData = data as Record<string, any>;
+      if (rawData.formId !== undefined || rawData.form_id !== undefined) {
+        updateData.formId = String(rawData.formId || rawData.form_id || '').trim();
+      }
+      if (rawData.submitterId !== undefined || rawData.submitter_id !== undefined || rawData.userId !== undefined) {
+        updateData.submitterId = rawData.submitterId || rawData.submitter_id || rawData.userId || null;
+      }
+      if (rawData.payload !== undefined || rawData.responses !== undefined) {
+        updateData.payload = typeof rawData.payload === 'object' && rawData.payload !== null
+          ? JSON.stringify(rawData.payload)
+          : String(rawData.payload || rawData.responses || '{}');
+      }
+      if (rawData.status !== undefined) {
+        updateData.status = String(rawData.status);
+      }
+      if (rawData.metadata !== undefined) {
+        updateData.metadata = typeof rawData.metadata === 'object' && rawData.metadata !== null
+          ? JSON.stringify(rawData.metadata)
+          : (rawData.metadata || null);
+      }
+      if (rawData.isPublic !== undefined || rawData.is_public !== undefined) {
+        updateData.isPublic = Boolean(rawData.isPublic ?? rawData.is_public);
+      }
+      if (rawData.isGuest !== undefined || rawData.is_guest !== undefined) {
+        updateData.isGuest = Boolean(rawData.isGuest ?? rawData.is_guest);
+      }
+      if (rawData.source !== undefined) {
+        updateData.source = rawData.source || null;
+      }
+      if (rawData.isTrash !== undefined || rawData.is_trash !== undefined) {
+        updateData.isTrash = Boolean(rawData.isTrash ?? rawData.is_trash);
+      }
+      delete updateData.form_id;
+      delete updateData.submitter_id;
+      delete updateData.is_public;
+      delete updateData.is_guest;
+      delete updateData.is_trash;
+      delete updateData.responses;
     }
 
     try {

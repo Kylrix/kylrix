@@ -1,5 +1,6 @@
 export { cookies } from 'next/headers';
-import { createHmac, randomBytes } from 'node:crypto';
+import { cache } from 'react';
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { systemTables } from '@/lib/data/system-tables';
 import { q } from '@/lib/data/queries';
 import { Registry } from '@/lib/core/di/registry';
@@ -50,7 +51,17 @@ export const isViewerTokenValid = (token: string) => {
   const parts = trimmed.split('.');
   if (parts.length < 3) return false;
   const payload = `${parts[0]}.${parts[1]}`;
-  return signViewerToken(payload) === parts[2];
+  const expectedSig = signViewerToken(payload);
+  const suppliedSig = parts[2];
+  // Security concern: Comparing signatures with === leaks byte-match timing, enabling timing side-channel attacks.
+  // Pre-hash both strings with SHA-256 before timingSafeEqual to enforce uniform 32-byte buffers and prevent length-leak errors.
+  try {
+    const expectedHash = createHash('sha256').update(expectedSig).digest();
+    const suppliedHash = createHash('sha256').update(suppliedSig).digest();
+    return timingSafeEqual(expectedHash, suppliedHash);
+  } catch {
+    return false;
+  }
 };
 
 export type PermissionLevel = 'viewer' | 'editor' | 'admin';
@@ -132,7 +143,7 @@ export async function getRowCached(params: { databaseId: string; tableId: string
   return await task;
 }
 
-export async function getActor(jwt?: string) {
+export const getActor = cache(async function getActor(jwt?: string) {
   try {
     const { headers } = await import('next/headers');
     const { auth } = await import('@/lib/auth/better-auth');
@@ -157,7 +168,7 @@ export async function getActor(jwt?: string) {
     console.error('[secure-ops] getActor exception:', err);
     return null;
   }
-}
+});
 
 export function isEnvSERVERSDKUser(user: any) {
   const email = String(user?.email || '').trim().toLowerCase();

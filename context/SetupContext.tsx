@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import toast from 'react-hot-toast';
 
-type SetupStep = 'none' | 'masterpass' | 'username' | 'passkey' | 'identity';
+type SetupStep = 'none' | 'masterpass' | 'passkey' | 'identity';
 
 interface SetupContextType {
   currentStep: SetupStep;
@@ -24,7 +24,6 @@ interface SetupContextType {
 
 const SetupContext = createContext<SetupContextType | undefined>(undefined);
 
-const USERNAME_DISMISS_KEY = 'kylrix_setup_dismiss_username_';
 const MP_DISMISS_KEY = 'kylrix_setup_dismiss_masterpass_';
 const PASSKEY_DISMISS_KEY = 'kylrix_setup_dismiss_passkey_';
 
@@ -52,9 +51,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (user?.$id) {
       const expiresAt = Date.now() + (durationDays ?? 7) * 24 * 60 * 60 * 1000;
       
-      if (step === 'username') {
-        localStorage.setItem(`${USERNAME_DISMISS_KEY}${user.$id}`, String(expiresAt));
-      } else if (step === 'masterpass') {
+      if (step === 'masterpass') {
         localStorage.setItem(`${MP_DISMISS_KEY}${user.$id}`, String(expiresAt));
       } else if (step === 'passkey') {
         localStorage.setItem(`${PASSKEY_DISMISS_KEY}${user.$id}`, String(expiresAt));
@@ -171,15 +168,7 @@ export const SetupProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       const handle = prof?.username ? String(prof.username).trim() : '';
       if (handle.length < 3) {
-        const silenced = await silentPublishUsername();
-        if (!silenced) {
-          const dismissedStr = localStorage.getItem(`${USERNAME_DISMISS_KEY}${user.$id}`);
-          const dismissedUntil = dismissedStr ? parseInt(dismissedStr, 10) : 0;
-          if (now > dismissedUntil) {
-            setCurrentStep('username');
-            return;
-          }
-        }
+        await silentPublishUsername();
       }
 
       if (mpOk && !passkeyOk) {
