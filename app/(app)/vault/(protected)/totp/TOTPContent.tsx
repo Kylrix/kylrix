@@ -584,12 +584,25 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
 
   useEffect(() => {
     const activeUserId = user?.id || user?.$id || (typeof window !== 'undefined' ? (getCurrentUserSnapshot()?.id || getCurrentUserSnapshot()?.$id || '') : '') || 'guest';
-    const wsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
+    const currentWsId = activeWorkspace?.isPersonal ? 'personal' : activeWorkspace?.id || 'personal';
+    const targetWsId = activeWorkspace?.isPersonal ? undefined : activeWorkspace?.id;
     let isCancelled = false;
-    const cacheKey = `vault_totp_${activeUserId}_${wsId || 'personal'}`;
-    const guestFallbackKey = `vault_totp_guest_${wsId || 'personal'}`;
+    const cacheKey = `vault_totp_${activeUserId}_${currentWsId}`;
+    const guestFallbackKey = `vault_totp_guest_${currentWsId}`;
 
     (async () => {
+      // Immediate local cache check for 0ms initial render
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const cached = (await LocalEngine.cacheGet<any[]>(cacheKey)) ||
+          (currentWsId === 'personal' ? await LocalEngine.cacheGet<any[]>(`vault_totp_${activeUserId}`) : null) ||
+          (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(guestFallbackKey) : null);
+        if (cached && Array.isArray(cached) && cached.length > 0 && !isCancelled) {
+          setTotpCodes(cached as any);
+          setLoading(false);
+        }
+      } catch {}
+
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         let rows: any[] = [];
@@ -598,7 +611,7 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
             cacheKey,
             async () => {
               const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listTotpSecretsTurso(activeUserId, wsId);
+              const res = await listTotpSecretsTurso(activeUserId, targetWsId);
               return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
             },
             {

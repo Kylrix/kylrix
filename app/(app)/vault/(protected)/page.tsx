@@ -174,16 +174,16 @@ function DashboardPageContent() {
     if (!background && !cursorToUse) setLoading(true);
     if (cursorToUse) setLoadingMore(true);
 
-    const currentWsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
-    const cacheKey = `vault_credentials_${activeUserId}_${currentWsId || 'personal'}`;
-    const guestFallbackKey = `vault_credentials_guest_${currentWsId || 'personal'}`;
+    const currentWsId = activeWorkspace?.isPersonal ? 'personal' : activeWorkspace?.id || 'personal';
+    const cacheKey = `vault_credentials_${activeUserId}_${currentWsId}`;
+    const guestFallbackKey = `vault_credentials_guest_${currentWsId}`;
 
-    // Instant local copy read on mount (dedupe — stale cache may contain twin rows)
+    // Instant local copy read on mount and workspace change for 0ms initial render
     if (!cursorToUse && !force) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cachedRows = (await LocalEngine.cacheGet<any[]>(cacheKey)) ||
-          (await LocalEngine.cacheGet<any[]>(`vault_credentials_${activeUserId}`)) ||
+          (currentWsId === 'personal' ? await LocalEngine.cacheGet<any[]>(`vault_credentials_${activeUserId}`) : null) ||
           (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(guestFallbackKey) : null);
         if (cachedRows && Array.isArray(cachedRows) && cachedRows.length > 0) {
           const unique = dedupeCredentialsById(cachedRows as Credentials[]);
@@ -201,12 +201,13 @@ function DashboardPageContent() {
 
       if (!cursorToUse) {
         let rows: Credentials[] = [];
+        const targetWsId = activeWorkspace?.isPersonal ? undefined : activeWorkspace?.id;
         if (activeUserId !== 'guest') {
           rows = await LocalEngine.query<Credentials[]>(
             cacheKey,
             async () => {
               const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listVaultItemsTurso(activeUserId, currentWsId);
+              const res = await listVaultItemsTurso(activeUserId, targetWsId);
               return dedupeCredentialsById((res.rows || []).map((row: any) => ({
                 ...row,
                 $id: row.$id || row.id,
