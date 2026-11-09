@@ -81,7 +81,7 @@ describe('Sidekick Drawer Message Content Safety', () => {
     expect(parsed.toolCall.args.title).toBe('Refactored System Architecture');
   });
 
-  it('verifies topbar agentic icon dispatches kylrix:open-sidekick event', () => {
+  it('verifies contextual object sidekick event dispatch for concrete objects', () => {
     let capturedDetail: any = null;
     const listener = (e: Event) => {
       capturedDetail = (e as CustomEvent).detail;
@@ -91,17 +91,17 @@ describe('Sidekick Drawer Message Content Safety', () => {
     window.dispatchEvent(
       new CustomEvent('kylrix:open-sidekick', {
         detail: {
-          type: 'workspace',
-          id: 'ws_default',
-          title: 'Workspace Assistant',
+          type: 'note',
+          id: 'note_123',
+          title: 'System Design',
         },
       })
     );
 
     window.removeEventListener('kylrix:open-sidekick', listener);
     expect(capturedDetail).not.toBeNull();
-    expect(capturedDetail.type).toBe('workspace');
-    expect(capturedDetail.id).toBe('ws_default');
-    expect(capturedDetail.title).toBe('Workspace Assistant');
+    expect(capturedDetail.type).toBe('note');
+    expect(capturedDetail.id).toBe('note_123');
+    expect(capturedDetail.title).toBe('System Design');
   });
 });

@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { X, Sparkles, FileText, ListChecks, Map as MapIcon, Lightbulb, Send, Paperclip, Target, FormInput, Tag, Copy, FolderKanban, ShieldAlert, FileCode, Calendar, Bot, Layers, Trash2 } from 'lucide-react';
 import { Drawer, Box } from '@/lib/openbricks/primitives';
 import { LocalEngine } from '@/lib/services/LocalEngine';
-import { useWorkspace } from '@/context/WorkspaceContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useNotes } from '@/context/NotesContext';
 import { useTask } from '@/context/TaskContext';
@@ -135,44 +134,17 @@ export function SidekickDrawer({
 }) {
   const router = useRouter();
   const { user: currentUser } = useAuth();
-  const { activeWorkspace } = useWorkspace();
   const { notes = [] } = useNotes();
   const { tasks = [] } = useTask();
   const { open: openUnified } = useUnifiedDrawer();
 
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [focusedObjectTarget, setFocusedObjectTarget] = useState<SidekickTarget | null>(initialTarget);
-  const [scopeMode, setScopeMode] = useState<'object' | 'workspace'>('workspace');
-
-  const defaultWorkspaceTarget = useMemo<SidekickTarget>(() => ({
-    type: 'workspace',
-    id: activeWorkspace?.id || 'personal',
-    title: activeWorkspace?.title || 'Workspace Assistant',
-  }), [activeWorkspace?.id, activeWorkspace?.title]);
-
-  const [localTarget, setLocalTarget] = useState<SidekickTarget>(() => {
-    if (initialTarget && initialTarget.type !== 'workspace') {
-      return initialTarget;
-    }
-    return defaultWorkspaceTarget;
-  });
+  const [localTarget, setLocalTarget] = useState<SidekickTarget | null>(initialTarget);
 
   useEffect(() => {
-    if (initialTarget) {
-      if (initialTarget.type !== 'workspace') {
-        setFocusedObjectTarget(initialTarget);
-        setScopeMode('object');
-        setLocalTarget(initialTarget);
-      } else {
-        setScopeMode('workspace');
-        setLocalTarget(initialTarget);
-      }
-    } else {
-      setScopeMode('workspace');
-      setLocalTarget(defaultWorkspaceTarget);
-    }
-  }, [initialTarget, defaultWorkspaceTarget]);
+    setLocalTarget(initialTarget);
+  }, [initialTarget]);
 
   const target = localTarget;
 
@@ -568,36 +540,9 @@ export function SidekickDrawer({
           <div>
             <div className="text-[11px] font-black tracking-widest text-[#A855F7] uppercase">Sidekick</div>
             <div className="text-sm font-black text-white font-clash -mt-1 truncate max-w-[180px]">{target?.title || 'Research companion'}</div>
-            {focusedObjectTarget && focusedObjectTarget.type !== 'workspace' && (
-              <div className="flex items-center gap-1 mt-1 bg-[#161412] p-0.5 rounded-lg border border-white/10 text-[10px]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScopeMode('object');
-                    setLocalTarget(focusedObjectTarget);
-                  }}
-                  className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
-                    scopeMode === 'object'
-                      ? 'bg-[#A855F7] text-white'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Object: {focusedObjectTarget.title || focusedObjectTarget.id}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setScopeMode('workspace');
-                    setLocalTarget(defaultWorkspaceTarget);
-                  }}
-                  className={`px-2 py-0.5 rounded-md font-bold transition-all cursor-pointer ${
-                    scopeMode === 'workspace'
-                      ? 'bg-[#A855F7] text-white'
-                      : 'text-white/60 hover:text-white'
-                  }`}
-                >
-                  Workspace: {defaultWorkspaceTarget.title}
-                </button>
+            {target && (
+              <div className="text-[10px] text-white/40 font-mono uppercase mt-0.5">
+                {target.type} companion
               </div>
             )}
           </div>

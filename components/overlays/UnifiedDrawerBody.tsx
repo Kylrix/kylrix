@@ -124,6 +124,11 @@ const SidekickDrawer = dynamic(
   { ssr: false },
 );
 
+const WorkspaceCopilotDrawer = dynamic(
+  () => import('../agentic/WorkspaceCopilotDrawer').then((m) => m.WorkspaceCopilotDrawer),
+  { ssr: false },
+);
+
 const FollowListDrawer = dynamic(() => import('./FollowListDrawer').then((m) => m.FollowListDrawer), { ssr: false });
 const ZapDrawer = dynamic(() => import('./ZapDrawer').then((m) => m.ZapDrawer), { ssr: false });
 const SanitizeDrawer = dynamic(() => import('./SanitizeDrawer').then((m) => m.SanitizeDrawer), { ssr: false });
@@ -148,6 +153,7 @@ export function unifiedDrawerWidth(content: DrawerContent): number {
     case 'trash':
       return 560;
     case 'sidekick':
+    case 'workspace-copilot':
       return 520;
     case 'agentic':
       return 440;
@@ -197,13 +203,17 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           open
           onClose={onClose}
           embedded
-          target={
-            drawerData?.target || {
-              type: 'workspace',
-              id: drawerData?.workspaceId || 'personal',
-              title: drawerData?.workspaceTitle || 'Workspace Assistant',
-            }
-          }
+          target={drawerData?.target || null}
+        />
+      );
+    case 'workspace-copilot':
+      return (
+        <WorkspaceCopilotDrawer
+          open
+          onClose={onClose}
+          embedded
+          workspaceId={drawerData?.workspaceId || 'personal'}
+          workspaceTitle={drawerData?.workspaceTitle || 'Personal Workspace'}
         />
       );
     case 'note':

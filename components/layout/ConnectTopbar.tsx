@@ -2586,33 +2586,30 @@ export default function ConnectTopbar({
                       </Tooltip>
                     )}
 
-                    <Tooltip title="Sidekick Assistant (Agentic Workspace AI)">
+                    <Tooltip title="Workspace Copilot (Central Workspace AI)">
                       <IconButton
                         id="topbar-sidekick-button"
-                        aria-label="Sidekick Assistant"
+                        aria-label="Workspace Copilot"
                         onClick={() => {
                           handleCloseAll();
-                          openUnified('sidekick', {
-                            target: {
-                              type: 'workspace',
-                              id: activeWorkspace?.id || 'personal',
-                              title: activeWorkspace?.title || 'Workspace Assistant',
-                            },
+                          openUnified('workspace-copilot', {
+                            workspaceId: activeWorkspace?.id || 'personal',
+                            workspaceTitle: activeWorkspace?.title || 'Personal Workspace',
                           });
                         }}
                         sx={{
-                          color: '#A855F7',
+                          color: '#6366F1',
                           bgcolor: '#161412',
-                          border: '1px solid rgba(168, 85, 247, 0.35)',
+                          border: '1px solid rgba(99, 102, 241, 0.35)',
                           borderRadius: '50%',
                           width: 44,
                           height: 44,
-                          boxShadow: '0 4px 16px rgba(168, 85, 247, 0.2)',
+                          boxShadow: '0 4px 16px rgba(99, 102, 241, 0.2)',
                           '&:hover': {
                             bgcolor: '#201D1A',
-                            borderColor: '#A855F7',
+                            borderColor: '#6366F1',
                             transform: 'scale(1.05)',
-                            boxShadow: '0 0 20px rgba(168, 85, 247, 0.4)',
+                            boxShadow: '0 0 20px rgba(99, 102, 241, 0.4)',
                           },
                           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
