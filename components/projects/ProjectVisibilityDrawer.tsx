@@ -66,6 +66,9 @@ export default function ProjectVisibilityDrawer({
       />
       {/* Drawer */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="project-visibility-drawer-title"
         className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-50 ${
           isDesktop 
             ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
@@ -83,7 +86,7 @@ export default function ProjectVisibilityDrawer({
         {/* Header */}
         <div className="p-6 pb-4 flex items-center justify-between border-b border-[#1C1A18] shrink-0 relative z-10">
           <div>
-            <h3 className="text-white text-lg font-black font-clash tracking-tight font-clash">
+            <h3 id="project-visibility-drawer-title" className="text-white text-lg font-black font-clash tracking-tight font-clash">
               Project Visibility
             </h3>
             <p className="text-xs text-[#9B9691] font-semibold mt-1">
@@ -93,7 +96,8 @@ export default function ProjectVisibilityDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-white/50 hover:text-white transition rounded-lg hover:bg-white/5"
+            aria-label="Close project visibility dialog"
+            className="p-1.5 text-white/50 hover:text-white transition rounded-lg hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
           >
             <X size={20} />
           </button>
@@ -107,7 +111,7 @@ export default function ProjectVisibilityDrawer({
             <button
               type="button"
               onClick={() => setVisibility('private')}
-              className={`p-4 rounded-2xl border text-left transition duration-200 flex items-start gap-4 w-full ${
+              className={`p-4 rounded-2xl border text-left transition duration-200 flex items-start gap-4 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] ${
                 visibility === 'private'
                   ? 'border-[#6366F1] bg-[#6366F1]/5'
                   : 'border-[#1C1A18] bg-[#0A0908] hover:border-white/10'
@@ -137,7 +141,7 @@ export default function ProjectVisibilityDrawer({
                   setIsExpanded(false);
                 }
               }}
-              className={`p-4 rounded-2xl border text-left transition duration-200 flex items-start gap-4 w-full ${
+              className={`p-4 rounded-2xl border text-left transition duration-200 flex items-start gap-4 w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] ${
                 visibility === 'public'
                   ? 'border-[#6366F1] bg-[#6366F1]/5'
                   : 'border-[#1C1A18] bg-[#0A0908] hover:border-white/10'
@@ -163,7 +167,8 @@ export default function ProjectVisibilityDrawer({
                 <button
                   type="button"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-white/[0.01] transition-colors"
+                  aria-expanded={isExpanded}
+                  className="w-full flex items-center justify-between p-4 hover:bg-white/[0.01] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
                 >
                   <span className="text-xs font-bold text-[#9B9691] tracking-wider uppercase font-clash">
                     Advanced Access Control
@@ -184,8 +189,11 @@ export default function ProjectVisibilityDrawer({
                       </div>
                       <button
                         type="button"
+                        role="switch"
+                        aria-checked={isGuest}
+                        aria-label="Toggle anonymous guest view"
                         onClick={() => setIsGuest(!isGuest)}
-                        className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-200 focus:outline-none ${
+                        className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] ${
                           isGuest ? 'bg-[#6366F1]' : 'bg-[#1C1A18]'
                         }`}
                       >
