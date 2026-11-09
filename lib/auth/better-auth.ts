@@ -172,7 +172,7 @@ export const auth = betterAuth({
       maxUsernameLength: 32,
     }),
     oauthProvider({
-      loginPage: '/login',
+      loginPage: '/app',
       consentPage: '/oauth/consent',
       scopes: [...KYLRIX_OAUTH_SCOPES],
     }),

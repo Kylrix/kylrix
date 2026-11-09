@@ -187,29 +187,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => window.removeEventListener('message', handleMessage);
   }, [refreshUser, pathname, router]);
 
-  const openIDMWindow = useCallback((target?: string) => {
-    if (typeof window === 'undefined' || isAuthenticating) return;
-
-    setIsAuthenticating(true);
-    const authBaseUrl = getEcosystemUrl('accounts');
-    const authUrl = `${authBaseUrl}/login`;
-    const sourceUrl = target || (window.location.origin + pathname);
-    const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
-
-    const width = 560, height = 750;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-    
-    const windowRef = window.open(targetUrl, 'KylrixAccounts', `width=${width},height=${height},left=${left},top=${top}`);
-
-    if (!windowRef) {
-      router.push(targetUrl);
-      return;
-    }
-
-    idmWindowRef.current = windowRef;
-    setIDMWindowOpen(true);
-  }, [isAuthenticating, pathname, router]);
+  const openIDMWindow = useCallback((_target?: string) => {
+    if (typeof window === 'undefined') return;
+    // Kylrix does not use a standalone /login route. Invoke the in-app auth drawer universally.
+    window.dispatchEvent(new CustomEvent('kylrix:auth:open-drawer', { detail: { mode: 'sign-in' } }));
+  }, []);
 
   const logout = useCallback(async () => {
     lastSeenUserIdRef.current = null;

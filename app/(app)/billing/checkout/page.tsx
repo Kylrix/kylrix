@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Rocket, Heart, Globe, Clock } from 'lucide-react';
+import { Rocket, Heart, Globe, Clock, ShieldCheck, ArrowRight } from 'lucide-react';
 import { calculateTotalSubscriptionPrice } from '@/lib/subscription/ppp';
 import { createBillingCheckoutSessionAction } from '@/lib/actions/billing/billing';
 import { account } from '@/lib/data';
@@ -25,6 +26,7 @@ function LoadingSpinner({ size = 28 }: { size?: number }) {
 
 function CheckoutContent() {
   const router = useRouter();
+  const { open: openDrawer } = useUnifiedDrawer();
   const { user, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -89,18 +91,50 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      if (typeof window !== 'undefined') {
-        const currentUrl = window.location.href;
-        router.push(`/?source=${encodeURIComponent(currentUrl)}`);
-      }
+      openDrawer('login', {
+        title: 'Sign In to Continue Checkout',
+        subtitle: 'Log in or create an account to proceed with subscription checkout.',
+      });
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, openDrawer]);
 
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-[#0A0908]">
         <LoadingSpinner size={32} />
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="min-h-screen bg-[#0A0908] text-white flex items-center justify-center py-8">
+        <div className="w-full max-w-md px-4">
+          <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/[0.05] text-center space-y-6">
+            <div className="inline-flex p-4 rounded-[20px] bg-[#6366F1]/10 text-[#6366F1]">
+              <Rocket size={32} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-black tracking-tight">Sign In Required</h1>
+              <p className="text-white/60 text-sm">
+                Please sign in to your Kylrix account to finalize subscription checkout.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => openDrawer('login', {
+                title: 'Sign In to Continue Checkout',
+                subtitle: 'Log in or create an account to proceed with subscription checkout.',
+              })}
+              className="w-full py-3.5 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Sign In to Continue</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </main>
     );
   }
 
