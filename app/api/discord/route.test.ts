@@ -198,6 +198,34 @@ describe('verifyDiscordSignature', () => {
 
     assert.equal(isValid, true);
   });
+
+  it('should reject malformed or invalid-length signatures and public keys without throwing', () => {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+    const rawPub = publicKey.export({ type: 'spki', format: 'der' }).subarray(-32).toString('hex');
+    const timestamp = '1720000000';
+    const rawBody = JSON.stringify({ type: 1 });
+    const data = Buffer.from(timestamp + rawBody);
+    const validSignature = crypto.sign(null, data, privateKey).toString('hex');
+
+    // Missing fields
+    assert.equal(verifyDiscordSignature({ rawBody, signature: '', timestamp, clientPublicKey: rawPub }), false);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: validSignature, timestamp: '', clientPublicKey: rawPub }), false);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: validSignature, timestamp, clientPublicKey: '' }), false);
+
+    // Malformed / truncated public key (not 64 hex characters)
+    assert.equal(verifyDiscordSignature({ rawBody, signature: validSignature, timestamp, clientPublicKey: 'abcd' }), false);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: validSignature, timestamp, clientPublicKey: rawPub + 'ff' }), false);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: validSignature, timestamp, clientPublicKey: 'z'.repeat(64) }), false);
+
+    // Malformed / truncated signature (not 128 hex characters)
+    assert.equal(verifyDiscordSignature({ rawBody, signature: 'short_sig', timestamp, clientPublicKey: rawPub }), false);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: validSignature + 'aa', timestamp, clientPublicKey: rawPub }), false);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: 'z'.repeat(128), timestamp, clientPublicKey: rawPub }), false);
+
+    // Valid format but wrong signature content
+    const wrongSignature = '0'.repeat(128);
+    assert.equal(verifyDiscordSignature({ rawBody, signature: wrongSignature, timestamp, clientPublicKey: rawPub }), false);
+  });
 });
 
 describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {

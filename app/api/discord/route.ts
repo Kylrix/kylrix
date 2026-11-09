@@ -53,6 +53,9 @@ const NextResponse = Object.assign(
 
 /**
  * Validates Discord interaction Ed25519 signature via Node native crypto.
+ * Enforces strict 64-hex char (32-byte) public key and 128-hex char (64-byte)
+ * signature input validation prior to ASN.1 SPKI parsing to protect against
+ * malformed key buffer allocations and signature parsing exceptions.
  */
 export function verifyDiscordSignature({
   rawBody,
@@ -66,6 +69,12 @@ export function verifyDiscordSignature({
   clientPublicKey: string;
 }): boolean {
   if (!signature || !timestamp || !clientPublicKey) return false;
+  // Strict format check: Ed25519 raw public key must be exactly 32 bytes (64 hex characters)
+  // and Ed25519 signature must be exactly 64 bytes (128 hex characters)
+  if (!/^[0-9a-fA-F]{64}$/.test(clientPublicKey) || !/^[0-9a-fA-F]{128}$/.test(signature)) {
+    return false;
+  }
+
   try {
     const keyObject = crypto.createPublicKey({
       key: Buffer.concat([
@@ -1018,10 +1027,11 @@ export async function resolveMessageForSave(
       });
       if (res.ok) {
         const messages: any[] = await res.json();
-        const botId = process.env.DISCORD_APPLICATION_ID || '1553752726070886412';
+        // Resolve application/bot ID dynamically from environment; do not hardcode static snowflake IDs
+        const botId = process.env.DISCORD_APPLICATION_ID || process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID;
 
         // Find latest message not authored by a bot
-        const nonBot = messages.find((m) => !m.author?.bot && m.author?.id !== botId);
+        const nonBot = messages.find((m) => !m.author?.bot && (!botId || m.author?.id !== botId));
         if (nonBot) {
           // If that message is a reply to another message, the replied-to message is what the user tagged!
           const target = nonBot.referenced_message || nonBot;
