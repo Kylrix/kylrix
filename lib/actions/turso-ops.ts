@@ -644,6 +644,16 @@ export async function upsertVaultItemTurso(data: any) {
   }
 }
 
+const parseMetadata = (raw: any) => {
+  if (!raw || typeof raw !== 'string') return typeof raw === 'object' ? raw : {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+  } catch {
+    return {};
+  }
+};
+
 export const listVaultItemsTurso = cache(async function listVaultItemsTurso(userId: string, workspaceId?: string | null) {
   const wsKey = workspaceId && workspaceId !== 'personal' && workspaceId !== userId ? workspaceId : 'personal';
   const cacheKey = `vault:${userId}:${wsKey}`;
@@ -663,7 +673,9 @@ export const listVaultItemsTurso = cache(async function listVaultItemsTurso(user
             eq(schema.workspaceObjects.workspaceId, wsKey),
             or(
               eq(schema.workspaceObjects.entityKind, 'credential'),
-              eq(schema.workspaceObjects.entityKind, 'vault_item')
+              eq(schema.workspaceObjects.entityKind, 'password'),
+              eq(schema.workspaceObjects.entityKind, 'vault_item'),
+              eq(schema.workspaceObjects.entityKind, 'secret')
             )
           )
         );
@@ -691,11 +703,8 @@ export const listVaultItemsTurso = cache(async function listVaultItemsTurso(user
         .where(and(inArray(schema.vaultItems.userId, allUserIds), eq(schema.vaultItems.isTrashed, false)));
     }
     const normalizedRows = rows.map((row: any) => {
-      let nested = row.metadata;
-      for (let i = 0; i < 3 && typeof nested === 'string'; i += 1) {
-        try { nested = JSON.parse(nested); } catch { break; }
-      }
-      const fields = nested && typeof nested === 'object' ? nested : {};
+      const parsed = parseMetadata(row.metadata);
+      const fields = parsed && typeof parsed === 'object' ? parsed : {};
       return {
         ...row,
         $id: row.id,
@@ -853,10 +862,8 @@ export const listTotpSecretsTurso = cache(async function listTotpSecretsTurso(us
         .where(inArray(schema.totpSecrets.userId, allUserIds));
     }
     const normalizedRows = rows.map((row: any) => {
-      let meta: any = {};
-      try {
-        meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
-      } catch {}
+      const parsed = parseMetadata(row.metadata);
+      const meta = parsed && typeof parsed === 'object' ? parsed : {};
       return {
         ...row,
         $id: row.id,

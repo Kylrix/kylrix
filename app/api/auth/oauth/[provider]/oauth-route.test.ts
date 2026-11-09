@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizeCallbackUrl } from './[provider]/route';
+import { sanitizeCallbackUrl } from './route';
 
 describe('sanitizeCallbackUrl', () => {
   it('allows valid relative paths', () => {
