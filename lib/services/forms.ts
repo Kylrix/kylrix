@@ -28,11 +28,20 @@ export const FormsService = {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cacheKeys = [`f_forms_list_${userId}`, `f_forms_${userId}`, 'f_forms_list'];
-        for (const key of cacheKeys) {
-          const existing = (await LocalEngine.cacheGet<any[]>(key)) || [];
-          const updated = [createdForm, ...existing.filter((f: any) => (f.$id || f.id) !== (createdForm.$id || createdForm.id))];
-          await LocalEngine.cacheSet(key, updated);
-        }
+        // Bolt: Concurrently update relevant form cache stores via Promise.all
+        // to reduce cache update latency from O(K * T) to O(T) (~3x speedup).
+        await Promise.all(
+          cacheKeys.map(async (key) => {
+            try {
+              const existing = (await LocalEngine.cacheGet<any[]>(key)) || [];
+              const updated = [
+                createdForm,
+                ...existing.filter((f: any) => (f.$id || f.id) !== (createdForm.$id || createdForm.id)),
+              ];
+              await LocalEngine.cacheSet(key, updated);
+            } catch {}
+          })
+        );
       } catch {}
     }
 

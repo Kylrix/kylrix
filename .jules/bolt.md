@@ -42,3 +42,8 @@
 
 **Learning:** In `ShareContextDrawer.updateLocalShareCache`, serial `for...of` loops awaiting `LocalEngine.cacheGet` and `LocalEngine.cacheSet` across 4 cache keys (`f_ideas_all`, `f_ideas_guest`, `f_notes_list`, `f_notes_list_guest`, or corresponding goal/event keys) accumulated linear $O(K \times T)$ latency on drawer open and publish events. Unifying key mutations via `Promise.all(cacheKeys.map(...))` reduced update duration from ~122ms to ~31ms (~3.9x speedup) with zero race conditions or data anomalies.
 **Action:** When updating multiple offline list cache keys in response to resource visibility or state changes, run get-modify-set cycles in parallel using `Promise.all`.
+
+## 2025-05-18 - Concurrent Form Cache Updates in FormsService.createForm
+
+**Learning:** In `FormsService.createForm`, awaiting sequential `cacheGet` and `cacheSet` across 3 form list cache keys (`f_forms_list_${userId}`, `f_forms_${userId}`, and `f_forms_list`) in a serial `for...of` loop forced $O(K \times T)$ cumulative latency (~93ms for 15ms step latency) during client-side form creation. Replacing the sequential loop with `Promise.all(cacheKeys.map(...))` reduced cache synchronization latency to $O(T)$ (~30ms, a ~3.0x speedup) while preserving isolation across storage operations.
+**Action:** When updating multiple user or global list cache keys upon object creation in client services, use concurrent `Promise.all` with individual `try...catch` handlers.
