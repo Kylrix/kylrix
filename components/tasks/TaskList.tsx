@@ -213,7 +213,7 @@ export default function TaskList() {
                 type="button"
                 aria-pressed={activeTagFilter === tag}
                 onClick={() => handleTagFilterToggle(tag)}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7] ${
                   activeTagFilter === tag
                     ? 'bg-[#A855F7] border-2 border-[#FFFFFF] text-white shadow-[0_4px_12px_rgba(168,85,247,0.2)]'
                     : 'bg-[#161412] border border-white/25 text-white hover:border-white/60 hover:bg-[#201D1A]'
@@ -231,7 +231,8 @@ export default function TaskList() {
               <button
                 type="button"
                 onClick={() => setFilter({ ...filter, labels: [] })}
-                className="ml-1 px-3 py-1.5 text-xs text-[#A855F7] hover:text-[#c084fc] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0"
+                aria-label="Clear active tag filter"
+                className="ml-1 px-3 py-1.5 text-xs text-[#A855F7] hover:text-[#c084fc] font-mono font-bold tracking-wider flex items-center gap-1 shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
               >
                 <X size={12} />
                 Clear
@@ -256,7 +257,7 @@ export default function TaskList() {
                 <button
                   type="button"
                   onClick={openCreateGoal}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Add Your First Goal</span>
@@ -308,8 +309,11 @@ export default function TaskList() {
                 <div className="space-y-4 pt-4">
                   <div className="flex items-center justify-between px-1 mb-2">
                     <button
+                      type="button"
                       onClick={() => setShowCompletedSection(!showCompletedSection)}
-                      className="flex items-center gap-2 group cursor-pointer"
+                      aria-expanded={showCompletedSection}
+                      aria-label="Toggle completed goals visibility"
+                      className="flex items-center gap-2 group cursor-pointer rounded-lg p-1 -m-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
                     >
                       <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-[0.2em] font-mono group-hover:text-white transition-colors">
                         Completed ({completedTasks.length})
@@ -336,8 +340,10 @@ export default function TaskList() {
                             </div>
                          </div>
                          <button
+                            type="button"
                             onClick={handleBulkDeleteCompleted}
-                            className="relative z-10 px-5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all active:scale-[0.98] flex items-center gap-2"
+                            aria-label="Purge all completed goals"
+                            className="relative z-10 px-5 py-2.5 rounded-xl bg-[#161412] border border-white/10 text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all active:scale-[0.98] flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
                          >
                             <Trash2 size={14} />
                             Purge All
