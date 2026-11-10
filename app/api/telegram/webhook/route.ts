@@ -396,6 +396,55 @@ export const TELEGRAM_BOT_COMMANDS = [
   { command: 'help', description: 'Open dashboard and quick menu' },
 ];
 
+/**
+ * SSRF Guard: Validates that a Telegram webhook target URL is an external HTTPS URL
+ * and does not point to internal networks, localhost, link-local, cloud metadata,
+ * embedded credentials, or non-standard ports.
+ */
+export function isValidTelegramWebhookUrl(urlStr: string | null | undefined): boolean {
+  if (!urlStr || typeof urlStr !== 'string') return false;
+  try {
+    const url = new URL(urlStr);
+    if (url.protocol !== 'https:' || url.username || url.password) return false;
+    if (url.port && url.port !== '443') return false;
+
+    const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) {
+      return false;
+    }
+
+    const ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host);
+    if (ipv4) {
+      const [, o1, o2] = ipv4.map(Number);
+      if (
+        o1 === 127 ||
+        o1 === 10 ||
+        o1 === 0 ||
+        (o1 === 172 && o2 >= 16 && o2 <= 31) ||
+        (o1 === 192 && o2 === 168) ||
+        (o1 === 169 && o2 === 254)
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      host === '::1' ||
+      host.startsWith('fe80:') ||
+      host.startsWith('fc00:') ||
+      host.startsWith('fd00:') ||
+      host.startsWith('::ffff:')
+    ) {
+      return false;
+    }
+
+    // Must strictly route to the telegram webhook path
+    return url.pathname.replace(/\/+$/, '') === '/api/telegram/webhook';
+  } catch {
+    return false;
+  }
+}
+
 export async function syncTelegramBot(appUrl?: string) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_API;
   if (!botToken) {
@@ -419,33 +468,38 @@ export async function syncTelegramBot(appUrl?: string) {
     console.error('[telegram-webhook] Failed to setMyCommands:', err);
   }
 
-  // 2. Set webhook if a public HTTPS URL is provided or configured
+  // 2. Set webhook if a valid HTTPS URL is configured (prefer authoritative server env over untrusted caller param)
   let webhookResult: { configured: boolean; url?: string; error?: string } = { configured: false };
-  const targetUrl = (appUrl || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || '').trim();
+  const targetUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || appUrl || '').trim();
 
-  if (targetUrl.startsWith('https://')) {
+  if (targetUrl) {
     const cleanUrl = targetUrl.replace(/\/+$/, '');
     const webhookUrl = `${cleanUrl}/api/telegram/webhook`;
-    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
-    try {
-      const whRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url: webhookUrl,
-          allowed_updates: ['message', 'callback_query'],
-          drop_pending_updates: false,
-          ...(webhookSecret ? { secret_token: webhookSecret } : {}),
-        }),
-      });
-      const whJson = await whRes.json().catch(() => ({}));
-      if (whJson.ok) {
-        webhookResult = { configured: true, url: webhookUrl };
-      } else {
-        webhookResult = { configured: false, error: whJson.description || 'Failed to set webhook' };
+
+    if (!isValidTelegramWebhookUrl(webhookUrl)) {
+      webhookResult = { configured: false, error: 'Disallowed or insecure webhook URL' };
+    } else {
+      const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+      try {
+        const whRes = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: webhookUrl,
+            allowed_updates: ['message', 'callback_query'],
+            drop_pending_updates: false,
+            ...(webhookSecret ? { secret_token: webhookSecret } : {}),
+          }),
+        });
+        const whJson = await whRes.json().catch(() => ({}));
+        if (whJson.ok) {
+          webhookResult = { configured: true, url: webhookUrl };
+        } else {
+          webhookResult = { configured: false, error: whJson.description || 'Failed to set webhook' };
+        }
+      } catch (err: any) {
+        webhookResult = { configured: false, error: err?.message };
       }
-    } catch (err: any) {
-      webhookResult = { configured: false, error: err?.message };
     }
   }
 
