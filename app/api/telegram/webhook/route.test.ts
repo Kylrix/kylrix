@@ -1,7 +1,7 @@
 import { describe, it, vi, beforeEach } from 'vitest';
 import assert from 'node:assert/strict';
 import { NextRequest } from 'next/server';
-import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS, verifyTelegramSecretToken } from './route';
+import { POST, GET, syncTelegramBot, TELEGRAM_BOT_COMMANDS, verifyTelegramSecretToken, isValidTelegramWebhookUrl } from './route';
 import { createSystemClient } from '@/lib/data';
 import { ApiResources } from '@/lib/api/resources';
 
@@ -241,7 +241,43 @@ describe('Telegram Webhook Route Handler - Interactive Menus & 1:1 Parity', () =
     assert.ok(ApiResources.createNote.mock.calls.length === 1);
   });
 
-  it('syncTelegramBot registers commands and sets webhook for https target', async () => {
+  it('isValidTelegramWebhookUrl blocks SSRF, credentials, non-standard ports, and non-webhook paths', () => {
+    // Valid public HTTPS endpoints
+    assert.equal(isValidTelegramWebhookUrl('https://www.kylrix.space/api/telegram/webhook'), true);
+    assert.equal(isValidTelegramWebhookUrl('https://sub.domain.org/api/telegram/webhook/'), true);
+
+    // Insecure protocols
+    assert.equal(isValidTelegramWebhookUrl('http://www.kylrix.space/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('ftp://www.kylrix.space/api/telegram/webhook'), false);
+
+    // Credential smuggling
+    assert.equal(isValidTelegramWebhookUrl('https://admin:pass@www.kylrix.space/api/telegram/webhook'), false);
+
+    // Non-standard ports
+    assert.equal(isValidTelegramWebhookUrl('https://www.kylrix.space:8443/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://www.kylrix.space:443/api/telegram/webhook'), true);
+
+    // Localhost, local, and internal hosts
+    assert.equal(isValidTelegramWebhookUrl('https://localhost/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://app.localhost/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://server.local/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://service.internal/api/telegram/webhook'), false);
+
+    // Loopback & private IP ranges
+    assert.equal(isValidTelegramWebhookUrl('https://127.0.0.1/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://10.0.0.1/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://172.16.0.1/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://192.168.1.1/api/telegram/webhook'), false);
+    assert.equal(isValidTelegramWebhookUrl('https://169.254.169.254/api/telegram/webhook'), false); // AWS/cloud metadata
+    assert.equal(isValidTelegramWebhookUrl('https://[::1]/api/telegram/webhook'), false);
+
+    // Non-webhook path
+    assert.equal(isValidTelegramWebhookUrl('https://www.kylrix.space/api/v1/bad-path'), false);
+    assert.equal(isValidTelegramWebhookUrl(''), false);
+    assert.equal(isValidTelegramWebhookUrl(null), false);
+  });
+
+  it('syncTelegramBot registers commands and sets webhook for valid https target', async () => {
     process.env.TELEGRAM_WEBHOOK_SECRET = 'configured-secret';
     (global.fetch as any).mockResolvedValue({
       ok: true,
@@ -262,6 +298,23 @@ describe('Telegram Webhook Route Handler - Interactive Menus & 1:1 Parity', () =
     assert.ok(whCall, 'setWebhook was called');
     const whBody = JSON.parse(whCall[1].body);
     assert.equal(whBody.secret_token, 'configured-secret');
+  });
+
+  it('syncTelegramBot rejects insecure webhook URLs and refuses to call setWebhook', async () => {
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    delete process.env.APP_URL;
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, result: true }),
+    });
+
+    const res = await syncTelegramBot('http://169.254.169.254/metadata');
+    assert.equal(res.webhook.configured, false);
+    assert.equal(res.webhook.error, 'Disallowed or insecure webhook URL');
+
+    const fetchCalls = (global.fetch as any).mock.calls;
+    const whCall = fetchCalls.find((call: any[]) => call[0].includes('setWebhook'));
+    assert.equal(whCall, undefined, 'setWebhook should not be invoked for insecure target');
   });
 
   it('GET returns status and command list', async () => {
