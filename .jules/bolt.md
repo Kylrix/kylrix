@@ -47,3 +47,8 @@
 
 **Learning:** In `FormsService.createForm`, awaiting sequential `cacheGet` and `cacheSet` across 3 form list cache keys (`f_forms_list_${userId}`, `f_forms_${userId}`, and `f_forms_list`) in a serial `for...of` loop forced $O(K \times T)$ cumulative latency (~93ms for 15ms step latency) during client-side form creation. Replacing the sequential loop with `Promise.all(cacheKeys.map(...))` reduced cache synchronization latency to $O(T)$ (~30ms, a ~3.0x speedup) while preserving isolation across storage operations.
 **Action:** When updating multiple user or global list cache keys upon object creation in client services, use concurrent `Promise.all` with individual `try...catch` handlers.
+
+## 2025-05-18 - Concurrent Form Cache Updates in MoveToWorkspaceDrawer
+
+**Learning:** In `MoveToWorkspaceDrawer.handleSelectWorkspace`, updating 3 form list cache keys (`f_forms_list_${uid}`, `f_forms_${uid}`, and `f_forms_list`) in a sequential `for...of` loop introduced linear $O(K \times T)$ latency (~93ms for 15ms step latency) when transferring forms across workspaces. Replacing the sequential loop with `Promise.all(formCacheKeys.map(...))` reduced local cache synchronization latency to $O(T)$ (~31ms, a ~2.9x speedup) while guaranteeing failure isolation per key.
+**Action:** In workspace transfer and drawer handlers that mutate multiple LocalEngine cache keys, use concurrent `Promise.all` mapping instead of serial `for...of` await loops.

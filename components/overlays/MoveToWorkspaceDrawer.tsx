@@ -133,19 +133,25 @@ export function MoveToWorkspaceDrawer() {
           }
         }
 
-        // Update LocalEngine caches for forms
+        // Update LocalEngine caches for forms concurrently to eliminate O(K * T) serial latency
         const formCacheKeys = [`f_forms_list_${uid}`, `f_forms_${uid}`, 'f_forms_list'];
-        for (const key of formCacheKeys) {
-          const cachedForms = await LocalEngine.cacheGet<any[]>(key).catch(() => null);
-          if (Array.isArray(cachedForms)) {
-            const updated = cachedForms.map((f) =>
-              (f.$id === entityId || f.id === entityId)
-                ? { ...f, projectId: isPersonalTarget ? undefined : targetWorkspaceId, isWorkspace: !isPersonalTarget }
-                : f
-            );
-            await LocalEngine.cacheSet(key, updated);
-          }
-        }
+        await Promise.all(
+          formCacheKeys.map(async (key) => {
+            try {
+              const cachedForms = await LocalEngine.cacheGet<any[]>(key).catch(() => null);
+              if (Array.isArray(cachedForms)) {
+                const updated = cachedForms.map((f) =>
+                  (f.$id === entityId || f.id === entityId)
+                    ? { ...f, projectId: isPersonalTarget ? undefined : targetWorkspaceId, isWorkspace: !isPersonalTarget }
+                    : f
+                );
+                await LocalEngine.cacheSet(key, updated);
+              }
+            } catch {
+              // Silently ignore individual cache failure to preserve resilience
+            }
+          })
+        );
       }
 
       // 2. Perform background attachment or personal state update
