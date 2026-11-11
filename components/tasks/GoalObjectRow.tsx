@@ -432,7 +432,7 @@ export default function GoalObjectRow({ task }: Props) {
           type="button"
           onClick={handleComplete}
           aria-label={task.status === 'done' ? 'Mark incomplete' : 'Mark complete'}
-          className={`flex h-5 w-5 items-center justify-center rounded-md border transition-colors ${
+          className={`flex h-5 w-5 items-center justify-center rounded-md border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0A0908] ${
             task.status === 'done'
               ? 'border-[#A855F7] bg-[#A855F7] text-[#0A0908]'
               : 'border-[#4A4744] text-transparent hover:border-[#A855F7]'
@@ -459,7 +459,7 @@ export default function GoalObjectRow({ task }: Props) {
                 })
               );
             }}
-            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#A855F7] hover:bg-[#A855F7]/10"
+            className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#A855F7] hover:bg-[#A855F7]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A855F7]"
             title="Sidekick Assist"
             aria-label="Sidekick Assist"
           >

@@ -536,7 +536,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                     e.stopPropagation();
                     setShowSidekick(true);
                   }}
-                  className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/10"
+                  className="p-1.5 rounded-lg transition-all duration-200 text-white hover:text-[#6366F1] hover:bg-[#6366F1]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]"
                   title="Sidekick Assist"
                   aria-label="Sidekick Assist"
                 >
