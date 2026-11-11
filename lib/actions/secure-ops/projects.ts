@@ -168,6 +168,24 @@ export async function createProjectSecure(data: any, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
+  const tier = await getUserSubscriptionTierServer(actor.$id);
+  if (tier === 'FREE') {
+    const { listWorkspacesTurso } = await import('@/lib/actions/turso-ops');
+    const wsRes = await listWorkspacesTurso(actor.$id);
+    const ownedCustom = (wsRes.rows || []).filter(
+      (w: any) =>
+        (w.creatorId === actor.$id || w.ownerId === actor.$id) &&
+        !w.isPersonal &&
+        w.id !== actor.$id &&
+        w.$id !== actor.$id &&
+        w.id !== 'personal'
+    );
+    if (ownedCustom.length >= 1) {
+      throw new Error('Free tier includes 1 custom workspace. Upgrade to Pro for unlimited workspaces.');
+    }
+  }
+
   const payloadToValidate = {
     ...data,
     title: data?.title || data?.name || 'Workspace',

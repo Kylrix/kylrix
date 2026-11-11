@@ -31,6 +31,7 @@ import { formatAgentToken, generateEtkSecret, zeroClearBytes } from '@/lib/secur
 import { buildAetEnvelope, loadPermittedRows } from '@/lib/security/aet-mint';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 
 type Step = 'name' | 'wizard_step1' | 'wizard_step2' | 'scopes' | 'done';
 
@@ -234,6 +235,7 @@ export function CreatePatDrawer({
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { user } = useAuth();
+  const { currentTier } = useSubscription();
   const [step, setStep] = useState<Step>('name');
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<PatScope[]>(DEFAULT_SCOPES);
@@ -397,6 +399,19 @@ export function CreatePatDrawer({
       return;
     }
     if (isAetToken) {
+      const isPaid = currentTier && currentTier !== 'FREE';
+      if (!isPaid) {
+        try {
+          const { listPats } = await import('@/lib/actions/client-ops');
+          const existing = await listPats({ category: 'agent_enclave_token' });
+          const activeKeys = (existing?.data || []).filter((k: any) => k.status === 'active');
+          if (activeKeys.length >= 1) {
+            toast.error('Free tier includes 1 active Agent Token. Upgrade to Pro for unlimited agent keys.');
+            return;
+          }
+        } catch {}
+      }
+
       const mek = masterPassCrypto.getMasterKey();
       if (!mek || !masterPassCrypto.isVaultUnlocked()) {
         setNeedsUnlock(true);

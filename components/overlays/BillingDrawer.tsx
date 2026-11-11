@@ -177,18 +177,35 @@ export function BillingContent() {
               )}
             </div>
 
-            {/* Pricing Reference */}
+            {/* Tier Summary Reference */}
             {!isPro && !isTeams && !planLoading && (
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t-2 border-white/10">
-                <div className="p-3 rounded-xl bg-[#161412] border-2 border-[#6366F1]/30">
-                  <span className="text-[10px] font-black text-[#6366F1] uppercase tracking-wider block">Pro</span>
-                  <span className="text-lg font-black text-white">$10</span>
-                  <span className="text-[9px] text-white/40 block">/month</span>
+              <div className="space-y-2 pt-2 border-t-2 border-white/10">
+                <div className="p-3 rounded-xl bg-[#161412] border border-white/10">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-black text-white/60 uppercase tracking-wider">Free Plan (Active)</span>
+                    <span className="text-xs font-mono font-bold text-white">$0</span>
+                  </div>
+                  <p className="text-[11px] text-white/50 leading-relaxed m-0">
+                    Universal Cloud Sync across Web, CLI, VS Code, Discord, Telegram · Zero-Knowledge Vault · 1 Workspace · 1 Agent Token · 1,000 daily AI tool calls
+                  </p>
                 </div>
-                <div className="p-3 rounded-xl bg-[#161412] border-2 border-amber-500/30">
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">Teams</span>
-                  <span className="text-lg font-black text-white">$50</span>
-                  <span className="text-[9px] text-white/40 block">/month</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-[#161412] border-2 border-[#6366F1]/30">
+                    <span className="text-[10px] font-black text-[#6366F1] uppercase tracking-wider block">Pro</span>
+                    <span className="text-lg font-black text-white">$10</span>
+                    <span className="text-[9px] text-white/40 block mb-1.5">/month</span>
+                    <p className="text-[10px] text-white/60 m-0 leading-tight">
+                      10x API Speed (600 RPM, 50k calls/day) · Unlimited Workspaces & Agent Keys · 2-Hour Sudo Window
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-[#161412] border-2 border-amber-500/30">
+                    <span className="text-[10px] font-black text-amber-400 uppercase tracking-wider block">Teams</span>
+                    <span className="text-lg font-black text-white">$50</span>
+                    <span className="text-[9px] text-white/40 block mb-1.5">/month</span>
+                    <p className="text-[10px] text-white/60 m-0 leading-tight">
+                      3,000 RPM (500k calls/day) · Team Roles & Collaboration · Shared Vaults · Full Audit Logs
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

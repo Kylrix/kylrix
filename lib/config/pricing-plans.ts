@@ -21,6 +21,13 @@ export const FEATURE_CATALOG: Record<string, string> = {
   projects: 'Projects & team workspaces',
   api_limits: 'Higher API rate limits',
   group_hangouts: 'Group hangouts & channels',
+  high_speed_api: '10x API Speed (600 RPM, 50k calls/day)',
+  unlimited_workspaces: 'Unlimited Workspaces',
+  unlimited_agent_keys: 'Unlimited Agent Keys',
+  sudo_window: '2-Hour Sudo Window',
+  team_roles: 'Team Roles & Collaboration',
+  shared_vaults: 'Shared Zero-Knowledge Vaults',
+  audit_logs: 'Full Audit Logs',
 };
 
 export type PricingPlan = {
@@ -37,6 +44,10 @@ export type PricingPlan = {
 const MAX_PLAN_SCAN = 12;
 
 const PRO_VS_FREE = [
+  'high_speed_api',
+  'unlimited_workspaces',
+  'unlimited_agent_keys',
+  'sudo_window',
   'ai',
   'voice',
   'file_upload',
@@ -44,13 +55,14 @@ const PRO_VS_FREE = [
   'pinned_notes',
   'milestones',
   'discussions',
-  'oauth_provider',
-  'article_mode',
 ];
 
 const TEAMS_VS_FREE = [
   ...PRO_VS_FREE,
   'projects',
+  'team_roles',
+  'shared_vaults',
+  'audit_logs',
   'api_limits',
   'group_hangouts',
 ];
@@ -77,16 +89,24 @@ function defaultCloudPlans(): PricingPlan[] {
   return [
     {
       index: 1,
+      name: 'Free',
+      description: 'Universal Cloud Sync & Zero-Knowledge Vault',
+      priceUsd: 0,
+      ledgerKey: 'FREE',
+      exclusiveFeatures: [],
+    },
+    {
+      index: 2,
       name: 'Pro',
-      description: 'Full private suite for individuals',
+      description: '10x API Speed, Unlimited Workspaces & Agent Keys',
       priceUsd: 10,
       ledgerKey: 'PRO',
       exclusiveFeatures: [...PRO_VS_FREE],
     },
     {
-      index: 2,
+      index: 3,
       name: 'Teams',
-      description: 'Projects, higher API limits, and group hangouts',
+      description: '3,000 RPM, Team Roles, Shared Vaults & Audit Logs',
       priceUsd: 50,
       ledgerKey: 'TEAMS',
       exclusiveFeatures: [...TEAMS_VS_FREE],

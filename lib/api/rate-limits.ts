@@ -19,30 +19,48 @@ export type ApiRateLimits = {
   resetDayEpoch: number;
 };
 
-/**
- * Tier limits (rolling 1-minute burst + 24-hour account ceiling):
- *
- * Chokepoint analysis:
- * - **Minute window** — protects the VPS from burst abuse; kept modest across tiers.
- * - **Daily window** — what blocks MCP/agent loops (many calls per turn); Pro/Teams get
- *   the larger relative bump. Teams = exactly 2× Pro on both windows.
- *
- * - Free:  12 req/min · 300 req/day  (~25 agent turns/day at ~12 calls each)
- * - Pro:   60 req/min · 2,500 req/day
- * - Teams: 120 req/min · 5,000 req/day
- */
+export const TIER_RATE_LIMITS = {
+  FREE: {
+    windowMs: 60_000,
+    maxRequests: 60,            // 60 req/min
+    dailyToolInvocations: 1_000,
+  },
+  PRO: {
+    windowMs: 60_000,
+    maxRequests: 600,           // 600 req/min (10x Free)
+    dailyToolInvocations: 50_000,
+  },
+  TEAMS: {
+    windowMs: 60_000,
+    maxRequests: 3_000,         // 3,000 req/min (50x Free)
+    dailyToolInvocations: 500_000,
+  },
+} as const;
+
 export async function resolveApiRateLimits(userId: string): Promise<{ tier: BillingUiTier; perMinute: number; perDay: number }> {
   try {
     const entitlement = await getVerifiedProEntitlementForUser(userId);
     const tier = entitlement.uiTier;
-    if (ledgerMeetsFeature(tier, 'api_limits')) {
-      return { tier, perMinute: 120, perDay: 5000 };
+    if (tier === 'TEAMS' || ledgerMeetsFeature(tier, 'api_limits')) {
+      return {
+        tier,
+        perMinute: TIER_RATE_LIMITS.TEAMS.maxRequests,
+        perDay: TIER_RATE_LIMITS.TEAMS.dailyToolInvocations,
+      };
     }
-    if (ledgerMeetsFeature(tier, 'ai') || ledgerMeetsFeature(tier, 'sharing')) {
-      return { tier, perMinute: 60, perDay: 2500 };
+    if (tier === 'PRO' || tier === 'CONTRIBUTOR' || tier === 'LIFETIME' || tier === 'ORG' || ledgerMeetsFeature(tier, 'ai') || ledgerMeetsFeature(tier, 'sharing')) {
+      return {
+        tier,
+        perMinute: TIER_RATE_LIMITS.PRO.maxRequests,
+        perDay: TIER_RATE_LIMITS.PRO.dailyToolInvocations,
+      };
     }
   } catch {}
-  return { tier: 'FREE', perMinute: 12, perDay: 300 };
+  return {
+    tier: 'FREE',
+    perMinute: TIER_RATE_LIMITS.FREE.maxRequests,
+    perDay: TIER_RATE_LIMITS.FREE.dailyToolInvocations,
+  };
 }
 
 function minuteKey(d = new Date()) {
@@ -59,12 +77,14 @@ class RateLimitError extends Error {
   type: 'per_minute' | 'per_day';
   resetAt: number;
   retryAfterSec: number;
+  tier?: BillingUiTier;
 
-  constructor(message: string, type: 'per_minute' | 'per_day', resetAt: number) {
+  constructor(message: string, type: 'per_minute' | 'per_day', resetAt: number, tier: BillingUiTier = 'FREE') {
     super(message);
     this.type = type;
     this.resetAt = resetAt;
     this.retryAfterSec = Math.max(1, Math.ceil(resetAt - Date.now() / 1000));
+    this.tier = tier;
   }
 }
 
@@ -75,6 +95,7 @@ async function bumpCounter(opts: {
   max: number;
   type: 'per_minute' | 'per_day';
   resetAt: number;
+  tier?: BillingUiTier;
 }) {
   const tables = systemTables();
   try {
@@ -90,7 +111,7 @@ async function bumpCounter(opts: {
     const msg = String(err?.message || err || '');
     if (/max|maximum|limit/i.test(msg) || err?.code === 400) {
       const timeframe = opts.type === 'per_minute' ? '1-minute' : '24-hour';
-      throw new RateLimitError(`You have exceeded your rolling ${timeframe} limit of ${opts.max} requests.`, opts.type, opts.resetAt);
+      throw new RateLimitError(`You have exceeded your rolling ${timeframe} limit of ${opts.max} requests.`, opts.type, opts.resetAt, opts.tier || 'FREE');
     }
     throw err;
   }
@@ -220,6 +241,7 @@ async function rollAndBump(opts: {
     max: opts.limits.perMinute,
     type: 'per_minute',
     resetAt: resetMinuteEpoch,
+    tier: opts.limits.tier,
   });
   await bumpCounter({
     tableId: opts.tableId,
@@ -228,6 +250,7 @@ async function rollAndBump(opts: {
     max: opts.limits.perDay,
     type: 'per_day',
     resetAt: resetDayEpoch,
+    tier: opts.limits.tier,
   });
 
   return {
@@ -240,7 +263,7 @@ async function rollAndBump(opts: {
 
 const memoryBuckets = new Map<string, { count: number; resetAt: number }>();
 
-function checkMemoryBurst(key: string, limit: number): { count: number; resetAt: number } {
+function checkMemoryBurst(key: string, limit: number, tier: BillingUiTier = 'FREE'): { count: number; resetAt: number } {
   const now = Date.now();
   const existing = memoryBuckets.get(key);
   if (!existing || now >= existing.resetAt) {
@@ -254,7 +277,8 @@ function checkMemoryBurst(key: string, limit: number): { count: number; resetAt:
     throw new RateLimitError(
       `You have exceeded your rolling 1-minute limit of ${limit} requests.`,
       'per_minute',
-      resetEpoch
+      resetEpoch,
+      tier
     );
   }
   return existing;
@@ -270,8 +294,8 @@ export async function enforceApiRateLimits(params: {
   const baseLimits = await resolveApiRateLimits(params.userId);
 
   // Fast in-memory shield: reject burst traffic without hitting the database cluster
-  checkMemoryBurst(`pat:${params.patId}`, baseLimits.perMinute);
-  checkMemoryBurst(`user:${params.userId}`, baseLimits.perMinute);
+  checkMemoryBurst(`pat:${params.patId}`, baseLimits.perMinute, baseLimits.tier);
+  checkMemoryBurst(`user:${params.userId}`, baseLimits.perMinute, baseLimits.tier);
 
   const patRow = await ensurePatRateRow(params.patId, params.userId);
   const patStats = await rollAndBump({ tableId: PAT_RATE, row: patRow, limits: baseLimits });

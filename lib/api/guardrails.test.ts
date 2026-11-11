@@ -57,4 +57,29 @@ describe('Paid Guardrails & Public Pull Access Unit Tests', () => {
     expect(err.code).toBe('payment_required');
     expect(err.message).toBe('Custom message');
   });
+
+  it('resolves correct tiered rate limits for Free vs Pro vs Teams', async () => {
+    const { resolveApiRateLimits, TIER_RATE_LIMITS } = await import('./rate-limits');
+    const freeLimits = await resolveApiRateLimits('free_user');
+    expect(freeLimits.tier).toBe('FREE');
+    expect(freeLimits.perMinute).toBe(TIER_RATE_LIMITS.FREE.maxRequests);
+    expect(freeLimits.perDay).toBe(TIER_RATE_LIMITS.FREE.dailyToolInvocations);
+
+    const proLimits = await resolveApiRateLimits('pro_user');
+    expect(proLimits.tier).toBe('PRO');
+    expect(proLimits.perMinute).toBe(TIER_RATE_LIMITS.PRO.maxRequests);
+    expect(proLimits.perDay).toBe(TIER_RATE_LIMITS.PRO.dailyToolInvocations);
+  });
+
+  it('jsonErr formats 429 RateLimitError with X-RateLimit-Tier and upgrade link', async () => {
+    const { jsonErr } = await import('./guard');
+    const { RateLimitError } = await import('./rate-limits');
+    const err = new RateLimitError('Rate limit exceeded', 'per_minute', 1234567890, 'FREE');
+    const res = jsonErr(err);
+    expect(res.status).toBe(429);
+    expect(res.headers.get('X-RateLimit-Tier')).toBe('FREE');
+    const body = await res.json();
+    expect(body.tier).toBe('FREE');
+    expect(body.upgrade_url).toBe('https://www.kylrix.space/pricing');
+  });
 });

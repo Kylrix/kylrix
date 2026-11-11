@@ -44,9 +44,9 @@ const SHIELD_PRESETS = {
   /** Short burst before DB incrementRowColumn (per PAT / user bucket). */
   patBurst: {
     windowMs: 5_000,
-    max: 28,
+    max: 100,
     burstWindowMs: 1_000,
-    burstMax: 12,
+    burstMax: 50,
     blockMs: 45_000,
   },
   /** SSE session opens per IP. */
