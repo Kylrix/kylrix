@@ -545,8 +545,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                 <ShareLockButton
                   resourceType="note"
                   resourceId={note.$id}
-                  isPublic={getNotePublicState(liveNote)}
-                  isGuest={!!liveNote.isGuest}
+                  isPublic={Boolean(getNotePublicState(liveNote))}
+                  isGuest={Boolean(liveNote.isGuest ?? getNotePublicState(liveNote))}
                   resourceTitle={note.title ?? undefined}
                   dek={note.dek}
                   accentColor="#6366F1"

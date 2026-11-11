@@ -48,8 +48,26 @@ export default function CredentialItem({
   const pinned = isResourcePinned('credential', credential.$id, credential.userId, credential.isPinned);
   const contextMenu = useContextMenu();
   const openMenu = contextMenu?.openMenu;
-  const [localIsPublic, setLocalIsPublic] = useState(!!credential.isPublic);
-  const [localIsGuest, setLocalIsGuest] = useState(!!credential.isGuest);
+  const isVaultPublic = Boolean(
+    credential.isPublic ||
+    credential.metadata?.isPublic ||
+    (typeof credential.metadata === 'string' && (() => {
+      try { return JSON.parse(credential.metadata)?.isPublic; } catch { return false; }
+    })())
+  );
+  const parsedMetaGuest = credential.metadata?.isGuest || (
+    typeof credential.metadata === 'string' && (() => {
+      try { return JSON.parse(credential.metadata)?.isGuest; } catch { return false; }
+    })()
+  );
+  const isVaultGuest = Boolean(
+    credential.isGuest !== undefined
+      ? credential.isGuest
+      : (parsedMetaGuest !== undefined && parsedMetaGuest !== false ? parsedMetaGuest : isVaultPublic)
+  );
+
+  const [localIsPublic, setLocalIsPublic] = useState(isVaultPublic);
+  const [localIsGuest, setLocalIsGuest] = useState(isVaultGuest);
   const [displayCredential, setDisplayCredential] = useState<Credentials>(credential);
   const [isVaultUnlockedState, setIsVaultUnlockedState] = useState(() => {
     try {
@@ -63,9 +81,9 @@ export default function CredentialItem({
   }, [credential]);
 
   useEffect(() => {
-    setLocalIsPublic(!!credential.isPublic);
-    setLocalIsGuest(!!credential.isGuest);
-  }, [credential.isPublic, credential.isGuest]);
+    setLocalIsPublic(isVaultPublic);
+    setLocalIsGuest(isVaultGuest);
+  }, [isVaultPublic, isVaultGuest]);
 
   // Self-heal: subscribe to masterpass unlock and re-evaluate whenever visited or sitting with encrypted placeholder
   useEffect(() => {
@@ -532,8 +550,8 @@ export default function CredentialItem({
         <ShareLockButton 
           resourceType="credential"
           resourceId={credential.$id}
-          isPublic={localIsPublic}
-          isGuest={localIsGuest}
+          isPublic={Boolean(localIsPublic || isVaultPublic)}
+          isGuest={Boolean(localIsGuest || isVaultGuest)}
           accentColor="#6366F1"
           onPublished={(result) => {
             setLocalIsPublic(result?.isPublic ?? true);

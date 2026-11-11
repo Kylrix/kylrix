@@ -1194,9 +1194,9 @@ export function NoteDetailSidebar({
             <ShareLockButton 
               resourceType="note"
               resourceId={note.$id}
-              isPublic={!!isPublic}
-              isGuest={!!(note as any).isGuest}
-              accentColor={isPublic ? '#10B981' : '#6366F1'}
+              isPublic={Boolean(isPublic || getNotePublicState(liveNote))}
+              isGuest={Boolean((note as any).isGuest ?? liveNote.isGuest ?? (isPublic || getNotePublicState(liveNote)))}
+              accentColor="#6366F1"
               onPublished={({ isPublic, isGuest }) => {
                   const updated = { ...note, isPublic, isGuest };
                   onUpdate(updated);

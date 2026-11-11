@@ -154,8 +154,8 @@ export function FormDetail({
           <ShareLockButton
             resourceType="form"
             resourceId={form.$id}
-            isPublic={!!form.isPublic}
-            isGuest={!!form.isGuest}
+            isPublic={Boolean(form.isPublic || form.status === 'published')}
+            isGuest={Boolean(form.isGuest ?? (form.isPublic || form.status === 'published'))}
             resourceTitle={form.title}
             accentColor="#6366F1"
             onPublished={() => void loadForm()}

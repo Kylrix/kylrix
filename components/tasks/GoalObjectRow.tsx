@@ -468,8 +468,8 @@ export default function GoalObjectRow({ task }: Props) {
           <ShareLockButton
             resourceType="goal"
             resourceId={task.id}
-            isPublic={!!task.isPublic}
-            isGuest={!!task.isGuest}
+            isPublic={Boolean(task.isPublic || task.labels?.includes('public') || (Array.isArray(rawTaskTags) && rawTaskTags.includes('public')) || (task as any).visibility === 'public')}
+            isGuest={Boolean(task.isGuest ?? (task.isPublic || task.labels?.includes('public') || (Array.isArray(rawTaskTags) && rawTaskTags.includes('public')) || (task as any).visibility === 'public'))}
             resourceTitle={task.title}
             dek={task.dek}
             accentColor="#A855F7"
