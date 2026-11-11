@@ -223,6 +223,32 @@ export const PatService = {
     const now = new Date();
     const expiresAt = params.expiresAt ? new Date(params.expiresAt) : null;
 
+    // Enforce tier-based agent token limits for Free tier
+    const isAgentToken = category === 'agent_enclave_token' || category === 'agent_provisioning_key' || category === 'agentic_pat';
+    if (isAgentToken) {
+      const { getUserSubscriptionTierServer } = await import('@/lib/services/internal/subscription-entitlement');
+      const tier = await getUserSubscriptionTierServer(params.userId);
+      if (tier === 'FREE') {
+        const existingAgentTokens = await db
+          .select({ count: count() })
+          .from(schema.apikey)
+          .where(
+            and(
+              eq(schema.apikey.userId, params.userId),
+              eq(schema.apikey.enabled, true),
+              or(
+                eq(schema.apikey.category, 'agent_enclave_token'),
+                eq(schema.apikey.category, 'agent_provisioning_key'),
+                eq(schema.apikey.category, 'agentic_pat')
+              )
+            )
+          );
+        if ((existingAgentTokens[0]?.count ?? 0) >= 1) {
+          throw new Error('Free tier includes 1 active Agent Token. Upgrade to Pro for unlimited agent keys.');
+        }
+      }
+    }
+
     // Enforce active PAT ceiling to prevent unbounded database rows
     const existingActive = await db
       .select({ count: count() })

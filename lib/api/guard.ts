@@ -36,6 +36,7 @@ export type ApiActor = {
 };
 
 function applyRateLimitHeaders(headers: Headers, limits: ApiRateLimits) {
+  headers.set('X-RateLimit-Tier', String(limits.tier || 'FREE'));
   headers.set('X-RateLimit-Limit-Minute', String(limits.perMinute));
   headers.set('X-RateLimit-Remaining-Minute', String(limits.remainingMinute));
   headers.set('X-RateLimit-Limit-Day', String(limits.perDay));
@@ -265,15 +266,19 @@ export function jsonErr(err: unknown) {
   const headers: Record<string, string> = {};
   if (e instanceof RateLimitError || e?.code === 'rate_limit_exceeded') {
     const retryAfter = String(e.retryAfterSec || 60);
+    const tier = String(e?.tier || 'FREE');
     headers['Retry-After'] = retryAfter;
     headers['RateLimit-Remaining'] = '0';
     headers['RateLimit-Reset'] = retryAfter;
+    headers['X-RateLimit-Tier'] = tier;
     return NextResponse.json(
       {
         error: e?.code || 'rate_limit_exceeded',
         message: e?.message || 'Rate limit exceeded.',
         type: e?.type || 'per_minute',
+        tier,
         reset_at: e?.resetAt || Math.floor((Date.now() + 60000) / 1000),
+        upgrade_url: 'https://www.kylrix.space/pricing',
       },
       { status: 429, headers }
     );

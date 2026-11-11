@@ -16,6 +16,8 @@ import {
   KeyRound,
   FileText,
   Layers,
+  Lock,
+  Workflow,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -31,6 +33,20 @@ import { getPublicPricingPlansOrDefault, type PublicPricingPlan } from '@/lib/co
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
 
 const FEATURE_ICONS: Record<string, typeof Sparkles> = {
+  sync: Sparkles,
+  vault: Lock,
+  workspaces: Layers,
+  agent_token: KeyRound,
+  tools: Bot,
+  high_speed_api: Sparkles,
+  unlimited_workspaces: Layers,
+  unlimited_agent_keys: KeyRound,
+  sudo_window: Lock,
+  flows: Workflow,
+  teams_rpm: Sparkles,
+  team_roles: Layers,
+  shared_vaults: Lock,
+  audit_logs: FileText,
   ai: Bot,
   voice: Mic,
   file_upload: Folder,

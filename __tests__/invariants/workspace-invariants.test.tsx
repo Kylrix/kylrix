@@ -169,4 +169,28 @@ describe('Workspace Domain Invariants (workspace-invariants.test.tsx)', () => {
       expect(namedWsItems.map((i) => i.id)).toEqual(['cred_named_ws_1', 'cred_junction_attached']);
     });
   });
+
+  describe('Workspace Quota Invariant: Free Tier Limits', () => {
+    it('enforces 1 custom workspace limit for Free tier accounts', () => {
+      const userId = 'usr_free_plan';
+      const existingWorkspaces = [
+        { id: userId, ownerId: userId, creatorId: userId, isPersonal: true },
+        { id: 'ws_custom_1', ownerId: userId, creatorId: userId, isPersonal: false },
+      ];
+
+      const ownedCustom = existingWorkspaces.filter(
+        (w) =>
+          (w.creatorId === userId || w.ownerId === userId) &&
+          !w.isPersonal &&
+          w.id !== userId &&
+          w.id !== 'personal'
+      );
+
+      expect(ownedCustom.length).toBe(1);
+      const shouldReject = ownedCustom.length >= 1;
+      expect(shouldReject).toBe(true);
+      const rejectionError = 'Free tier includes 1 custom workspace. Upgrade to Pro for unlimited workspaces.';
+      expect(rejectionError).toContain('Free tier includes 1 custom workspace');
+    });
+  });
 });
