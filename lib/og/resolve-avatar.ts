@@ -33,10 +33,15 @@ export function isSafeAvatarUrl(urlStr: string): URL | null {
   }
 }
 
-export async function resolveProfileAvatarDataUrl(
-  fileId: string | null | undefined
+/**
+ * Safely resolves remote image URLs or safe data URLs to base64 data URLs.
+ * Validates against SSRF, internal IPs, cloud metadata, enforces raster MIME types,
+ * payload size limit (5MB), and an AbortSignal timeout (4s).
+ */
+export async function resolveMediaDataUrl(
+  targetUrl: string | null | undefined
 ): Promise<string | null> {
-  const id = String(fileId || '').trim();
+  const id = String(targetUrl || '').trim();
   if (!id) return null;
   try {
     if (id.startsWith('data:')) {
@@ -55,11 +60,16 @@ export async function resolveProfileAvatarDataUrl(
       }
       return null;
     }
-    // Storage bucket-based avatars are no longer supported
     return null;
   } catch {
     return null;
   }
+}
+
+export async function resolveProfileAvatarDataUrl(
+  fileId: string | null | undefined
+): Promise<string | null> {
+  return resolveMediaDataUrl(fileId);
 }
 
 export async function resolveOwnerForOg(userId: string | null | undefined): Promise<{

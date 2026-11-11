@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { isSafeAvatarUrl, resolveProfileAvatarDataUrl } from './resolve-avatar';
+import { isSafeAvatarUrl, resolveProfileAvatarDataUrl, resolveMediaDataUrl } from './resolve-avatar';
 
 describe('isSafeAvatarUrl - SSRF Guard', () => {
   it('allows safe public HTTPS URLs', () => {
@@ -143,5 +143,48 @@ describe('resolveProfileAvatarDataUrl', () => {
 
     const result = await resolveProfileAvatarDataUrl('https://images.example.com/huge.png');
     expect(result).toBeNull();
+  });
+});
+
+describe('resolveMediaDataUrl', () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('blocks SSRF and link-local cloud metadata attempts on media URLs', async () => {
+    const fetchSpy = vi.fn();
+    globalThis.fetch = fetchSpy;
+
+    expect(await resolveMediaDataUrl('http://169.254.169.254/latest/meta-data')).toBeNull();
+    expect(await resolveMediaDataUrl('https://169.254.169.254/latest/user-data')).toBeNull();
+    expect(await resolveMediaDataUrl('https://127.0.0.1:8080/admin/dump')).toBeNull();
+    expect(await resolveMediaDataUrl('https://localhost:3005/api/dev/logs')).toBeNull();
+    expect(await resolveMediaDataUrl('https://10.0.0.5/internal.png')).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('safely fetches and returns base64 data for legitimate media URLs', async () => {
+    const fakeImageBuffer = Buffer.from('test-image-content');
+    const exactArrayBuffer = fakeImageBuffer.buffer.slice(
+      fakeImageBuffer.byteOffset,
+      fakeImageBuffer.byteOffset + fakeImageBuffer.byteLength
+    );
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({
+        'content-type': 'image/webp',
+        'content-length': String(fakeImageBuffer.byteLength),
+      }),
+      arrayBuffer: async () => exactArrayBuffer,
+    });
+
+    const result = await resolveMediaDataUrl('https://media.example.com/test.webp');
+    expect(result).toBe(`data:image/webp;base64,${fakeImageBuffer.toString('base64')}`);
   });
 });
