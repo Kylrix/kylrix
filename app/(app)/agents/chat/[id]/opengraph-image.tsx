@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getPublicAgentConversationSecure } from '@/lib/actions/agentic';
 import { renderKylrixShareCard } from '@/lib/og/share-card';
-import { resolveOwnerForOg } from '@/lib/og/resolve-avatar';
+import { resolveOwnerForOg, resolveMediaDataUrl } from '@/lib/og/resolve-avatar';
 
 export const runtime = 'nodejs';
 export const revalidate = 86400;
@@ -24,13 +24,7 @@ export default async function Image({
   let firstMedia: string | null = null;
   const match = /!\[.*?\]\((https?:\/\/[^\s\)]+)\)/i.exec(String(payload?.message?.content || ''));
   if (match && match[1]) {
-    try {
-      const res = await fetch(match[1]);
-      if (res.ok) {
-        const ct = res.headers.get('content-type') || 'image/png';
-        firstMedia = `data:${ct};base64,${Buffer.from(await res.arrayBuffer()).toString('base64')}`;
-      }
-    } catch {}
+    firstMedia = await resolveMediaDataUrl(match[1]);
   }
 
   return new ImageResponse(
