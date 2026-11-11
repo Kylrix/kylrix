@@ -21,6 +21,7 @@ const PENDING_PAYLOADS_KEY = 'kylrix:sync:pending-payloads';
 
 const pendingById = new Map<string, string>();
 const pendingPayloads = new Map<string, any>();
+const freshnessChecks = new Map<string, number>();
 const statusListeners = new Set<() => void>();
 const failedSyncAttempts = new Map<string, { count: number; lastFailedAt: number }>();
 
@@ -546,7 +547,78 @@ export const autonomicSyncEngine = {
     lastPullAt = at;
   },
 
-  requestObjectFreshness(_kind: string, _id?: string, _onRefreshed?: (item: any) => void) {},
+  requestObjectFreshness(
+    kind: string,
+    id?: string,
+    onRefreshed?: (item: any) => void,
+    opts?: { force?: boolean }
+  ) {
+    if (typeof window === 'undefined') return;
+    const cleanId = String(id || '').trim();
+    const cacheKey = `${kind}:${cleanId}`;
+    const now = Date.now();
+    const FRESHNESS_WINDOW_MS = 30_000; // 30 seconds freshness window
+
+    const lastCheck = freshnessChecks.get(cacheKey) || 0;
+    if (!opts?.force && now - lastCheck < FRESHNESS_WINDOW_MS) {
+      return;
+    }
+    freshnessChecks.set(cacheKey, now);
+
+    // Non-blocking background fetch and compare
+    void (async () => {
+      try {
+        let activeUserId: string | null = null;
+        try {
+          const { authClient } = await import('@/lib/auth/better-auth-client');
+          const sessionRes = await authClient.getSession().catch(() => null);
+          if (sessionRes?.data?.user?.id) {
+            activeUserId = sessionRes.data.user.id;
+          }
+        } catch {}
+
+        if (kind === 'note' && cleanId) {
+          const { getNoteTurso } = await import('@/lib/actions/turso-ops');
+          const res = await getNoteTurso(cleanId);
+          if (res?.success && res?.row) {
+            const remote = res.row;
+            const local = await LocalEngine.cacheGet<any>(`note_${cleanId}`);
+            const remoteTime = new Date(remote.updatedAt || remote.createdAt || 0).getTime();
+            const localTime = new Date(local?.updatedAt || local?.$updatedAt || 0).getTime();
+            if (remoteTime > localTime || !local) {
+              const shaped = { ...local, ...remote, $id: remote.id || cleanId };
+              await LocalEngine.cacheSet(`note_${cleanId}`, shaped);
+              LocalEngine.snapshotBaseline(cleanId, shaped);
+              window.dispatchEvent(new CustomEvent('kylrix:live-note-saved', { detail: { note: shaped } }));
+              if (onRefreshed) onRefreshed(shaped);
+            }
+          }
+        } else if (kind === 'goal' && cleanId) {
+          const { listGoalsTurso } = await import('@/lib/actions/turso-ops');
+          if (activeUserId) {
+            const res = await listGoalsTurso(activeUserId);
+            if (res?.success && Array.isArray(res.rows)) {
+              const remote = res.rows.find((r: any) => r.id === cleanId || r.$id === cleanId);
+              if (remote) {
+                const local = await LocalEngine.cacheGet<any>(`goal_${cleanId}`);
+                const remoteTime = new Date(remote.updatedAt || remote.createdAt || 0).getTime();
+                const localTime = new Date(local?.updatedAt || local?.$updatedAt || 0).getTime();
+                if (remoteTime > localTime || !local) {
+                  const shaped = { ...local, ...remote, id: remote.id || cleanId };
+                  await LocalEngine.cacheSet(`goal_${cleanId}`, shaped);
+                  LocalEngine.snapshotBaseline(cleanId, shaped);
+                  window.dispatchEvent(new CustomEvent('kylrix:live-task-saved', { detail: { task: shaped } }));
+                  if (onRefreshed) onRefreshed(shaped);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[SyncEngine] requestObjectFreshness error for ${kind}:${cleanId}:`, err);
+      }
+    })();
+  },
 
   subscribe(listener: () => void) {
     statusListeners.add(listener);

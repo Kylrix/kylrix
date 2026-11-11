@@ -35,6 +35,7 @@ import {
 import { useSection } from '@/context/SectionContext';
 import { useSudo } from '@/context/SudoContext';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useWorkspace } from '@/context/WorkspaceContext';
 import { NativeSidebarMount } from '@/components/layout/NativeSidebarMount';
 import {
@@ -126,6 +127,15 @@ export default function CredentialDialog({
   const [envHint, setEnvHint] = useState<string | null>(null);
   const [draftReady, setDraftReady] = useState(false);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Immediate unlock prompt if opened while locked or without MEK
+  useEffect(() => {
+    if (open && (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey() || !masterPassCrypto.isVaultUnlocked())) {
+      requestSudo({
+        onSuccess: () => {},
+      });
+    }
+  }, [open, requestSudo]);
 
   // Wipe legacy plaintext drafts once.
   useEffect(() => {
@@ -506,19 +516,21 @@ export default function CredentialDialog({
     return credentialData;
   };
 
+  const isVaultLockedOrNoMek = !ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey() || !masterPassCrypto.isVaultUnlocked();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
     setError(null);
 
-    if (!masterPassCrypto.isVaultUnlocked()) {
+    if (isVaultLockedOrNoMek) {
       requestSudo({
         onSuccess: () => {
           const fake = { preventDefault() {} } as React.FormEvent;
           void handleSubmit(fake);
         },
       });
-      return;
+      throw new Error('VaultLocked — Cannot create zero-knowledge credential without MEK');
     }
 
     setLoading(true);
@@ -553,9 +565,9 @@ export default function CredentialDialog({
 
   const handleMorphToDetail = async () => {
     if (!resolveSecretName() || loading) return;
-    if (!masterPassCrypto.isVaultUnlocked()) {
+    if (isVaultLockedOrNoMek) {
       requestSudo({ onSuccess: () => void handleMorphToDetail() });
-      return;
+      throw new Error('VaultLocked — Cannot create zero-knowledge credential without MEK');
     }
     setLoading(true);
     setError(null);
@@ -1086,12 +1098,12 @@ export default function CredentialDialog({
       <div className="px-5 py-4 shrink-0 border-t border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || isVaultLockedOrNoMek}
           className="w-full py-3 rounded-xl font-bold bg-[#6366F1] hover:bg-[#5254E8] text-white disabled:opacity-50 flex items-center justify-center gap-2 text-sm font-clash"
         >
           {!loading && <Save className="w-4 h-4" />}
           <span>
-            {loading ? 'Saving…' : initial ? 'Update' : isEnvMode ? 'Save Env' : 'Save Secret'}
+            {loading ? 'Saving…' : isVaultLockedOrNoMek ? 'Vault Locked — Unlock Required' : initial ? 'Update' : isEnvMode ? 'Save Env' : 'Save Secret'}
           </span>
         </button>
       </div>

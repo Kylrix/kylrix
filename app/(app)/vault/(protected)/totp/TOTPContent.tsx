@@ -625,6 +625,21 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         if (!isCancelled) {
           setTotpCodes(rows as any);
         }
+
+        // Break stale cache lock: background fetch from Turso
+        if (activeUserId !== 'guest') {
+          void (async () => {
+            try {
+              const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
+              const res = await listTotpSecretsTurso(activeUserId, targetWsId);
+              if (res?.rows && !isCancelled) {
+                const refreshed = (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
+                setTotpCodes(refreshed as any);
+                void LocalEngine.cacheSet(cacheKey, refreshed);
+              }
+            } catch {}
+          })();
+        }
       } catch (err: any) {
         console.error('[TOTP] Failed to load direct TOTP secrets:', err);
       } finally {

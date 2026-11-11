@@ -44,7 +44,7 @@ To balance near-instantaneous sync responsiveness with server request efficiency
 
 - **Typing Debounce (`FLUSH_TYPING_DEBOUNCE_MS`):** `150ms`.
 - **Hard Ceiling (`HARD_CEILING_MS`):** `500ms`. Ensures queued edits are force-flushed to the server within 500ms even during continuous typing.
-- **Freshness Cache Threshold:** `requestObjectFreshness` skips remote document fetches if a local baseline exists in `LocalEngine` and was verified within 300,000ms (5 minutes).
+- **Freshness Cache Threshold:** `requestObjectFreshness` skips remote document fetches if a local baseline exists in `LocalEngine` and was verified within 30,000ms (30 seconds).
 
 ---
 

@@ -1282,7 +1282,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
         // 2. Background Refresh — network errors are silent so local copy remains SoT
         try {
-          const data = await fetchBatch(userId);
+          const data = await fetchBatch(userId, true);
           dispatchSyncedData(data);
           await refreshEcosystemTags();
         } catch (netErr) {
@@ -1599,9 +1599,21 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const onLiveTaskSaved = (event: Event) => {
+      const incoming = (event as CustomEvent)?.detail?.task;
+      if (!incoming) return;
+      const coerced = coerceCachedTask(incoming);
+      if (coerced) {
+        dispatch({ type: 'UPSERT_TASK', payload: coerced });
+        void setCachedData(`goal_${coerced.id}`, coerced);
+      }
+    };
+
     window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+    window.addEventListener('kylrix:live-task-saved', onLiveTaskSaved as EventListener);
     return () => {
       window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
+      window.removeEventListener('kylrix:live-task-saved', onLiveTaskSaved as EventListener);
     };
   }, [setCachedData, state.userId]);
 

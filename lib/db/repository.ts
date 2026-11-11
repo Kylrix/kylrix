@@ -692,7 +692,17 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
     }
 
     try {
-      await db.insert(table).values(insertData);
+      if (table && table.id) {
+        await db
+          .insert(table)
+          .values(insertData)
+          .onConflictDoUpdate({
+            target: table.id,
+            set: insertData,
+          });
+      } else {
+        await db.insert(table).values(insertData);
+      }
       const shaped = this.shapeRow<T>(insertData, tableId);
       broadcastRealtimeEvent({
         databaseId,

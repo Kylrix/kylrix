@@ -251,7 +251,9 @@ function DashboardPageContent() {
   }, [loadingMore, hasMore, nextCursor, loadAllCredentials]);
 
   const hydrateVaultData = useCallback(async () => {
-    await loadAllCredentials();
+    await loadAllCredentials(false, null, false);
+    // Break stale cache lock: background revalidation from Turso
+    void loadAllCredentials(true, null, true);
   }, [loadAllCredentials]);
 
   useEffect(() => {
