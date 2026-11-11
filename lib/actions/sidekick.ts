@@ -39,6 +39,7 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
         const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
           Query.equal('userId', actor.$id),
           Query.equal('targetType', 'workspace'),
+          Query.orderDesc('updatedAt'),
           Query.limit(20),
         ]);
         if (res.rows.length) {
@@ -55,6 +56,7 @@ export async function executeSidekickAction(opts: { target: { type: string; id: 
           Query.equal('userId', actor.$id),
           Query.equal('targetType', target.type),
           Query.equal('targetId', target.id),
+          Query.orderDesc('updatedAt'),
           Query.limit(10),
         ]);
         if (res.rows.length) {
@@ -204,6 +206,7 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
           const res = await databases.listRows('passwordManagerDb', 'agentic_sessions', [
             Query.equal('userId', actor.$id),
             Query.equal('targetType', 'workspace'),
+            Query.orderDesc('updatedAt'),
             Query.limit(20),
           ]);
           if (res.rows.length) {
@@ -220,6 +223,7 @@ export async function executeSidekickChat(opts: { target: { type: string; id: st
             Query.equal('userId', actor.$id),
             Query.equal('targetType', opts.target.type),
             Query.equal('targetId', opts.target.id),
+            Query.orderDesc('updatedAt'),
             Query.limit(10),
           ]);
           if (res.rows.length) {

@@ -457,10 +457,27 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       // If we are resetting, we can use fetchOptimized for the first page
       let res;
       if (reset && INITIAL_NOTES_CACHE_KEY) {
-        const fetcher = () => listNotesPaginated({
-          limit: PAGE_SIZE,
-          cursor: null,
-          userId: user?.$id});
+        const fetcher = async () => {
+          if (user?.$id) {
+            try {
+              const { listNotesTurso } = await import('@/lib/actions/turso-ops');
+              const tursoRes = await listNotesTurso(user.$id);
+              if (tursoRes?.success && Array.isArray(tursoRes.rows) && tursoRes.rows.length > 0) {
+                return {
+                  rows: tursoRes.rows.map((r: any) => ({ ...r, $id: r.id || r.$id })),
+                  total: tursoRes.rows.length,
+                  hasMore: false,
+                  nextCursor: null,
+                };
+              }
+            } catch {}
+          }
+          return listNotesPaginated({
+            limit: PAGE_SIZE,
+            cursor: null,
+            userId: user?.$id,
+          });
+        };
         
         const optimizedRes = await fetchOptimized(INITIAL_NOTES_CACHE_KEY, fetcher, 15_000);
         res = optimizedRes;
@@ -824,13 +841,21 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       if (!noteId) return;
       registerComposeSession(noteId);
     };
+    const onLiveNoteSaved = (event: Event) => {
+      const incoming = (event as CustomEvent)?.detail?.note;
+      if (!incoming) return;
+      const normalized = normalizeVisibility(incoming as Notes);
+      upsertNote(normalized);
+    };
     window.addEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
     window.addEventListener('kylrix:sync-pending', onSyncPending as EventListener);
+    window.addEventListener('kylrix:live-note-saved', onLiveNoteSaved as EventListener);
     return () => {
       window.removeEventListener('kylrix:sync-complete', onSyncComplete as EventListener);
       window.removeEventListener('kylrix:sync-pending', onSyncPending as EventListener);
+      window.removeEventListener('kylrix:live-note-saved', onLiveNoteSaved as EventListener);
     };
-  }, [unregisterComposeSession, registerComposeSession]);
+  }, [unregisterComposeSession, registerComposeSession, upsertNote]);
 
   const clearLiveNoteGuard = useCallback((noteId: string) => {
     liveEditGuardsRef.current.delete(noteId);
