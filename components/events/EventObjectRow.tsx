@@ -357,8 +357,8 @@ export function EventObjectRow({ event, onClick, onDelete }: Props) {
             <ShareLockButton
               resourceType="event"
               resourceId={event.id}
-              isPublic={!!event.isPublic}
-              isGuest={!!event.isGuest}
+              isPublic={Boolean(event.isPublic || (event as any).visibility === 'public')}
+              isGuest={Boolean(event.isGuest ?? (event.isPublic || (event as any).visibility === 'public'))}
               accentColor="#22C55E"
               onPublished={() => {}}
             />

@@ -46,6 +46,32 @@ export function ShareLockButton({
   const { open } = useUnifiedDrawer();
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
+  const [localIsPublic, setLocalIsPublic] = useState(Boolean(isPublic));
+  const [localIsGuest, setLocalIsGuest] = useState(Boolean(isGuest));
+
+  React.useEffect(() => {
+    setLocalIsPublic(Boolean(isPublic));
+  }, [isPublic]);
+
+  React.useEffect(() => {
+    setLocalIsGuest(Boolean(isGuest));
+  }, [isGuest]);
+
+  // Realtime settle listener: when a share publish event settles for resourceId, update local state optimistically
+  React.useEffect(() => {
+    if (!resourceId || typeof window === 'undefined') return;
+    const handleSettled = (ev: Event) => {
+      const detail = (ev as CustomEvent).detail || {};
+      if (detail.resourceId === resourceId && detail.ok !== false) {
+        setLocalIsPublic(true);
+        setLocalIsGuest(true);
+      }
+    };
+    window.addEventListener('kylrix:share-published', handleSettled);
+    return () => {
+      window.removeEventListener('kylrix:share-published', handleSettled);
+    };
+  }, [resourceId]);
 
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,7 +93,10 @@ export function ShareLockButton({
       return;
     }
 
-    if (!canPublish && !isPublic) {
+    const effectiveIsPublic = localIsPublic || isPublic;
+    const effectiveIsGuest = localIsGuest || isGuest;
+
+    if (!canPublish && !effectiveIsPublic) {
       showError('Cannot share: ' + (blockReason || 'This resource cannot be shared publicly.'));
       return;
     }
@@ -91,7 +120,7 @@ export function ShareLockButton({
       showError(err?.message || 'Could not build share link');
       return;
     }
-    const alreadyLive = isPublic && isGuest;
+    const alreadyLive = effectiveIsPublic && effectiveIsGuest;
 
     // Happy-go-lucky: drawer + URL first
     open('share-context', {
@@ -126,6 +155,8 @@ export function ShareLockButton({
         }
         return;
       }
+      setLocalIsPublic(true);
+      setLocalIsGuest(true);
       onPublished?.({
         isPublic: true,
         isGuest: true,
@@ -157,12 +188,12 @@ export function ShareLockButton({
     }
   };
 
-  const isActive = isPublic || isGuest;
+  const isShared = Boolean(localIsPublic || localIsGuest || isPublic || isGuest);
   const tip = busy
     ? 'Confirming share…'
-    : !canPublish && !isActive
+    : !canPublish && !isShared
       ? (blockReason || 'Cannot share')
-      : isActive
+      : isShared
         ? 'Copy public link'
         : 'Share publicly';
 
@@ -175,20 +206,14 @@ export function ShareLockButton({
       sx={{
         width: 32,
         height: 32,
-        color: isPublic && isGuest 
-          ? accentColor 
-          : isPublic 
-            ? `color-mix(in srgb, ${accentColor} 50%, transparent)` 
-            : '#FFFFFF',
+        color: isShared ? accentColor : 'rgba(255, 255, 255, 0.4)',
+        bgcolor: isShared ? `color-mix(in srgb, ${accentColor} 15%, transparent)` : 'transparent',
+        border: isShared ? `1px solid color-mix(in srgb, ${accentColor} 30%, transparent)` : '1px solid transparent',
         transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         opacity: busy ? 0.5 : 1,
         '&:hover': {
-          color: isPublic && isGuest 
-            ? accentColor 
-            : isPublic 
-              ? `color-mix(in srgb, ${accentColor} 70%, transparent)` 
-              : 'white',
-          bgcolor: 'rgba(255, 255, 255, 0.05)',
+          color: isShared ? accentColor : '#FFFFFF',
+          bgcolor: isShared ? `color-mix(in srgb, ${accentColor} 25%, transparent)` : 'rgba(255, 255, 255, 0.08)',
           transform: 'scale(1.1)'},
         '&.ob-disabled': {
            color: 'rgba(255, 255, 255, 0.1)'}

@@ -626,8 +626,8 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <ShareLockButton
               resourceType="goal"
               resourceId={task.id}
-              isPublic={!!task.isPublic}
-              isGuest={!!task.isGuest}
+              isPublic={Boolean(task.isPublic || task.labels?.includes('public') || ((task as any).tags && Array.isArray((task as any).tags) && (task as any).tags.includes('public')) || (task as any).visibility === 'public')}
+              isGuest={Boolean(task.isGuest ?? (task.isPublic || task.labels?.includes('public') || ((task as any).tags && Array.isArray((task as any).tags) && (task as any).tags.includes('public')) || (task as any).visibility === 'public'))}
               resourceTitle={task.title}
               dek={task.dek}
               accentColor="#A855F7"
