@@ -110,7 +110,7 @@ export function isValidDiscordWebhookUrl(urlStr: string | null | undefined): boo
     // Block internal port scanning and non-standard ports
     if (url.port && url.port !== '443') return false;
 
-    const hostname = url.hostname.toLowerCase();
+    const hostname = url.hostname.toLowerCase().replace(/\.+$/, '');
     const isDiscordDomain =
       hostname === 'discord.com' ||
       hostname === 'discordapp.com' ||
@@ -1515,10 +1515,12 @@ export async function POST(req: NextRequest) {
         ];
       }
 
+      // Enforce strict 5s timeout to protect against slowloris-style hanging sockets and serverless resource exhaustion
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(messageBody),
+        signal: AbortSignal.timeout(5000),
       });
 
       if (!response.ok) {
