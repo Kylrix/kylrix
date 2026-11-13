@@ -70,6 +70,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const refreshEntitlement = useCallback(async (force = false) => {
     if (authLoading || !user?.$id) return;
+
+    const isContributorUser = Boolean(
+      (user as any)?.isContributor ||
+      user?.prefs?.isContributor ||
+      user?.prefs?.tier === 'CONTRIBUTOR'
+    );
+
+    // Optimistic override: if user indicates contributor status, immediately set without waiting
+    if (isContributorUser) {
+      setCurrentTier('CONTRIBUTOR');
+      setExpiresAt(null);
+      if (typeof window !== 'undefined') {
+        const localKey = `kylrix_entitlement_${user.$id}`;
+        const cachedStr = localStorage.getItem(localKey);
+        if (cachedStr && cachedStr.includes('"FREE"')) {
+          localStorage.removeItem(localKey);
+        }
+      }
+      setTierLoading(false);
+      return;
+    }
+
     setTierLoading(true);
     try {
       if (isSelfHostedDeployment()) {
@@ -83,16 +105,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         setExpiresAt(null);
         return;
       }
-      const isContributorUser = Boolean(
-        (user as any)?.isContributor ||
-        user?.prefs?.isContributor ||
-        user?.prefs?.tier === 'CONTRIBUTOR'
-      );
-      if (isContributorUser) {
-        setCurrentTier('CONTRIBUTOR');
-        setExpiresAt(null);
-        return;
+
+      // Clear stale local cache if it contains FREE while user hints contributor/pro
+      if (typeof window !== 'undefined') {
+        const localKey = `kylrix_entitlement_${user.$id}`;
+        const cachedStr = localStorage.getItem(localKey);
+        if (cachedStr && cachedStr.includes('"FREE"') && isContributorUser) {
+          localStorage.removeItem(localKey);
+        }
       }
+
       const ent = await BillingCacheService.getEntitlement(user.$id, force);
       const hasContributorHint = Boolean(
         (user as any)?.isContributor ||
@@ -187,6 +209,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         user?.prefs?.isContributor ||
         user?.prefs?.tier === 'CONTRIBUTOR'
       );
+
+      if (hasContributorHint) {
+        setCurrentTier('CONTRIBUTOR');
+        setExpiresAt(null);
+        if (typeof window !== 'undefined') {
+          const localKey = `kylrix_entitlement_${user.$id}`;
+          const cachedStr = localStorage.getItem(localKey);
+          if (cachedStr && cachedStr.includes('"FREE"')) {
+            localStorage.removeItem(localKey);
+          }
+        }
+      }
 
       // Try server hydration first for initial load or forced refresh
       if (force) {

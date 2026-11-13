@@ -673,7 +673,25 @@ export async function verifyProEntitlementAction(jwt?: string | null) {
       source: 'none' as const,
       uiTier: 'FREE' as const};
   }
+
+  // Check user snapshot for contributor flags or preference tiers before falling back
+  const userIsContributor = Boolean(
+    (user as any)?.isContributor ||
+    (user as any)?.prefs?.isContributor ||
+    (user as any)?.prefs?.tier === 'CONTRIBUTOR'
+  );
+
   const ent = await getVerifiedProEntitlementForUser(user.$id);
+
+  if (ent.uiTier === 'FREE' && userIsContributor) {
+    return {
+      authenticated: true as const,
+      active: true,
+      expiresAt: null,
+      source: 'subscription_row' as const,
+      uiTier: 'CONTRIBUTOR' as const};
+  }
+
   return {
     authenticated: true as const,
     active: ent.active,

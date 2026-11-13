@@ -76,3 +76,6 @@ functions/**/.env.*
 # ephemeral scratch and test results
 .ignore/
 test-results/
+
+# local patch inputs
+/kylrixpatch/

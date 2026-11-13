@@ -11,10 +11,6 @@ import {
     Bot,
     Lightbulb,
     ShieldCheck as SecurityIcon,
-    ShieldCheck,
-    MonitorSmartphone as SessionsIcon,
-    History as ActivityIcon,
-    Sliders as PreferencesIcon,
     Settings2 as RootAccountIcon,
     ShieldAlert as AdminIcon,
     Code2 as DevelopersIcon,
@@ -28,6 +24,8 @@ import {
     ArrowUpDown,
     LogOut,
     Crown,
+    User,
+    Sliders,
 } from 'lucide-react';
 import { WorkspaceTab } from '@/components/settings/WorkspaceTab';
 import { AgentsSettingsTab } from '@/components/settings/AgentsSettingsTab';
@@ -55,8 +53,6 @@ import { getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/user-utils'
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 
 // Consolidated settings subpage imports
-import SessionsManager from '@/components/SessionsManager';
-import ActivityLogs from '@/components/ActivityLogs';
 import ConnectedIdentities from '@/components/ConnectedIdentities';
 import PreferencesManager from '@/components/PreferencesManager';
 import { TwoFactorPanel } from '@/components/overlays/TwoFactorDrawer';
@@ -111,8 +107,8 @@ function SettingsPageInner() {
     const { isRightRailPushing } = useSidebar();
     const _nativeSidebar = useNativeSidebarOptional();
 
-    // Tab state
-    const [activeTab, setActiveTab] = useState<'general' | 'billing' | 'teams' | 'agents' | 'workspace' | 'security' | 'privacy' | 'developers' | 'sessions' | 'activity' | 'identities' | 'preferences' | 'account' | 'admin'>('general');
+    // Tab state (8 core domains + admin)
+    const [activeTab, setActiveTab] = useState<'general' | 'security' | 'identities' | 'workspace' | 'teams' | 'agents' | 'developers' | 'billing' | 'admin'>('general');
     const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
     const [mfaFactors, setMfaFactors] = useState<any>(null);
     const [accountMfaEnabled, setAccountMfaEnabled] = useState(false);
@@ -122,7 +118,7 @@ function SettingsPageInner() {
     useEffect(() => {
         const section = (searchParams.get('section') || '').toLowerCase();
         const tab = (searchParams.get('tab') || '').toLowerCase();
-        const allowed = new Set(['general', 'billing', 'teams', 'agents', 'workspace', 'security', 'privacy', 'developers', 'sessions', 'activity', 'identities', 'preferences', 'account', 'admin']);
+        const allowed = new Set(['general', 'security', 'identities', 'workspace', 'teams', 'agents', 'developers', 'billing', 'admin']);
         if (section.startsWith('admin') || tab === 'admin') {
             setActiveTab('admin');
             if (section.includes('user')) setAdminSubTab('users');
@@ -138,6 +134,15 @@ function SettingsPageInner() {
         }
         if (tab === 'assistants' || tab === 'agent') {
             setActiveTab('agents');
+            return;
+        }
+        // Legacy tab mappings: privacy -> security, preferences & account -> general, drop activity & sessions
+        if (tab === 'privacy') {
+            setActiveTab('security');
+            return;
+        }
+        if (tab === 'preferences' || tab === 'account' || tab === 'sessions' || tab === 'activity') {
+            setActiveTab('general');
             return;
         }
         const drawer = (searchParams.get('drawer') || '').toLowerCase();
@@ -525,18 +530,13 @@ function SettingsPageInner() {
 
     const tabsList = [
         { id: 'general', label: 'General', icon: RootAccountIcon },
-        { id: 'billing', label: 'Billing', icon: BillingIcon },
-        { id: 'teams', label: 'Teams', icon: Users },
-        { id: 'agents', label: 'Smart Agents', icon: Bot },
-        { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
         { id: 'security', label: 'Security & 2FA', icon: SecurityIcon },
-        { id: 'privacy', label: 'Privacy', icon: ShieldCheck },
-        { id: 'developers', label: 'Developers', icon: DevelopersIcon },
-        { id: 'sessions', label: 'Sessions', icon: SessionsIcon },
-        { id: 'activity', label: 'Activity Logs', icon: ActivityIcon },
         { id: 'identities', label: 'Connected Apps', icon: Fingerprint },
-        { id: 'preferences', label: 'Preferences', icon: PreferencesIcon },
-        { id: 'account', label: 'Delete/Export', icon: Trash2 },
+        { id: 'workspace', label: 'Workspace', icon: WorkspaceIcon },
+        { id: 'teams', label: 'Teams & Collaborators', icon: Users },
+        { id: 'agents', label: 'Smart Agents', icon: Bot },
+        { id: 'developers', label: 'Developers', icon: DevelopersIcon },
+        { id: 'billing', label: 'Billing & Plans', icon: BillingIcon },
     ];
     if (isAdmin) {
         tabsList.push({ id: 'admin', label: 'Admin', icon: AdminIcon });
@@ -690,204 +690,381 @@ function SettingsPageInner() {
                 )}
 
                 {activeTab === 'general' && (
-                    <div className={`grid gap-8 items-start ${isRightRailPushing ? 'grid-cols-1 xl:grid-cols-[1.1fr_1fr]' : 'grid-cols-1 md:grid-cols-[1.1fr_1fr]'}`}>
-                        {/* Left Column: Discoverability, Integrations & Feedback */}
-                        <div className="flex flex-col gap-8">
-                            {/* Referral Program */}
-                            <div className="p-5 md:p-6 bg-[#000000] border-2 border-white/20 rounded-[22px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 text-[#818CF8] flex items-center justify-center shrink-0">
-                                            <Users size={18} />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">
-                                                 <h4 className="text-white font-bold text-sm md:text-base font-clash m-0 truncate">
-                                                     Referral & Growth
-                                                 </h4>
-                                                 <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
-                                                     +1.5 $KYL / invite
-                                                 </span>
+                    <div className="space-y-10 pb-24 max-w-4xl">
+                        {/* Profile & Identity Banner */}
+                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+                            <div className="flex items-center gap-4 min-w-0 flex-1">
+                                <div className="w-16 h-16 rounded-2xl bg-[#161412] border-2 border-white/20 text-white/40 flex items-center justify-center shrink-0 font-clash text-2xl font-black">
+                                    {profile?.displayName?.charAt(0)?.toUpperCase() || effUsername?.charAt(0)?.toUpperCase() || user?.name?.charAt(0)?.toUpperCase() || <User size={28} className="text-white/60" />}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h3 className="text-lg font-black text-white font-clash m-0 truncate">
+                                            {profile?.displayName || user?.name || effUsername || 'User Profile'}
+                                        </h3>
+                                        {effUsername && (
+                                            <span className="text-xs font-mono text-[#818CF8] bg-[#6366F1]/15 px-2 py-0.5 rounded-md border border-[#6366F1]/30">
+                                                @{effUsername}
+                                            </span>
+                                        )}
+                                        {isContributor && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                <Crown size={10} className="text-emerald-400" />
+                                                Contributor
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-white/50 font-medium mt-1 m-0 truncate">
+                                        {profile?.bio || user?.email || 'Manage your public persona, avatar, and bio'}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="w-full sm:w-auto h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-[#6366F1] shadow-lg shadow-[#6366F1]/20 shrink-0"
+                            >
+                                <User size={14} />
+                                <span>Edit Profile</span>
+                            </button>
+                        </div>
+
+                        {/* Top Columns: Growth & Integrations */}
+                        <div className={`grid gap-8 items-start ${isRightRailPushing ? 'grid-cols-1 xl:grid-cols-[1.1fr_1fr]' : 'grid-cols-1 md:grid-cols-[1.1fr_1fr]'}`}>
+                            {/* Left Column: Referral & Feedback */}
+                            <div className="flex flex-col gap-8">
+                                {/* Referral Program */}
+                                <div className="p-5 md:p-6 bg-[#000000] border-2 border-white/20 rounded-[22px] shadow-2xl flex flex-col gap-4 max-w-full overflow-hidden">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                            <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border-2 border-[#6366F1]/30 text-[#818CF8] flex items-center justify-center shrink-0">
+                                                <Users size={18} />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center gap-2">
+                                                     <h4 className="text-white font-bold text-sm md:text-base font-clash m-0 truncate">
+                                                         Referral & Growth
+                                                     </h4>
+                                                     <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                                                         +1.5 $KYL / invite
+                                                     </span>
+                                                 </div>
+                                                 <p className="text-white/60 text-xs font-medium mt-0.5 m-0 line-clamp-2 sm:line-clamp-none">
+                                                     Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
+                                                 </p>
                                              </div>
-                                             <p className="text-white/60 text-xs font-medium mt-0.5 m-0 line-clamp-2 sm:line-clamp-none">
-                                                 Earn 1.5 $KYL for each user who joins with your link, plus 0.5 $KYL for 30-day activity.
-                                             </p>
-                                         </div>
+                                        </div>
+
+                                        {/* Inset Metric Badges */}
+                                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                                            <div className="bg-[#161412] border-2 border-white/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
+                                                <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest font-mono">Referred</span>
+                                                <span className="text-white font-black text-xs font-mono">{referralStats?.totalReferred ?? 0}</span>
+                                            </div>
+                                            <div className="bg-[#161412] border-2 border-emerald-500/30 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
+                                                <span className="text-[9px] font-bold text-emerald-400/80 uppercase tracking-widest font-mono">Earned</span>
+                                                <span className="text-emerald-400 font-black text-xs font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* Inset Metric Badges */}
-                                    <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                                        <div className="bg-[#161412] border-2 border-white/20 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[70px]">
-                                            <span className="text-[9px] font-bold text-white/50 uppercase tracking-widest font-mono">Referred</span>
-                                            <span className="text-white font-black text-xs font-mono">{referralStats?.totalReferred ?? 0}</span>
-                                        </div>
-                                        <div className="bg-[#161412] border-2 border-emerald-500/30 rounded-xl px-3 py-1.5 flex flex-col items-center justify-center min-w-[85px]">
-                                            <span className="text-[9px] font-bold text-emerald-400/80 uppercase tracking-widest font-mono">Earned</span>
-                                            <span className="text-emerald-400 font-black text-xs font-mono">+{referralStats?.totalTokensEarned ?? '0.0'} $KYL</span>
-                                        </div>
+                                    {/* Shareable Link Box */}
+                                    <div className="flex items-center gap-2 bg-[#161412] p-1.5 pl-3 rounded-xl border-2 border-white/20 max-w-full min-w-0">
+                                        <input 
+                                            type="text"
+                                            readOnly
+                                            value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${getEffectiveUsername(user) ? `u_${getEffectiveUsername(user)}` : `id_${user?.$id || ''}`}` : ''}
+                                            className="flex-1 bg-transparent text-xs font-mono text-[#818CF8] border-none outline-none truncate min-w-0 select-all"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCopyReferral}
+                                            className="h-8 px-3.5 rounded-lg bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs flex items-center gap-1.5 transition-all select-none shrink-0 cursor-pointer shadow-md"
+                                        >
+                                            {copiedReferral ? <Check size={13} className="text-emerald-300" /> : <Copy size={13} />}
+                                            <span>{copiedReferral ? 'Copied' : 'Copy Link'}</span>
+                                        </button>
                                     </div>
                                 </div>
 
-                                {/* Shareable Link Box */}
-                                <div className="flex items-center gap-2 bg-[#161412] p-1.5 pl-3 rounded-xl border-2 border-white/20 max-w-full min-w-0">
-                                    <input 
-                                        type="text"
-                                        readOnly
-                                        value={typeof window !== 'undefined' ? `${window.location.origin}/?ref=${getEffectiveUsername(user) ? `u_${getEffectiveUsername(user)}` : `id_${user?.$id || ''}`}` : ''}
-                                        className="flex-1 bg-transparent text-xs font-mono text-[#818CF8] border-none outline-none truncate min-w-0 select-all"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleCopyReferral}
-                                        className="h-8 px-3.5 rounded-lg bg-[#6366F1] hover:bg-[#5254E8] text-white font-bold text-xs flex items-center gap-1.5 transition-all select-none shrink-0 cursor-pointer shadow-md"
-                                    >
-                                        {copiedReferral ? <Check size={13} className="text-emerald-300" /> : <Copy size={13} />}
-                                        <span>{copiedReferral ? 'Copied' : 'Copy Link'}</span>
-                                    </button>
+                                {/* Feature Requests Section */}
+                                <div>
+                                    <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-3 font-mono">
+                                        <Lightbulb size={20} className="text-[#6366F1]" />
+                                        <span>Feedback & Intelligence</span>
+                                    </h3>
+                                    <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl hover:border-white/40 transition-all duration-300">
+                                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <h4 className="text-white font-extrabold text-sm truncate m-0">
+                                                        Feature Request & Bug Report
+                                                    </h4>
+                                                    {isContributor && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                            <Crown size={10} className="text-emerald-400" />
+                                                            High Priority
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-white/60 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
+                                                    Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.
+                                                    {isContributor && (
+                                                        <span className="block mt-1 text-emerald-400 font-bold">
+                                                            ★ Contributor Perk: Requests from your account are tagged as high priority and evaluated directly for TODO.md & ROADMAP.md.
+                                                        </span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
+                                                className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto cursor-pointer border-2 border-[#6366F1]"
+                                            >
+                                                Open Portal
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-
-                            {/* Feature Requests Section */}
-                            <div>
-                                <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-3 font-mono">
-                                    <Lightbulb size={20} className="text-[#6366F1]" />
-                                    <span>Feedback & Intelligence</span>
-                                </h3>
-                                <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl hover:border-white/40 transition-all duration-300">
-                                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                            {/* Right Column */}
+                            <div className="flex flex-col gap-8">
+                                {/* Trash Management Card */}
+                                <button
+                                    type="button"
+                                    onClick={() => openDrawer('trash')}
+                                    className="w-full text-left p-6 bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-11 h-11 rounded-xl bg-[#EF4444]/10 text-[#EF4444] border-2 border-[#EF4444]/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                            <Trash2 size={22} />
+                                        </div>
                                         <div className="min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <h4 className="text-white font-extrabold text-sm truncate m-0">
-                                                    Feature Request & Bug Report
-                                                </h4>
-                                                {isContributor && (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-black uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                                        <Crown size={10} className="text-emerald-400" />
-                                                        High Priority
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-white/60 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
-                                                Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.
-                                                {isContributor && (
-                                                    <span className="block mt-1 text-emerald-400 font-bold">
-                                                        ★ Contributor Perk: Requests from your account are tagged as high priority and evaluated directly for TODO.md & ROADMAP.md.
-                                                    </span>
-                                                )}
+                                            <h4 className="text-white font-black text-base leading-tight font-mono">
+                                                Trash bin
+                                            </h4>
+                                            <p className="text-white/60 text-xs font-semibold mt-0.5 leading-relaxed">
+                                                Review and manage recently soft-deleted notes, credentials, tags, forms, events, and tasks.
                                             </p>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
-                                            className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto cursor-pointer border-2 border-[#6366F1]"
-                                        >
-                                            Open Portal
-                                        </button>
+                                    </div>
+                                    <ChevronRight size={20} className="text-white/40 group-hover:text-white transition-colors" />
+                                </button>
+
+                                {/* Telegram panel */}
+                                <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-5">
+                                    <div className="flex items-center justify-between border-b-2 border-white/10 pb-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-9 h-9 rounded-xl bg-[#0088cc]/10 text-[#0088cc] border border-[#0088cc]/30 flex items-center justify-center">
+                                                <TelegramIcon />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-extrabold text-sm text-white">Telegram Notifications</h4>
+                                                <p className="text-[10px] text-white/50 font-bold">Push notifications outlet</p>
+                                            </div>
+                                        </div>
+                                        <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                                            telegramConnected 
+                                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                                                : 'bg-white/5 border-white/10 text-white/40'
+                                        }`}>
+                                            {telegramConnected ? 'active' : 'off'}
+                                        </span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTgDrawerOpen(true)}
+                                        className="py-3 px-5 rounded-xl border-2 border-white/20 text-white hover:text-white font-extrabold text-xs hover:border-white/40 transition-all text-center w-full bg-transparent cursor-pointer"
+                                    >
+                                        {telegramConnected ? 'Manage Link' : 'Link Telegram Bot'}
+                                    </button>
+                                </div>
+
+                                {/* Primary Account Email Card */}
+                                <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-3">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                        <div>
+                                            <span className="text-[10px] text-white/50 font-bold font-mono uppercase tracking-wider block mb-1">
+                                                Primary Mail Relay
+                                            </span>
+                                            <span className="text-sm md:text-base text-white font-extrabold font-mono tracking-tight break-all">
+                                                {user?.email || 'No email attached'}
+                                            </span>
+                                        </div>
+                                        {user?.email && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(String(user.email));
+                                                    toast.success('Email copied');
+                                                }}
+                                                className="py-2 px-4 rounded-xl border-2 border-white/20 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/10 transition-all cursor-pointer flex-shrink-0"
+                                            >
+                                                Copy Email
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right Column */}
-                        <div className="flex flex-col gap-8">
-                            {/* Smart Assistants */}
-                            <button
-                                type="button"
-                                onClick={() => setActiveTab('agents')}
-                                className="w-full text-left p-6 bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
-                            >
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] border-2 border-[#6366F1]/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                                        <Bot size={22} />
+                        {/* Merged Preferences Section */}
+                        <div className="space-y-4 pt-4 border-t-2 border-white/10">
+                            <div className="flex items-center gap-2">
+                                <Sliders size={18} className="text-[#6366F1]" />
+                                <h3 className="text-lg font-black font-clash text-white tracking-tight">
+                                    System Preferences
+                                </h3>
+                            </div>
+                            <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
+                                <PreferencesManager />
+                            </div>
+                        </div>
+
+                        {/* Merged Account Management & Danger Zone */}
+                        <div id="root-mgmt" className="space-y-6 pt-4 border-t-2 border-white/10 select-none">
+                            <div>
+                                <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/40 m-0">
+                                    Sovereignty & Lifecycle
+                                </p>
+                                <h3 className="text-lg font-black font-clash text-white tracking-tight capitalize mt-0.5">
+                                    Account Management
+                                </h3>
+                            </div>
+
+                            {/* Sign Out Card */}
+                            <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border-2 border-rose-500/30">
+                                        <LogOut size={20} />
                                     </div>
                                     <div className="min-w-0">
-                                        <h4 className="text-white font-black text-base leading-tight font-mono">
-                                            Smart Assistants
+                                        <h4 className="text-base font-black text-white font-clash m-0">
+                                            Sign Out
                                         </h4>
-                                        <p className="text-white/60 text-xs font-semibold mt-0.5 leading-relaxed">
-                                            Configure private AI keys, automated assistant systems, and active workspaces.
+                                        <p className="text-xs text-white/50 leading-relaxed font-medium mt-0.5 m-0">
+                                            End your active session on this device cleanly.
                                         </p>
                                     </div>
-                                </div>
-                                <ChevronRight size={20} className="text-white/40 group-hover:text-white transition-colors" />
-                            </button>
-
-                            {/* Trash Management Card */}
-                            <button
-                                type="button"
-                                onClick={() => openDrawer('trash')}
-                                className="w-full text-left p-6 bg-[#000000] border-2 border-white/20 hover:border-white/40 rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group cursor-pointer"
-                            >
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-11 h-11 rounded-xl bg-[#EF4444]/10 text-[#EF4444] border-2 border-[#EF4444]/30 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                                        <Trash2 size={22} />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h4 className="text-white font-black text-base leading-tight font-mono">
-                                            Trash bin
-                                        </h4>
-                                        <p className="text-white/60 text-xs font-semibold mt-0.5 leading-relaxed">
-                                            Review and manage recently soft-deleted notes, credentials, tags, forms, events, and tasks.
-                                        </p>
-                                    </div>
-                                </div>
-                                <ChevronRight size={20} className="text-white/40 group-hover:text-white transition-colors" />
-                            </button>
-
-                            {/* Telegram panel */}
-                            <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-5">
-                                <div className="flex items-center justify-between border-b-2 border-white/10 pb-3">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-9 h-9 rounded-xl bg-[#0088cc]/10 text-[#0088cc] border border-[#0088cc]/30 flex items-center justify-center">
-                                            <TelegramIcon />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-extrabold text-sm text-white">Telegram Notifications</h4>
-                                            <p className="text-[10px] text-white/50 font-bold">Push notifications outlet</p>
-                                        </div>
-                                    </div>
-                                    <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
-                                        telegramConnected 
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
-                                            : 'bg-white/5 border-white/10 text-white/40'
-                                    }`}>
-                                        {telegramConnected ? 'active' : 'off'}
-                                    </span>
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => setTgDrawerOpen(true)}
-                                    className="py-3 px-5 rounded-xl border-2 border-white/20 text-white hover:text-white font-extrabold text-xs hover:border-white/40 transition-all text-center w-full bg-transparent cursor-pointer"
+                                    onClick={() => void logout()}
+                                    className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#161412] hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-rose-500/40 shrink-0"
                                 >
-                                    {telegramConnected ? 'Manage Link' : 'Link Telegram Bot'}
+                                    <LogOut size={14} />
+                                    <span>Sign Out</span>
                                 </button>
                             </div>
 
-                            {/* Primary Account Email Card */}
-                            <div className="p-6 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col gap-3">
-                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                    <div>
-                                        <span className="text-[10px] text-white/50 font-bold font-mono uppercase tracking-wider block mb-1">
-                                            Primary Mail Relay
+                            {/* Export & Data Sovereignty Card */}
+                            <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl space-y-5">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0 border-2 border-[#6366F1]/30">
+                                        <Download size={20} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-base font-black text-white font-clash m-0">
+                                                Export Sovereign Account Archive
+                                            </h4>
+                                            <span className="px-2 py-0.5 rounded bg-white/5 border-2 border-white/15 text-[9px] font-mono text-white/60 font-bold uppercase">
+                                                JSON
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-white/50 leading-relaxed font-medium mt-1 m-0">
+                                            Download a complete, offline snapshot of your public identity, app preferences, and active authentication session records. Client-side encrypted secrets remain protected under your local master key.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#161412] border-2 border-white/15">
+                                    <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
+                                        <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
+                                            Portability
                                         </span>
-                                        <span className="text-sm md:text-base text-white font-extrabold font-mono tracking-tight break-all">
-                                            {user?.email || 'No email attached'}
+                                        <span className="text-xs font-mono text-white font-bold block mt-0.5">
+                                            100% Sovereign
                                         </span>
                                     </div>
-                                    {user?.email && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(String(user.email));
-                                                toast.success('Email copied');
-                                            }}
-                                            className="py-2 px-4 rounded-xl border-2 border-white/20 text-white font-bold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/10 transition-all cursor-pointer flex-shrink-0"
-                                        >
-                                            Copy Email
-                                        </button>
-                                    )}
+                                    <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
+                                        <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
+                                            Encryption
+                                        </span>
+                                        <span className="text-xs font-mono text-emerald-400 font-bold block mt-0.5">
+                                            Client Sealed
+                                        </span>
+                                    </div>
+                                    <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
+                                        <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
+                                            Format
+                                        </span>
+                                        <span className="text-xs font-mono text-white font-bold block mt-0.5">
+                                            Formatted JSON
+                                        </span>
+                                    </div>
                                 </div>
+
+                                <button
+                                    type="button"
+                                    onClick={triggerExport}
+                                    className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#6366F1]/10 border-2 border-[#6366F1]"
+                                >
+                                    <Download size={14} />
+                                    <span>Download Account Archive</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={openPorter}
+                                    className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#000000] hover:bg-[#161412] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-white/20"
+                                >
+                                    <ArrowUpDown size={14} />
+                                    <span>Transfer Secrets &amp; Codes</span>
+                                </button>
+                            </div>
+
+                            {/* Irreversible Account Purge (Danger Zone) */}
+                            <div className="p-6 md:p-7 bg-[#000000] border-2 border-rose-500/40 rounded-[28px] shadow-2xl space-y-5">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border-2 border-rose-500/40">
+                                        <AlertTriangle size={20} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-base font-black text-rose-400 font-clash m-0">
+                                                Permanent Master Purge
+                                            </h4>
+                                            <span className="px-2 py-0.5 rounded bg-rose-500/10 border-2 border-rose-500/30 text-[9px] font-mono text-rose-300 font-bold uppercase">
+                                                No Undo
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-white/50 leading-relaxed font-medium mt-1 m-0">
+                                            Instantly destroy all account records, vault credentials, private notes, workspaces, and identity bindings. There is no grace period, no recycle bin, and no recovery possible.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-[#161412] border-2 border-rose-500/20 space-y-2">
+                                    <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-rose-400/80 m-0">
+                                        Purge Scope Breakdown
+                                    </p>
+                                    <ul className="text-xs text-white/70 space-y-1.5 list-disc pl-4 m-0 font-medium leading-relaxed">
+                                        <li>All vault secrets, TOTP keys, keychain identities, and encrypted rows</li>
+                                        <li>All workspaces, ideas, goals, tasks, forms, feeds, and thread discussions</li>
+                                        <li>Instant termination of active sessions across all devices</li>
+                                    </ul>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={triggerDeleteAccount}
+                                    className="w-full sm:w-auto h-11 px-6 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/20 border-2 border-rose-500"
+                                >
+                                    <Trash2 size={14} />
+                                    <span>Initiate Account Purge</span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -900,60 +1077,61 @@ function SettingsPageInner() {
                 )}
 
                 {activeTab === 'security' && (
-                    <SecurityTab
-                        isUnlocked={isUnlocked}
-                        hasMasterpass={_hasMasterpass}
-                        isArgon={isArgon}
-                        isAuthPassConfigured={_isAuthPassConfigured}
-                        masterpassChangedAt={_masterpassChangedAt}
-                        onLockVault={() => {
-                            ecosystemSecurity.lock();
-                            setIsUnlocked(false);
-                            toast.success('Vault locked successfully');
-                        }}
-                        onUnlockVault={() => {
-                            requestSudo({
-                                intent: 'unlock',
-                                forcePrompt: true,
-                                onSuccess: () => {
-                                    setIsUnlocked(true);
-                                    toast.success('Vault unlocked successfully');
-                                }
-                            });
-                        }}
-                        onSetupVault={() => {
-                            requestSudo({
-                                intent: 'initialize',
-                                forcePrompt: true,
-                                onSuccess: () => {
-                                    // Refresh masterpass state
-                                    if (user?.$id) {
-                                        KeychainService.listKeychainEntries(user.$id).then(entries => {
-                                            const pe = entries.find((e: any) => e.type === 'password');
-                                            setHasMasterpass(!!pe);
-                                            setIsAuthPassConfigured(Boolean(pe?.authPass || user?.prefs?.hasPass));
-                                            setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
-                                        }).catch(() => {});
+                    <div className="space-y-8 pb-24 max-w-3xl">
+                        <SecurityTab
+                            isUnlocked={isUnlocked}
+                            hasMasterpass={_hasMasterpass}
+                            isArgon={isArgon}
+                            isAuthPassConfigured={_isAuthPassConfigured}
+                            masterpassChangedAt={_masterpassChangedAt}
+                            onLockVault={() => {
+                                ecosystemSecurity.lock();
+                                setIsUnlocked(false);
+                                toast.success('Vault locked successfully');
+                            }}
+                            onUnlockVault={() => {
+                                requestSudo({
+                                    intent: 'unlock',
+                                    forcePrompt: true,
+                                    onSuccess: () => {
+                                        setIsUnlocked(true);
+                                        toast.success('Vault unlocked successfully');
                                     }
-                                    // Prompt passkey setup after masterpass is configured
-                                    setTimeout(() => {
-                                        toast((t) => (
-                                            <span className="flex items-center gap-2 text-sm">
-                                                Vault set up! Add a passkey as a backup unlock method?
-                                                <button
-                                                    className="ml-2 px-2 py-1 rounded bg-[#6366F1] text-white text-xs font-bold"
-                                                    onClick={() => { toast.dismiss(t.id); setPasskeySetupOpen(true); }}
-                                                >
-                                                    Set up passkey
-                                                </button>
-                                            </span>
-                                        ), { duration: 8000 });
-                                    }, 600);
-                                }
-                            });
-                        }}
-                        onManageVault={() => {
-                            if (isUnlocked) {
+                                });
+                            }}
+                            onSetupVault={() => {
+                                requestSudo({
+                                    intent: 'initialize',
+                                    forcePrompt: true,
+                                    onSuccess: () => {
+                                        // Refresh masterpass state
+                                        if (user?.$id) {
+                                            KeychainService.listKeychainEntries(user.$id).then(entries => {
+                                                const pe = entries.find((e: any) => e.type === 'password');
+                                                setHasMasterpass(!!pe);
+                                                setIsAuthPassConfigured(Boolean(pe?.authPass || user?.prefs?.hasPass));
+                                                setMasterpassChangedAt(pe?.$updatedAt || pe?.$createdAt || null);
+                                            }).catch(() => {});
+                                        }
+                                        // Prompt passkey setup after masterpass is configured
+                                        setTimeout(() => {
+                                            toast((t) => (
+                                                <span className="flex items-center gap-2 text-sm">
+                                                    Vault set up! Add a passkey as a backup unlock method?
+                                                    <button
+                                                        className="ml-2 px-2 py-1 rounded bg-[#6366F1] text-white text-xs font-bold"
+                                                        onClick={() => { toast.dismiss(t.id); setPasskeySetupOpen(true); }}
+                                                    >
+                                                        Set up passkey
+                                                    </button>
+                                                </span>
+                                            ), { duration: 8000 });
+                                        }, 600);
+                                    }
+                                });
+                            }}
+                            onManageVault={() => {
+                                if (isUnlocked) {
                                 if (!isArgon) {
                                     requestSudo({
                                         intent: 'upgrade',
@@ -1023,37 +1201,15 @@ function SettingsPageInner() {
                         mfaFactors={mfaFactors}
                         onManageMfa={openTwoFactorSurface}
                     />
-                )}
 
-                {activeTab === 'privacy' && (
-                    <div className="pb-24 max-w-3xl">
+                    {/* Folded Privacy Settings */}
+                    <div className="pt-4 border-t-2 border-white/10">
                         <PrivacyTab />
                     </div>
+                </div>
                 )}
 
                 {activeTab === 'developers' && <DevelopersTab />}
-
-                {activeTab === 'sessions' && (
-                    <div id="active-sessions" className="space-y-4 pb-24 max-w-3xl">
-                        <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                            Sessions
-                        </h2>
-                        <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
-                            <SessionsManager />
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'activity' && (
-                    <div id="activity-log" className="space-y-4 pb-24 max-w-3xl">
-                        <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                            Activity
-                        </h2>
-                        <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
-                            <ActivityLogs />
-                        </div>
-                    </div>
-                )}
 
                 {activeTab === 'identities' && (
                     <div id="oauth" className="pb-24 max-w-3xl space-y-4">
@@ -1061,164 +1217,6 @@ function SettingsPageInner() {
                             Connected Apps
                         </h2>
                         <ConnectedIdentities />
-                    </div>
-                )}
-
-                {activeTab === 'preferences' && (
-                    <div id="env-prefs" className="space-y-4 pb-24 max-w-3xl">
-                        <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-                            Preferences
-                        </h2>
-                        <div className="bg-[#000000] border-2 border-white/20 rounded-[28px] p-6 md:p-8 shadow-2xl">
-                            <PreferencesManager />
-                        </div>
-                    </div>
-                )}
-
-                {activeTab === 'account' && (
-                    <div id="root-mgmt" className="space-y-6 pb-24 max-w-3xl select-none">
-                        <div>
-                            <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-white/40 m-0">
-                                Sovereignty & Lifecycle
-                            </p>
-                            <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize mt-0.5">
-                                Account Management
-                            </h2>
-                        </div>
-
-                        {/* Sign Out Card */}
-                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border-2 border-rose-500/30">
-                                    <LogOut size={20} />
-                                </div>
-                                <div className="min-w-0">
-                                    <h3 className="text-base font-black text-white font-clash m-0">
-                                        Sign Out
-                                    </h3>
-                                    <p className="text-xs text-white/50 leading-relaxed font-medium mt-0.5 m-0">
-                                        End your active session on this device cleanly.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => void logout()}
-                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#161412] hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-rose-500/40 shrink-0"
-                            >
-                                <LogOut size={14} />
-                                <span>Sign Out</span>
-                            </button>
-                        </div>
-
-                        {/* Export & Data Sovereignty Card */}
-                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-white/20 rounded-[28px] shadow-2xl space-y-5">
-                            <div className="flex items-start gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center shrink-0 border-2 border-[#6366F1]/30">
-                                    <Download size={20} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-base font-black text-white font-clash m-0">
-                                            Export Sovereign Account Archive
-                                        </h3>
-                                        <span className="px-2 py-0.5 rounded bg-white/5 border-2 border-white/15 text-[9px] font-mono text-white/60 font-bold uppercase">
-                                            JSON
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-white/50 leading-relaxed font-medium mt-1 m-0">
-                                        Download a complete, offline snapshot of your public identity, app preferences, and active authentication session records. Client-side encrypted secrets remain protected under your local master key.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 p-3 rounded-2xl bg-[#161412] border-2 border-white/15">
-                                <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
-                                    <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
-                                        Portability
-                                    </span>
-                                    <span className="text-xs font-mono text-white font-bold block mt-0.5">
-                                        100% Sovereign
-                                    </span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
-                                    <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
-                                        Encryption
-                                    </span>
-                                    <span className="text-xs font-mono text-emerald-400 font-bold block mt-0.5">
-                                        Client Sealed
-                                    </span>
-                                </div>
-                                <div className="p-2.5 rounded-xl bg-[#000000] border-2 border-white/10">
-                                    <span className="text-[9px] font-mono uppercase tracking-wider text-white/40 font-bold block">
-                                        Format
-                                    </span>
-                                    <span className="text-xs font-mono text-white font-bold block mt-0.5">
-                                        Formatted JSON
-                                    </span>
-                                </div>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={triggerExport}
-                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-[#6366F1]/10 border-2 border-[#6366F1]"
-                            >
-                                <Download size={14} />
-                                <span>Download Account Archive</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={openPorter}
-                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-[#000000] hover:bg-[#161412] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border-2 border-white/20"
-                            >
-                                <ArrowUpDown size={14} />
-                                <span>Transfer Secrets &amp; Codes</span>
-                            </button>
-                        </div>
-
-                        {/* Irreversible Account Purge (Danger Zone) */}
-                        <div className="p-6 md:p-7 bg-[#000000] border-2 border-rose-500/40 rounded-[28px] shadow-2xl space-y-5">
-                            <div className="flex items-start gap-4">
-                                <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center shrink-0 border-2 border-rose-500/40">
-                                    <AlertTriangle size={20} />
-                                </div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-base font-black text-rose-400 font-clash m-0">
-                                            Permanent Master Purge
-                                        </h3>
-                                        <span className="px-2 py-0.5 rounded bg-rose-500/10 border-2 border-rose-500/30 text-[9px] font-mono text-rose-300 font-bold uppercase">
-                                            No Undo
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-white/50 leading-relaxed font-medium mt-1 m-0">
-                                        Instantly destroy all account records, vault credentials, private notes, workspaces, and identity bindings. There is no grace period, no recycle bin, and no recovery possible.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-[#161412] border-2 border-rose-500/20 space-y-2">
-                                <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-rose-400/80 m-0">
-                                    Purge Scope Breakdown
-                                </p>
-                                <ul className="text-xs text-white/70 space-y-1.5 list-disc pl-4 m-0 font-medium leading-relaxed">
-                                    <li>All vault secrets, TOTP keys, keychain identities, and encrypted rows</li>
-                                    <li>All workspaces, ideas, goals, tasks, forms, feeds, and thread discussions</li>
-                                    <li>Instant termination of active sessions across all devices</li>
-                                </ul>
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={triggerDeleteAccount}
-                                className="w-full sm:w-auto h-11 px-6 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-rose-600/20 border-2 border-rose-500"
-                            >
-                                <Trash2 size={14} />
-                                <span>Initiate Account Purge</span>
-                            </button>
-                        </div>
                     </div>
                 )}
 
