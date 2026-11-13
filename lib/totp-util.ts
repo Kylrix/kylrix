@@ -6,8 +6,9 @@ import { sha1 } from '@noble/hashes/legacy.js';
  * Bypasses heavy dependencies like otplib and speakeasy.
  */
 
-function base32ToBuffer(base32: string): Uint8Array {
+function base32ToBuffer(base32: string | undefined): Uint8Array {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  if (typeof base32 !== 'string') return new Uint8Array();
   const clean = base32.replace(/=+$/, '').toUpperCase();
   const len = clean.length;
   const buffer = new Uint8Array(Math.floor((len * 5) / 8));
@@ -32,9 +33,10 @@ function base32ToBuffer(base32: string): Uint8Array {
 /**
  * Generates a 6-digit TOTP code.
  */
-export function generateTOTP(secret: string, options: { step?: number; digits?: number; timestamp?: number } = {}): string {
+export function generateTOTP(secret: string | undefined, options: { step?: number; digits?: number; timestamp?: number } = {}): string {
     const step = options.step || 30;
     const digits = options.digits || 6;
+    if (!secret) return '-'.repeat(digits);
     const ts = options.timestamp || Date.now();
     const counter = Math.floor(ts / 1000 / step);
     

@@ -945,7 +945,9 @@ export function HangoutsDrawer({
               const avatarUserId =
                 target.otherUserId ||
                   (target.kind === 'secure'
-                  ? target.participants?.find((p: string) => p !== user?.$id)
+                  ? (Array.isArray(target.participants)
+                    ? target.participants.find((p: string) => p !== user?.$id)
+                    : undefined)
                   : undefined);
               const timeLabel = formatConversationListTime(target.lastMessageAt);
 
