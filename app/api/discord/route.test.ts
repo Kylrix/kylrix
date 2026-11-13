@@ -130,6 +130,10 @@ describe('isValidDiscordWebhookUrl', () => {
       isValidDiscordWebhookUrl('https://canary.discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
       true
     );
+    assert.equal(
+      isValidDiscordWebhookUrl('https://discord.com./api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx'),
+      true
+    );
   });
 
   it('should reject non-https protocols', () => {
@@ -742,6 +746,40 @@ describe('Discord API Route Handler - Interactive Menus & 1:1 Parity', () => {
     assert.ok(json.data.embeds[0].title.includes('Idea Saved & Shared'));
     assert.ok(json.data.embeds[0].description.includes('/idea/note_created'));
     assert.ok(json.data.components[0].components.some((c: any) => c.label === 'Open Link'));
+  });
+
+  it('should dispatch outbound notifications to valid Discord webhooks and pass abort signal timeout', async () => {
+    const originalFetch = globalThis.fetch;
+    let interceptedSignal: any = null;
+    globalThis.fetch = vi.fn().mockImplementation(async (_url: any, init: any) => {
+      interceptedSignal = init?.signal;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => 'ok',
+      } as any;
+    });
+
+    try {
+      const req = new NextRequest('http://localhost:3005/api/discord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'notify',
+          webhookUrl: 'https://discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwx',
+          content: 'Important security broadcast',
+        }),
+      });
+
+      const res = await POST(req);
+      assert.equal(res.status, 200);
+      const json = await res.json();
+      assert.equal(json.ok, true);
+      assert.equal(json.dispatched, true);
+      assert.ok(interceptedSignal, 'AbortSignal should be attached to outbound fetch');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 
   it('should handle message context menu action "Save & Share"', async () => {
