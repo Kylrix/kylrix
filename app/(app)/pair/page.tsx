@@ -28,6 +28,7 @@ function PairContent() {
   const [code, setCode] = useState(initialCode);
   const [loading, setLoading] = useState(false);
   const [deciding, setDeciding] = useState(false);
+  const [accountResolved, setAccountResolved] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [session, setSession] = useState<{
     id: string;
@@ -37,10 +38,6 @@ function PairContent() {
     status: string;
   } | null>(null);
   const [decisionDone, setDecisionDone] = useState<'approved' | 'denied' | null>(null);
-
-  useEffect(() => {
-    account.get().then(setCurrentUser).catch(() => setCurrentUser(null));
-  }, []);
 
   const lookupCode = useCallback(async (codeToLookup: string) => {
     const clean = codeToLookup.trim().toUpperCase();
@@ -66,10 +63,27 @@ function PairContent() {
   }, []);
 
   useEffect(() => {
-    if (initialCode) {
-      lookupCode(initialCode);
+    let active = true;
+    account.get()
+      .then((user) => {
+        if (active) setCurrentUser(user);
+      })
+      .catch(() => {
+        if (active) setCurrentUser(null);
+      })
+      .finally(() => {
+        if (active) setAccountResolved(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (accountResolved && initialCode) {
+      void lookupCode(initialCode);
     }
-  }, [initialCode, lookupCode]);
+  }, [accountResolved, initialCode, lookupCode]);
 
   const handleDecide = async (action: 'approve' | 'deny') => {
     if (!currentUser) {
