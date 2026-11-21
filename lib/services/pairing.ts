@@ -41,8 +41,24 @@ interface MemoryPairingRecord {
   decidedAt?: string;
 }
 
-const memorySessionsByUserCode = new Map<string, MemoryPairingRecord>();
-const memorySessionsByDeviceCode = new Map<string, MemoryPairingRecord>();
+type PairingMemoryStore = {
+  byUserCode: Map<string, MemoryPairingRecord>;
+  byDeviceCode: Map<string, MemoryPairingRecord>;
+};
+
+const pairingStoreKey = '__kylrix_pairing_memory_store__';
+const pairingGlobal = globalThis as typeof globalThis & {
+  [pairingStoreKey]?: PairingMemoryStore;
+};
+
+const pairingStore: PairingMemoryStore = pairingGlobal[pairingStoreKey] || {
+  byUserCode: new Map<string, MemoryPairingRecord>(),
+  byDeviceCode: new Map<string, MemoryPairingRecord>(),
+};
+pairingGlobal[pairingStoreKey] = pairingStore;
+
+const memorySessionsByUserCode = pairingStore.byUserCode;
+const memorySessionsByDeviceCode = pairingStore.byDeviceCode;
 
 function pruneMemorySessions() {
   const now = Date.now();
