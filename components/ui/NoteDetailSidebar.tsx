@@ -105,6 +105,17 @@ export interface NoteDetailSidebarProps {
   decryptionKey?: string;
 }
 
+function stringifyNoteTags(tags: unknown): string {
+  if (Array.isArray(tags)) {
+    return tags
+      .map((tag) => String(tag || '').trim())
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof tags === 'string') return tags;
+  return '';
+}
+
 export function NoteDetailSidebar({
   note,
   onUpdate,
@@ -298,7 +309,7 @@ export function NoteDetailSidebar({
 
   const [title, setTitle] = useState(liveNote.title || '');
   const [content, setContent] = useState(liveNote.content || '');
-  const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
+  const [tags, setTags] = useState(stringifyNoteTags(liveNote.tags));
   const [isPublic, _setIsPublic] = useState(getNotePublicState(liveNote));
 
   // Guarded sync from liveNote -> local fields: never clobber dirty typing or focused textarea (cursor)
@@ -317,7 +328,7 @@ export function NoteDetailSidebar({
     }
     setTitle(liveNote.title || '');
     setContent(liveNote.content || '');
-    setTags(liveNote.tags?.join(', ') || '');
+    setTags(stringifyNoteTags(liveNote.tags));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveNote.$id, liveNote.tags, liveNote.title, liveNote.content]);
 
@@ -398,7 +409,7 @@ export function NoteDetailSidebar({
           if (decrypted) {
             setTitle(decrypted.title || '');
             setContent(decrypted.content || '');
-            setTags(decrypted.tags?.join(', ') || '');
+            setTags(stringifyNoteTags(decrypted.tags));
             setIsLocallyDecrypted(true);
             updateLocalAndParentNote(decrypted);
             showSuccess('Note decrypted', 'Content is now visible.');
