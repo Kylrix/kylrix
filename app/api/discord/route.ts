@@ -593,6 +593,7 @@ export async function linkDiscordUserAccount(
           userId,
           status: 'approved',
           requestMeta: meta,
+          nonce: callerId,
           decidedAt: now,
         },
       });
@@ -623,20 +624,40 @@ export async function linkDiscordUserAccount(
 }
 
 export async function unlinkDiscordUserAccount(callerId: string): Promise<void> {
+  const cachedLink = discordUserCache.get(callerId);
+  let legacyLinkedUserId: string | undefined;
   discordUserCache.delete(callerId);
   discordActiveWorkspaceCache.delete(callerId);
 
+  // Resolve the caller's exact legacy row before revoking it.
+  try {
+    const tables = systemTables();
+    const existing = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE || 'passwordManagerDb',
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.OAUTH_CONSENT_REQUESTS || 'oauth_consent_requests',
+      queries: [
+        `equal("clientId", "discord_account")`,
+        `equal("nonce", ${JSON.stringify(callerId)})`,
+        'limit(1)',
+      ],
+    }).catch(() => ({ rows: [] as any[] }));
+    legacyLinkedUserId = String(existing.rows?.[0]?.userId || '').trim() || undefined;
+  } catch {}
+
   // 1. Delete from Turso oauthConsent
   try {
+    const linkedUserIds = [cachedLink?.userId, legacyLinkedUserId].filter(Boolean) as string[];
+    const deletionClauses = [
+      eq(schema.oauthConsent.referenceId, callerId),
+      eq(schema.oauthConsent.userId, callerId),
+      ...linkedUserIds.map((userId) => eq(schema.oauthConsent.userId, userId)),
+    ];
     await db
       .delete(schema.oauthConsent)
       .where(
         and(
           eq(schema.oauthConsent.clientId, 'discord_account'),
-          or(
-            eq(schema.oauthConsent.referenceId, callerId),
-            eq(schema.oauthConsent.userId, callerId)
-          )
+          or(...deletionClauses)
         )
       );
   } catch (err: any) {
