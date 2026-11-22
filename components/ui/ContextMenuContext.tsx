@@ -218,21 +218,6 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
           },
         ];
 
-        if (regionText) {
-          items.unshift({
-            label: 'Copy Text',
-            icon: <Copy size={16} />,
-            onClick: async () => {
-              try {
-                await copyRegionText(regionText);
-                showSuccess('Text copied');
-              } catch {
-                showError('Could not copy text');
-              }
-            },
-          });
-        }
-
         setState({
           x: e.clientX,
           y: e.clientY,
@@ -386,6 +371,21 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             { label: 'Settings', icon: <Settings size={16} />, onClick: () => router.push('/settings') }
           );
         }
+      }
+
+      if (regionText) {
+        items.unshift({
+          label: 'Copy Text',
+          icon: <Copy size={16} />,
+          onClick: async () => {
+            try {
+              await copyRegionText(regionText);
+              showSuccess('Text copied');
+            } catch {
+              showError('Could not copy text');
+            }
+          },
+        });
       }
 
       setState({
