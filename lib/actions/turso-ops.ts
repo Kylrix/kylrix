@@ -569,6 +569,11 @@ export async function deleteKeychainTurso(id: string) {
 export async function upsertVaultItemTurso(data: any) {
   try {
     const rawData = data || {};
+    const wrappedDek = rawData.dek || rawData.wrappedDek || rawData.metadata?.dek;
+    const sensitiveValue = rawData.password ?? rawData.secret ?? rawData.encryptedData ?? rawData.encrypted_data;
+    if (sensitiveValue && String(sensitiveValue).trim() && (!wrappedDek || !String(wrappedDek).trim())) {
+      throw new Error('Refusing plaintext vault item write: encrypted fields require wrapped DEK');
+    }
     const vaultItemId = rawData.id || rawData.$id;
     invalidateResourceCache('vault', rawData.userId, vaultItemId);
     const titleVal = rawData.title || rawData.name || 'Untitled Secret';
@@ -771,6 +776,11 @@ export async function deleteVaultItemTurso(id: string) {
 export async function upsertTotpSecretTurso(data: any) {
   try {
     const rawData = data || {};
+    const wrappedDek = rawData.dek || rawData.wrappedDek;
+    const sensitiveValue = rawData.secretKey ?? rawData.secret ?? rawData.encryptedSecret;
+    if (sensitiveValue && String(sensitiveValue).trim() && (!wrappedDek || !String(wrappedDek).trim())) {
+      throw new Error('Refusing plaintext TOTP write: encrypted fields require wrapped DEK');
+    }
     const totpId = rawData.id || rawData.$id;
     invalidateResourceCache('totp', rawData.userId, totpId);
     const accountVal = rawData.account || rawData.accountName || 'Account';

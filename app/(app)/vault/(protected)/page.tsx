@@ -208,9 +208,9 @@ function DashboardPageContent() {
           rows = await LocalEngine.query<Credentials[]>(
             cacheKey,
             async () => {
-              const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listVaultItemsTurso(activeUserId, targetWsId);
-              return dedupeCredentialsById((res.rows || []).map((row: any) => ({
+              const { listVaultCredentials } = await import('@/lib/actions/client-ops');
+              const res = await listVaultCredentials(activeUserId, targetWsId);
+              return dedupeCredentialsById(((res?.rows || [])).map((row: any) => ({
                 ...row,
                 $id: row.$id || row.id,
               })) as Credentials[]);

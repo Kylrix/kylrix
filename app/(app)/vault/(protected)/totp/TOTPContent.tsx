@@ -566,8 +566,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
       const userId = user?.id || user?.$id;
       const wsId = activeWorkspace && !activeWorkspace.isPersonal ? activeWorkspace.id : null;
       if (userId) {
-        import('@/lib/actions/turso-ops').then(({ listTotpSecretsTurso }) =>
-          listTotpSecretsTurso(userId, wsId).then((res) =>
+        import('@/lib/actions/client-ops').then(({ listVaultTotps }) =>
+          listVaultTotps(userId, wsId).then((res) =>
             setTotpCodes((res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }))),
           ),
         ).catch(() => {});
@@ -610,8 +610,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
           rows = await LocalEngine.query<any[]>(
             cacheKey,
             async () => {
-              const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listTotpSecretsTurso(activeUserId, targetWsId);
+              const { listVaultTotps } = await import('@/lib/actions/client-ops');
+              const res = await listVaultTotps(activeUserId, targetWsId);
               return (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
             },
             {
@@ -630,8 +630,8 @@ export function TOTPPageContent({ isTabMode = false }: { isTabMode?: boolean }) 
         if (activeUserId !== 'guest') {
           void (async () => {
             try {
-              const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-              const res = await listTotpSecretsTurso(activeUserId, targetWsId);
+              const { listVaultTotps } = await import('@/lib/actions/client-ops');
+              const res = await listVaultTotps(activeUserId, targetWsId);
               if (res?.rows && !isCancelled) {
                 const refreshed = (res.rows || []).map((row: any) => ({ ...row, $id: row.$id || row.id }));
                 setTotpCodes(refreshed as any);

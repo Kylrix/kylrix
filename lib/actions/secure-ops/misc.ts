@@ -259,6 +259,134 @@ export async function deleteRowSecure(
   return JSON.parse(JSON.stringify({ success: true }));
 }
 
+export async function createVaultCredentialSecure(data: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const id = data?.$id || data?.id || `cred_${ulid()}`;
+  const { upsertVaultItemTurso } = await import('@/lib/actions/turso-ops');
+  const result = await upsertVaultItemTurso({
+    ...data,
+    id,
+    userId: actor.$id,
+  });
+  if (!result.success) throw new Error(result.error || 'Failed to create credential');
+
+  return JSON.parse(JSON.stringify({ ...data, id, $id: id, userId: actor.$id }));
+}
+
+export async function updateVaultCredentialSecure(id: string, data: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const existing = await db
+    .select({ userId: schema.vaultItems.userId })
+    .from(schema.vaultItems)
+    .where(eq(schema.vaultItems.id, id))
+    .limit(1);
+  if (existing.length > 0 && existing[0].userId !== actor.$id) {
+    throw new Error('Forbidden');
+  }
+
+  const { upsertVaultItemTurso } = await import('@/lib/actions/turso-ops');
+  const result = await upsertVaultItemTurso({
+    ...data,
+    id,
+    userId: actor.$id,
+  });
+  if (!result.success) throw new Error(result.error || 'Failed to update credential');
+
+  return JSON.parse(JSON.stringify({ ...data, id, $id: id, userId: actor.$id }));
+}
+
+export async function deleteVaultCredentialSecure(id: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const existing = await db
+    .select({ userId: schema.vaultItems.userId })
+    .from(schema.vaultItems)
+    .where(eq(schema.vaultItems.id, id))
+    .limit(1);
+  if (existing.length > 0 && existing[0].userId !== actor.$id) {
+    throw new Error('Forbidden');
+  }
+
+  const { deleteVaultItemTurso } = await import('@/lib/actions/turso-ops');
+  await deleteVaultItemTurso(id);
+  return JSON.parse(JSON.stringify({ success: true }));
+}
+
+export async function listVaultCredentialsSecure(userId: string, workspaceId?: string | null, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  if (userId && userId !== actor.$id) throw new Error('Forbidden');
+
+  const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
+  return await listVaultItemsTurso(actor.$id, workspaceId);
+}
+
+export async function createVaultTotpSecure(data: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const id = data?.$id || data?.id || `totp_${ulid()}`;
+  const { upsertTotpSecretTurso } = await import('@/lib/actions/turso-ops');
+  const result = await upsertTotpSecretTurso({
+    ...data,
+    id,
+    userId: actor.$id,
+  });
+  if (!result.success) throw new Error(result.error || 'Failed to create TOTP secret');
+  return JSON.parse(JSON.stringify({ ...data, id, $id: id, userId: actor.$id }));
+}
+
+export async function updateVaultTotpSecure(id: string, data: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const existing = await db
+    .select({ userId: schema.totpSecrets.userId })
+    .from(schema.totpSecrets)
+    .where(eq(schema.totpSecrets.id, id))
+    .limit(1);
+  if (existing.length > 0 && existing[0].userId !== actor.$id) throw new Error('Forbidden');
+
+  const { upsertTotpSecretTurso } = await import('@/lib/actions/turso-ops');
+  const result = await upsertTotpSecretTurso({
+    ...data,
+    id,
+    userId: actor.$id,
+  });
+  if (!result.success) throw new Error(result.error || 'Failed to update TOTP secret');
+  return JSON.parse(JSON.stringify({ ...data, id, $id: id, userId: actor.$id }));
+}
+
+export async function deleteVaultTotpSecure(id: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const existing = await db
+    .select({ userId: schema.totpSecrets.userId })
+    .from(schema.totpSecrets)
+    .where(eq(schema.totpSecrets.id, id))
+    .limit(1);
+  if (existing.length > 0 && existing[0].userId !== actor.$id) throw new Error('Forbidden');
+
+  const { deleteTotpSecretTurso } = await import('@/lib/actions/turso-ops');
+  await deleteTotpSecretTurso(id);
+  return JSON.parse(JSON.stringify({ success: true }));
+}
+
+export async function listVaultTotpsSecure(userId: string, workspaceId?: string | null, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  if (userId && userId !== actor.$id) throw new Error('Forbidden');
+
+  const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
+  return await listTotpSecretsTurso(actor.$id, workspaceId);
+}
+
 export async function toggleResourcePublicGuestSecure(params: {
   resourceType: PublicResourceType;
   resourceId: string;

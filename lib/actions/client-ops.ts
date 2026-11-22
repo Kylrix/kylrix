@@ -31,6 +31,14 @@ import {
   createRowSecure,
   updateRowSecure,
   deleteRowSecure,
+  createVaultCredentialSecure,
+  updateVaultCredentialSecure,
+  deleteVaultCredentialSecure,
+  listVaultCredentialsSecure,
+  createVaultTotpSecure,
+  updateVaultTotpSecure,
+  deleteVaultTotpSecure,
+  listVaultTotpsSecure,
   convertResponseToGoalSecure,
   createthreadNoteForResourceSecure,
   promotethreadResourceThreadToStorySecure,
@@ -76,6 +84,47 @@ async function getBetterAuthUserId(): Promise<string | undefined> {
   } catch {
     return undefined;
   }
+}
+
+// --- Vault CRUD ---
+export async function createVaultCredential(data: any) {
+  const jwt = await getJwt();
+  return await createVaultCredentialSecure(data, jwt);
+}
+
+export async function updateVaultCredential(id: string, data: any) {
+  const jwt = await getJwt();
+  return await updateVaultCredentialSecure(id, data, jwt);
+}
+
+export async function deleteVaultCredential(id: string) {
+  const jwt = await getJwt();
+  return await deleteVaultCredentialSecure(id, jwt);
+}
+
+export async function listVaultCredentials(userId: string, workspaceId?: string | null) {
+  const jwt = await getJwt();
+  return await listVaultCredentialsSecure(userId, workspaceId, jwt);
+}
+
+export async function createVaultTotp(data: any) {
+  const jwt = await getJwt();
+  return await createVaultTotpSecure(data, jwt);
+}
+
+export async function updateVaultTotp(id: string, data: any) {
+  const jwt = await getJwt();
+  return await updateVaultTotpSecure(id, data, jwt);
+}
+
+export async function deleteVaultTotp(id: string) {
+  const jwt = await getJwt();
+  return await deleteVaultTotpSecure(id, jwt);
+}
+
+export async function listVaultTotps(userId: string, workspaceId?: string | null) {
+  const jwt = await getJwt();
+  return await listVaultTotpsSecure(userId, workspaceId, jwt);
 }
 
 // --- Notes CRUD ---

@@ -839,14 +839,13 @@ async function executeAgenticToolCall(
     if (key === 'create_vault_item' || key === 'create_secret') {
       const title = String(args.name || args.title || 'Untitled Secret').trim();
       const secret = String(args.secret || args.password || '');
-      const { upsertVaultItemTurso } = await import('@/lib/actions/turso-ops');
       const now = new Date().toISOString();
       const itemId = ulid();
-      await upsertVaultItemTurso({
+      const { createVaultCredential } = await import('@/lib/actions/client-ops');
+      await createVaultCredential({
         id: itemId,
-        userId: ctx.user?.$id || 'guest',
         title,
-        encryptedData: secret,
+        password: secret,
         itemType: (args.itemType as string) || 'login',
         createdAt: now,
         updatedAt: now,
@@ -863,14 +862,13 @@ async function executeAgenticToolCall(
     if (key === 'create_totp_secret') {
       const issuer = String(args.issuer || args.name || 'App').trim();
       const secretKey = String(args.secretKey || args.secret || '').trim();
-      const { upsertTotpSecretTurso } = await import('@/lib/actions/turso-ops');
       const now = new Date().toISOString();
       const itemId = ulid();
-      await upsertTotpSecretTurso({
+      const { createVaultTotp } = await import('@/lib/actions/client-ops');
+      await createVaultTotp({
         id: itemId,
-        userId: ctx.user?.$id || 'guest',
         accountName: issuer,
-        encryptedSecret: secretKey,
+        secretKey,
         createdAt: now,
         updatedAt: now,
       });

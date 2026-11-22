@@ -1,7 +1,5 @@
 import {
   listNotesTurso,
-  listVaultItemsTurso,
-  listTotpSecretsTurso,
   listEventsTurso,
   upsertNoteTurso,
 } from '@/lib/actions/turso-ops';
@@ -42,14 +40,16 @@ export const EcosystemService = {
 
   async listSecrets(userId: string, force = false) {
     return secretsCache.fetch(async () => {
-      const res = await listVaultItemsTurso(userId);
+      const { listVaultCredentials } = await import('@/lib/actions/client-ops');
+      const res = await listVaultCredentials(userId);
       return { total: (res.rows || []).length, rows: res.rows || [] };
     }, force);
   },
 
   async listTotpSecrets(userId: string, force = false) {
     return totpCache.fetch(async () => {
-      const res = await listTotpSecretsTurso(userId);
+      const { listVaultTotps } = await import('@/lib/actions/client-ops');
+      const res = await listVaultTotps(userId);
       return { total: (res.rows || []).length, rows: res.rows || [] };
     }, force);
   },

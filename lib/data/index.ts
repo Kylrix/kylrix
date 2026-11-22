@@ -466,13 +466,8 @@ export async function createTotpSecret(data: any, opts?: { skipPending?: boolean
       autonomicSyncEngine.markPending(`totp:${id}`, new Date().toISOString(), payload);
     } catch {}
   }
-  const { systemTables } = await import('./system-tables');
-  return systemTables().createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: 'totp_secrets',
-    rowId: id,
-    data: payload,
-  });
+  const { createVaultTotp } = await import('@/lib/actions/client-ops');
+  return createVaultTotp(payload);
 }
 
 export async function updateTotpSecret(id: string, data: any, opts?: { skipPending?: boolean }): Promise<any> {
@@ -483,31 +478,20 @@ export async function updateTotpSecret(id: string, data: any, opts?: { skipPendi
       autonomicSyncEngine.markPending(`totp:${id}`, new Date().toISOString(), payload);
     } catch {}
   }
-  const { systemTables } = await import('./system-tables');
-  return systemTables().updateRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: 'totp_secrets',
-    rowId: id,
-    data: payload,
-  });
+  const { updateVaultTotp } = await import('@/lib/actions/client-ops');
+  return updateVaultTotp(id, payload);
 }
 
 export async function deleteTotpSecret(id: string): Promise<any> {
-  const { systemTables } = await import('./system-tables');
-  return systemTables().deleteRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: 'totp_secrets',
-    rowId: id,
-  });
+  const { deleteVaultTotp } = await import('@/lib/actions/client-ops');
+  return deleteVaultTotp(id);
 }
 
-export async function listTotpSecrets(_userId?: string): Promise<any> {
-  const { systemTables } = await import('./system-tables');
-  const res = await systemTables().listRows({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: 'totp_secrets',
-  });
-  return res.rows;
+export async function listTotpSecrets(userId?: string): Promise<any> {
+  if (!userId) return [];
+  const { listVaultTotps } = await import('@/lib/actions/client-ops');
+  const res = await listVaultTotps(userId);
+  return res?.rows || [];
 }
 
 export async function createCredential(data: any, opts?: { skipPending?: boolean }): Promise<any> {
@@ -519,13 +503,8 @@ export async function createCredential(data: any, opts?: { skipPending?: boolean
       autonomicSyncEngine.markPending(`cred:${id}`, new Date().toISOString(), payload);
     } catch {}
   }
-  const { systemTables } = await import('./system-tables');
-  const created = await systemTables().createRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-    rowId: id,
-    data: payload,
-  });
+  const { createVaultCredential } = await import('@/lib/actions/client-ops');
+  const created = await createVaultCredential(payload);
   try {
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
     const shaped = { ...(created as any), $id: id, id };
@@ -557,22 +536,13 @@ export async function updateCredential(id: string, data: any, opts?: { skipPendi
       autonomicSyncEngine.markPending(`cred:${id}`, new Date().toISOString(), payload);
     } catch {}
   }
-  const { systemTables } = await import('./system-tables');
-  return systemTables().updateRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-    rowId: id,
-    data: payload,
-  });
+  const { updateVaultCredential } = await import('@/lib/actions/client-ops');
+  return updateVaultCredential(id, payload);
 }
 
 export async function deleteCredential(id: string): Promise<any> {
-  const { systemTables } = await import('./system-tables');
-  return systemTables().deleteRow({
-    databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-    tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
-    rowId: id,
-  });
+  const { deleteVaultCredential } = await import('@/lib/actions/client-ops');
+  return deleteVaultCredential(id);
 }
 
 export async function setCredentialPinned(id: string, isPinned: boolean): Promise<any> {
@@ -1072,14 +1042,14 @@ export const VaultService = {
   },
   async listAllCredentials(userId?: string, workspaceId?: string | null): Promise<any[]> {
     if (!userId) return [];
-    const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
-    const result = await listVaultItemsTurso(userId, workspaceId);
+    const { listVaultCredentials } = await import('@/lib/actions/client-ops');
+    const result = await listVaultCredentials(userId, workspaceId);
     return (result.rows || []).map((row: any) => ({ ...row, $id: row.id }));
   },
   async listTOTPSecrets(userId?: string, workspaceId?: string | null): Promise<any[]> {
     if (!userId) return [];
-    const { listTotpSecretsTurso } = await import('@/lib/actions/turso-ops');
-    const result = await listTotpSecretsTurso(userId, workspaceId);
+    const { listVaultTotps } = await import('@/lib/actions/client-ops');
+    const result = await listVaultTotps(userId, workspaceId);
     return (result.rows || []).map((row: any) => ({ ...row, $id: row.id }));
   },
   async getCredential(_id: string): Promise<any> { return null; },

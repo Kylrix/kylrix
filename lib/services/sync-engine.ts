@@ -209,7 +209,15 @@ async function flushCredentialPending(
   const flushRevision = queuedRevision;
 
   try {
-    const res = await upsertVaultItemTurso({ ...payload, id: credId, userId: activeUserId });
+    let res: any;
+    if (typeof window !== 'undefined') {
+      const { updateVaultCredential } = await import('@/lib/actions/client-ops');
+      res = await updateVaultCredential(credId, { ...payload, id: credId, userId: activeUserId })
+        .then(() => ({ success: true }))
+        .catch((err: any) => ({ success: false, error: err?.message }));
+    } else {
+      res = await upsertVaultItemTurso({ ...payload, id: credId, userId: activeUserId });
+    }
     if (!res?.success) {
       if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
         console.warn('[sync-engine] Vault mutation unauthenticated (401), canceling pending retry:', credId);
@@ -264,7 +272,15 @@ async function flushTotpPending(
   const flushRevision = queuedRevision;
 
   try {
-    const res = await upsertTotpSecretTurso({ ...payload, id: totpId, userId: activeUserId });
+    let res: any;
+    if (typeof window !== 'undefined') {
+      const { updateVaultTotp } = await import('@/lib/actions/client-ops');
+      res = await updateVaultTotp(totpId, { ...payload, id: totpId, userId: activeUserId })
+        .then(() => ({ success: true }))
+        .catch((err: any) => ({ success: false, error: err?.message }));
+    } else {
+      res = await upsertTotpSecretTurso({ ...payload, id: totpId, userId: activeUserId });
+    }
     if (!res?.success) {
       if (res?.error && (res.error.includes('401') || res.error.toLowerCase().includes('unauthorized'))) {
         console.warn('[sync-engine] TOTP mutation unauthenticated (401), canceling pending retry:', totpId);

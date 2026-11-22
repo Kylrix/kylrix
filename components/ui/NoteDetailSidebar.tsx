@@ -482,9 +482,9 @@ export function NoteDetailSidebar({
       if (!linkedCredentialIds.length) { setLinkedSecrets([]); return; }
       setIsLoadingSecrets(true);
       try {
-        const { listVaultItemsTurso } = await import('@/lib/actions/turso-ops');
+        const { listVaultCredentials } = await import('@/lib/actions/client-ops');
         const userId = (getCurrentUserSnapshot() as any)?.id || (getCurrentUserSnapshot() as any)?.$id;
-        const result = userId ? await listVaultItemsTurso(userId) : { rows: [] };
+        const result = userId ? await listVaultCredentials(userId) : { rows: [] };
         const byId = new Map((result.rows || []).map((row: any) => [row.id, row]));
         const resolved = linkedCredentialIds.map((id: string) => byId.get(id) || null);
         setLinkedSecrets(resolved.filter(Boolean) as any[]);
