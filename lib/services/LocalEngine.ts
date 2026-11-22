@@ -35,6 +35,7 @@ function scheduleBatchFlush() {
 const inflightQueries = new Map<string, Promise<any>>();
 const backgroundRevalidationCooldowns = new Map<string, number>();
 const inMemoryCacheSnapshots = new Map<string, string>();
+const inMemoryCacheData = new Map<string, any>();
 const inMemoryDeletedIds = new Set<string>();
 
 function ensureDeletedIdsLoaded(userId?: string): Set<string> {
@@ -161,6 +162,9 @@ export const LocalEngine = {
 
   async cacheGet<T = any>(id: string, maxAgeMs?: number): Promise<T | null> {
     if (typeof window === 'undefined') return null;
+    if (inMemoryCacheData.has(id)) {
+      return inMemoryCacheData.get(id) as T;
+    }
     try {
       const db = await getRxDB().catch(() => null);
       if (!db) return null;
@@ -182,6 +186,7 @@ export const LocalEngine = {
     if (typeof window === 'undefined') return;
     try {
       const serialized = typeof data === 'string' ? data : JSON.stringify(data);
+      inMemoryCacheData.set(id, data);
       if (inMemoryCacheSnapshots.get(id) === serialized) {
         return;
       }
@@ -212,6 +217,7 @@ export const LocalEngine = {
   async cacheDelete(id: string): Promise<void> {
     if (typeof window === 'undefined') return;
     inMemoryCacheSnapshots.delete(id);
+    inMemoryCacheData.delete(id);
     try {
       const db = await getRxDB().catch(() => null);
       if (!db) return;

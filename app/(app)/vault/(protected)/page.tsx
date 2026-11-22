@@ -184,6 +184,8 @@ function DashboardPageContent() {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
         const cachedRows = (await LocalEngine.cacheGet<any[]>(cacheKey)) ||
           (currentWsId === 'personal' ? await LocalEngine.cacheGet<any[]>(`vault_credentials_${activeUserId}`) : null) ||
+          (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(`f_vault_creds_${activeUserId}`) : null) ||
+          (await LocalEngine.cacheGet<any[]>('f_vault_creds')) ||
           (activeUserId !== 'guest' ? await LocalEngine.cacheGet<any[]>(guestFallbackKey) : null);
         if (cachedRows && Array.isArray(cachedRows) && cachedRows.length > 0) {
           const unique = dedupeCredentialsById(cachedRows as Credentials[]);

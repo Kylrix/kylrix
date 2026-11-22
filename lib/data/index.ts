@@ -520,12 +520,33 @@ export async function createCredential(data: any, opts?: { skipPending?: boolean
     } catch {}
   }
   const { systemTables } = await import('./system-tables');
-  return systemTables().createRow({
+  const created = await systemTables().createRow({
     databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
     tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS,
     rowId: id,
     data: payload,
   });
+  try {
+    const { LocalEngine } = await import('@/lib/services/LocalEngine');
+    const shaped = { ...(created as any), $id: id, id };
+    const userId = shaped.userId || payload.userId;
+    if (userId) {
+      const workspaceId = shaped.workspaceId || shaped.projectId || payload.workspaceId || payload.projectId;
+      for (const key of [
+        `vault_credentials_${userId}`,
+        `vault_credentials_${userId}_personal`,
+        ...(workspaceId ? [`vault_credentials_${userId}_${workspaceId}`] : []),
+        `f_vault_creds_${userId}`,
+      ]) {
+        const cached = await LocalEngine.cacheGet<any[]>(key).catch(() => null);
+        const rows = Array.isArray(cached) ? cached : [];
+        const next = [shaped, ...rows.filter((row) => (row?.$id || row?.id) !== id)];
+        await LocalEngine.cacheSet(key, next);
+      }
+      await LocalEngine.cacheSet('f_vault_creds', [shaped, ...((await LocalEngine.cacheGet<any[]>('f_vault_creds').catch(() => null)) || []).filter((row) => (row?.$id || row?.id) !== id)]);
+    }
+  } catch {}
+  return created;
 }
 
 export async function updateCredential(id: string, data: any, opts?: { skipPending?: boolean }): Promise<any> {
