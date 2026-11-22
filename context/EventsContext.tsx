@@ -82,7 +82,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener('kylrix:auth:logout', handleLogout);
     return () => window.removeEventListener('kylrix:auth:logout', handleLogout);
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     registerLiveEventGetter((id) => {
@@ -140,9 +140,11 @@ export function EventsProvider({ children }: { children: ReactNode }) {
         });
         setEvents(merged);
         void LocalEngine.cacheSet(cacheKey, merged);
+        void LocalEngine.cacheSet('f_events_list', merged);
       } else if (localItems.length > 0) {
         setEvents(mappedLocal);
         void LocalEngine.cacheSet(cacheKey, localItems);
+        void LocalEngine.cacheSet('f_events_list', localItems);
       }
     } catch (err) {
       console.error('Failed to load events in EventsProvider:', err);
@@ -169,6 +171,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
             const filtered = prev.filter((e) => (e.id || (e as any).$id) !== payload.$id);
             const nextList = [normalized, ...filtered];
             void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
+            void LocalEngine.cacheSet('f_events_list', nextList);
             return nextList;
           });
         } else if (type === 'update') {
@@ -179,12 +182,14 @@ export function EventsProvider({ children }: { children: ReactNode }) {
           setEvents((prev) => {
             const nextList = prev.map((e) => ((e.id || (e as any).$id) === payload.$id ? normalized : e));
             void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
+            void LocalEngine.cacheSet('f_events_list', nextList);
             return nextList;
           });
         } else if (type === 'delete') {
           setEvents((prev) => {
             const nextList = prev.filter((e) => (e.id || (e as any).$id) !== payload.$id);
             void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
+            void LocalEngine.cacheSet('f_events_list', nextList);
             return nextList;
           });
         }
@@ -214,6 +219,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       });
       const nextList = [normalized, ...filtered];
       void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
+      void LocalEngine.cacheSet('f_events_list', nextList);
       return nextList;
     });
 
@@ -246,6 +252,7 @@ export function EventsProvider({ children }: { children: ReactNode }) {
       });
       const nextList = [normalized, ...filtered];
       void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
+      void LocalEngine.cacheSet('f_events_list', nextList);
       return nextList;
     });
 
@@ -262,13 +269,14 @@ export function EventsProvider({ children }: { children: ReactNode }) {
     autonomicSyncEngine.cancelPending(`event:${eventId}`);
     setEvents((prev) => {
       const nextList = prev.filter((e) => (e.id || (e as any).$id) !== eventId);
+      void LocalEngine.cacheSet(`f_events_list_${userId}`, nextList);
       void LocalEngine.cacheSet('f_events_list', nextList);
       return nextList;
     });
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('kylrix:event-deleted', { detail: { id: eventId } }));
     }
-  }, []);
+  }, [userId]);
 
   return (
     <EventsContext.Provider

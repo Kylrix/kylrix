@@ -1431,7 +1431,11 @@ export const listGoalsTurso = cache(async function listGoalsTurso(userId: string
       .where(and(inArray(schema.goals.userId, allUserIds), eq(schema.goals.isTrashed, false)))
       .orderBy(desc(schema.goals.updatedAt));
     const result = { success: true, rows };
-    resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    if (rows.length > 0) {
+      resourceCache.set(cacheKey, { data: result, expiresAt: Date.now() + queryTTLMs });
+    } else {
+      resourceCache.delete(cacheKey);
+    }
     return result;
   } catch (err: any) {
     console.error('[turso-ops] listGoalsTurso failed:', err);

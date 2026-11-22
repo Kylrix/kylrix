@@ -140,6 +140,7 @@ async function persistGoalsLocalCopy(userId: string | null | undefined, tasks: T
     const { LocalEngine } = await import('@/lib/services/LocalEngine');
     await LocalEngine.cacheSet('f_goals_list', list);
     if (userId) {
+      await LocalEngine.cacheSet(`f_goals_list_${userId}`, list);
       await LocalEngine.cacheSet(`f_tasks_${userId}`, { rows: list, total: list.length });
     }
     const db = await import('@/lib/webrtc/RxDBManager').then((m) => m.getRxDB()).catch(() => null);
