@@ -152,31 +152,29 @@ export default function FormsDashboard() {
 
         try {
             let items: any[] = [];
-            try {
-                const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-                const db = await getRxDB();
-                if (db?.forms) {
-                    items = (await db.forms.find().exec()).map((d: any) => d.toJSON());
-                }
-            } catch {
-                items = [];
-            }
-            if (items.length === 0) {
-                const [userScopedList, userScopedForms, legacyList] = await Promise.all([
-                    LocalEngine.cacheGet<any[]>(`f_forms_list_${userId}`).catch(() => null),
-                    LocalEngine.cacheGet<any[]>(`f_forms_${userId}`).catch(() => null),
-                    LocalEngine.cacheGet<any[]>('f_forms_list').catch(() => null),
-                ]);
-                items = userScopedList || userScopedForms || legacyList || [];
-            }
-
-            const isFormActive = (f: any) => f && !f.isTrash && !f.isDeleted && !LocalEngine.isDeleted(f.$id || f.id || '', userId);
+            const workspaceKey = activeWorkspace?.isPersonal
+                ? null
+                : (activeWorkspace?.id ? `f_forms_list_${userId}_${activeWorkspace.id}` : null);
+            const [userScopedList, userScopedForms, workspaceList, legacyList] = await Promise.all([
+                LocalEngine.cacheGet<any[]>(`f_forms_list_${userId}`).catch(() => null),
+                LocalEngine.cacheGet<any[]>(`f_forms_${userId}`).catch(() => null),
+                workspaceKey ? LocalEngine.cacheGet<any[]>(workspaceKey).catch(() => null) : Promise.resolve(null),
+                LocalEngine.cacheGet<any[]>('f_forms_list').catch(() => null),
+            ]);
+            items = workspaceList || userScopedList || userScopedForms || legacyList || [];
 
             if (items.length > 0) {
-                const activeLocal = items.filter(isFormActive);
+                const activeLocal = items.filter((f: any) =>
+                    f &&
+                    !f.isTrash &&
+                    !f.isDeleted &&
+                    !LocalEngine.isDeleted(f.$id || f.id || '', userId)
+                );
                 setForms(sortForms(activeLocal as unknown as Forms[]));
                 setLoading(false);
             }
+
+            const isFormActive = (f: any) => f && !f.isTrash && !f.isDeleted && !LocalEngine.isDeleted(f.$id || f.id || '', userId);
 
             // Sync drafts safely
             try {
@@ -232,13 +230,16 @@ export default function FormsDashboard() {
                 await LocalEngine.cacheSet(`f_forms_list_${userId}`, merged);
                 await LocalEngine.cacheSet(`f_forms_${userId}`, merged);
                 await LocalEngine.cacheSet('f_forms_list', merged);
+                if (activeWorkspace?.id && !activeWorkspace.isPersonal) {
+                    await LocalEngine.cacheSet(`f_forms_list_${userId}_${activeWorkspace.id}`, merged);
+                }
             }
         } catch (error) {
             console.error('Failed to fetch forms', error);
         } finally {
             setLoading(false);
         }
-    }, [userId, sortForms]);
+    }, [userId, sortForms, activeWorkspace?.id, activeWorkspace?.isPersonal]);
     const fetchFormsRef = useRef(fetchForms);
     useEffect(() => {
         fetchFormsRef.current = fetchForms;

@@ -27,7 +27,14 @@ export const FormsService = {
     if (typeof window !== 'undefined' && (createdForm?.$id || createdForm?.id)) {
       try {
         const { LocalEngine } = await import('@/lib/services/LocalEngine');
-        const cacheKeys = [`f_forms_list_${userId}`, `f_forms_${userId}`, 'f_forms_list'];
+        const createdId = createdForm.$id || createdForm.id;
+        const workspaceId = createdForm.projectId || createdForm.workspaceId || data.projectId;
+        const cacheKeys = [
+          `f_forms_list_${userId}`,
+          `f_forms_${userId}`,
+          'f_forms_list',
+          ...(workspaceId ? [`f_forms_list_${userId}_${workspaceId}`] : []),
+        ];
         // Bolt: Concurrently update relevant form cache stores via Promise.all
         // to reduce cache update latency from O(K * T) to O(T) (~3x speedup).
         await Promise.all(
@@ -36,7 +43,7 @@ export const FormsService = {
               const existing = (await LocalEngine.cacheGet<any[]>(key)) || [];
               const updated = [
                 createdForm,
-                ...existing.filter((f: any) => (f.$id || f.id) !== (createdForm.$id || createdForm.id)),
+              ...existing.filter((f: any) => (f.$id || f.id) !== createdId),
               ];
               await LocalEngine.cacheSet(key, updated);
             } catch {}
@@ -94,13 +101,52 @@ export const FormsService = {
       updatedForm = await updateFormSecure(formId, data);
     }
 
+    if (typeof window !== 'undefined' && updatedForm) {
+      try {
+        const { LocalEngine } = await import('@/lib/services/LocalEngine');
+        const { getCurrentUserSnapshot } = await import('@/lib/data');
+        const userId = getCurrentUserSnapshot()?.$id || getCurrentUserSnapshot()?.id || 'guest';
+        const shaped = { ...updatedForm, $id: updatedForm.$id || updatedForm.id || formId };
+        const workspaceId = shaped.projectId || shaped.workspaceId;
+        const keys = [
+          `f_forms_list_${userId}`,
+          `f_forms_${userId}`,
+          'f_forms_list',
+          ...(workspaceId ? [`f_forms_list_${userId}_${workspaceId}`] : []),
+        ];
+        await Promise.all(keys.map(async (key) => {
+          const existing = (await LocalEngine.cacheGet<any[]>(key).catch(() => null)) || [];
+          const next = existing.map((form: any) =>
+            (form.$id || form.id) === formId ? { ...form, ...shaped } : form
+          );
+          await LocalEngine.cacheSet(key, next);
+        }));
+      } catch {}
+    }
+
     return updatedForm;
   },
 
   async deleteForm(formId: string) {
     if (typeof window !== 'undefined') {
       const { LocalEngine } = await import('@/lib/services/LocalEngine');
-      void LocalEngine.markDeleted(formId, 'guest');
+      const { getCurrentUserSnapshot } = await import('@/lib/data');
+      const userId = getCurrentUserSnapshot()?.$id || getCurrentUserSnapshot()?.id || 'guest';
+      void LocalEngine.markDeleted(formId, userId);
+      try {
+        const keys = [
+          `f_forms_list_${userId}`,
+          `f_forms_${userId}`,
+          'f_forms_list',
+        ];
+        await Promise.all(keys.map(async (key) => {
+          const existing = (await LocalEngine.cacheGet<any[]>(key).catch(() => null)) || [];
+          await LocalEngine.cacheSet(
+            key,
+            existing.filter((form: any) => (form.$id || form.id) !== formId),
+          );
+        }));
+      } catch {}
 
       const { deleteForm } = await import('@/lib/actions/client-ops');
       return await deleteForm(formId);
