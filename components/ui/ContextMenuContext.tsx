@@ -45,6 +45,67 @@ interface MenuState {
   title?: string;
 }
 
+function getRegionText(target: HTMLElement): string {
+  const editable = target.closest('input, textarea, [contenteditable="true"]') as
+    | HTMLInputElement
+    | HTMLTextAreaElement
+    | HTMLElement
+    | null;
+
+  if (editable instanceof HTMLInputElement || editable instanceof HTMLTextAreaElement) {
+    const start = editable.selectionStart ?? 0;
+    const end = editable.selectionEnd ?? 0;
+    const selected = start !== end ? editable.value.slice(start, end) : '';
+    return (selected || editable.value).trim();
+  }
+
+  if (editable) {
+    const selection = window.getSelection()?.toString().trim();
+    return (selection || editable.innerText || editable.textContent || '').trim();
+  }
+
+  const explicitRegion = target.closest('[data-copy-text], [data-context-copy]');
+  if (explicitRegion instanceof HTMLElement) {
+    const value = explicitRegion.dataset.copyText;
+    return (value || explicitRegion.innerText || explicitRegion.textContent || '').trim();
+  }
+
+  const preciseRegion = target.closest(
+    'h1, h2, h3, h4, h5, h6, p, li, td, th, label, code, pre, blockquote, button, a'
+  );
+  if (preciseRegion instanceof HTMLElement) {
+    const tag = preciseRegion.tagName.toLowerCase();
+    const raw = preciseRegion.innerText || preciseRegion.textContent || '';
+    return (tag === 'pre' || tag === 'code' ? raw : raw.replace(/\s+/g, ' ')).trim();
+  }
+
+  const broadRegion = target.closest('article, [role="row"], [role="listitem"], [data-testid]');
+  if (broadRegion instanceof HTMLElement) {
+    return (broadRegion.innerText || broadRegion.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  const raw = target.innerText || target.textContent || '';
+  return raw.replace(/\s+/g, ' ').trim();
+}
+
+async function copyRegionText(text: string): Promise<void> {
+  if (!text) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  textarea.remove();
+}
+
 interface ContextMenuContextType {
   openMenu: (state: MenuState) => void;
   closeMenu: () => void;
@@ -78,7 +139,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
   const pathname = usePathname();
   const router = useRouter();
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const { open: openUnifiedDrawer } = useUnifiedDrawer();
 
   // Global listener for ESC key
@@ -118,6 +179,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
       // 1. Identify clicked component target
       const target = e.target as HTMLElement;
+      const regionText = getRegionText(target);
 
       // Check if user has highlighted text on the page
       const selectedText = typeof window !== 'undefined' ? window.getSelection()?.toString().trim() : '';
@@ -155,6 +217,21 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
             },
           },
         ];
+
+        if (regionText) {
+          items.unshift({
+            label: 'Copy Text',
+            icon: <Copy size={16} />,
+            onClick: async () => {
+              try {
+                await copyRegionText(regionText);
+                showSuccess('Text copied');
+              } catch {
+                showError('Could not copy text');
+              }
+            },
+          });
+        }
 
         setState({
           x: e.clientX,
@@ -322,7 +399,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('contextmenu', handleGlobalContextMenu);
     return () => window.removeEventListener('contextmenu', handleGlobalContextMenu);
-  }, [pathname, router, showSuccess, openUnifiedDrawer]);
+  }, [pathname, router, showSuccess, showError, openUnifiedDrawer]);
 
   const value = useMemo<ContextMenuContextType>(
     () => ({ openMenu, closeMenu, isOpen, state }),
