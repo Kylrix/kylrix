@@ -725,10 +725,32 @@ export class TursoDatabaseAdapter implements DatabaseRepository {
       }).catch(() => {});
       return shaped;
     } catch (err: any) {
-      if (err?.message?.includes('UNIQUE constraint') || err?.message?.includes('PRIMARY KEY')) {
-        return this.updateRow<T>(databaseId, tableId, id, data, _permissions, _options);
+      if (
+        err?.message?.includes('UNIQUE constraint') ||
+        err?.message?.includes('PRIMARY KEY') ||
+        err?.message?.includes('Failed query')
+      ) {
+        try {
+          const existing = await db
+            .select()
+            .from(table)
+            .where(eq(table.id, id))
+            .limit(1);
+          if (existing.length > 0) {
+            return await this.updateRow<T>(databaseId, tableId, id, data, _permissions, _options);
+          }
+        } catch (fallbackError: any) {
+          console.error(
+            `[TursoDatabaseAdapter] createRow fallback ${tableId}/${id} failed:`,
+            fallbackError?.message || fallbackError,
+          );
+        }
       }
-      console.error(`[TursoDatabaseAdapter] createRow ${tableId}/${id} error:`, err?.message || err);
+      console.error(
+        `[TursoDatabaseAdapter] createRow ${tableId}/${id} error:`,
+        err?.message || err,
+        err?.cause ? `cause=${String(err.cause?.message || err.cause)}` : '',
+      );
       throw err;
     }
   }
