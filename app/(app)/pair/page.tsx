@@ -28,7 +28,6 @@ function PairContent() {
   const [code, setCode] = useState(initialCode);
   const [loading, setLoading] = useState(false);
   const [deciding, setDeciding] = useState(false);
-  const [accountResolved, setAccountResolved] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [session, setSession] = useState<{
     id: string;
@@ -70,9 +69,6 @@ function PairContent() {
       })
       .catch(() => {
         if (active) setCurrentUser(null);
-      })
-      .finally(() => {
-        if (active) setAccountResolved(true);
       });
     return () => {
       active = false;
@@ -80,13 +76,23 @@ function PairContent() {
   }, []);
 
   useEffect(() => {
-    if (accountResolved && initialCode) {
+    if (initialCode) {
       void lookupCode(initialCode);
     }
-  }, [accountResolved, initialCode, lookupCode]);
+  }, [initialCode, lookupCode]);
 
   const handleDecide = async (action: 'approve' | 'deny') => {
-    if (!currentUser) {
+    let resolvedUser = currentUser;
+    if (!resolvedUser) {
+      try {
+        resolvedUser = await account.get();
+        setCurrentUser(resolvedUser);
+      } catch {
+        resolvedUser = null;
+      }
+    }
+
+    if (!resolvedUser) {
       toast.error('Please sign in to authorize this client.');
       router.push('/app');
       return;
@@ -99,7 +105,7 @@ function PairContent() {
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           userCode: code.trim().toUpperCase(),
-          userId: currentUser?.$id,
+          userId: resolvedUser?.$id,
           action,
         }),
       });
