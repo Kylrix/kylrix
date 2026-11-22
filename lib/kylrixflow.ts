@@ -47,9 +47,19 @@ const FLOW_TTL = 1000 * 60 * 15; // 15 mins
 const CACHE_TTL = FLOW_TTL;
 const queryCache = new Map<string, { data: unknown; expires: number }>();
 
-async function listRows<T extends Models.Row>(tableId: string, queries: string[] = []): Promise<Models.RowList<T>> {
+type QueryInput = string | Record<string, unknown>;
+
+async function listRows<T extends Models.Row>(
+    tableId: string,
+    queries: QueryInput[] = []
+): Promise<Models.RowList<T>> {
     const finalQueries = [...queries];
-    if (!finalQueries.some(q => q.includes('limit('))) {
+    const hasLimit = finalQueries.some((q) =>
+        typeof q === 'string'
+            ? q.toLowerCase().includes('limit(')
+            : q?.type === 'limit'
+    );
+    if (!hasLimit) {
         finalQueries.push(Query.limit(100));
     }
     const key = `list:${tableId}:${JSON.stringify(finalQueries)}`;
@@ -307,7 +317,7 @@ async function deleteRow(
 // --- Calendars ---
 
 export const calendars = {
-    list: (queries?: string[]) => listRows<Calendar>('calendars', queries),
+    list: (queries?: QueryInput[]) => listRows<Calendar>('calendars', queries),
     create: (data: TableCreateData<Calendar>) => createRow<Calendar>('calendars', data),
     get: (id: string) => getRow<Calendar>('calendars', id),
     update: (id: string, data: TableUpdateData<Calendar>) => updateRow<Calendar>('calendars', id, data),
@@ -317,7 +327,7 @@ export const calendars = {
 // --- Tasks ---
 
 export const tasks = {
-    list: (queries?: string[]) => {
+    list: (queries?: QueryInput[]) => {
         return listRows<Task>(TABLES.FLOW.TASKS, queries);
     },
     create: async (data: TableCreateData<Task> & { $id?: string }, permissions?: string[]) => {
