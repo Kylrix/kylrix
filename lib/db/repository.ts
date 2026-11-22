@@ -75,6 +75,18 @@ function generateDefaultIvHex(): string {
 export function normalizeVaultItemData(data: Record<string, any>): Record<string, any> {
   if (!data || typeof data !== 'object') return {};
 
+  const wrappedDek = data.dek || data.wrappedDek;
+  const sensitiveFields = [
+    'password', 'secret', 'encryptedData', 'encrypted_data',
+    'username', 'notes', 'customFields',
+  ];
+  const hasSensitivePlaintext = sensitiveFields.some((field) =>
+    data[field] !== undefined && data[field] !== null && String(data[field]).trim().length > 0
+  );
+  if (hasSensitivePlaintext && (!wrappedDek || !String(wrappedDek).trim())) {
+    throw new Error('Refusing plaintext vault item write: encrypted fields require wrapped DEK');
+  }
+
   const titleVal = data.title || data.name || 'Untitled Secret';
   const typeVal = data.type || data.itemType || 'login';
   const encryptedDataVal = data.encrypted_data || data.encryptedData || data.password || data.secret || '';

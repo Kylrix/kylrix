@@ -52,6 +52,7 @@ import {
   wipeLegacyPlainVaultDrafts,
   writeSealedVaultDraft,
 } from '@/lib/vault/sealed-draft';
+import { sealRowFields } from '@/lib/api/vault-crypto';
 
 type CustomField = EnvField;
 
@@ -516,6 +517,65 @@ export default function CredentialDialog({
     return credentialData;
   };
 
+  const buildSealedCredentialData = async (
+    credentialData: CredentialsCreate,
+  ): Promise<CredentialsCreate> => {
+    const masterKey = ecosystemSecurity.getMasterKey();
+    if (!masterKey) throw new Error('Vault locked — cannot encrypt this item');
+
+    const rawMasterKey = new Uint8Array(
+      await crypto.subtle.exportKey('raw', masterKey),
+    );
+    const payload: Record<string, unknown> = {
+      name: credentialData.name,
+      username: credentialData.username,
+      password: credentialData.password,
+      url: credentialData.url,
+      notes: credentialData.notes,
+      customFields: credentialData.customFields,
+      cardNumber: credentialData.cardNumber,
+      cardholderName: credentialData.cardholderName,
+      cardExpiry: credentialData.cardExpiry,
+      cardCVV: credentialData.cardCVV,
+      cardPIN: credentialData.cardPIN,
+    };
+    const fields = [
+      'name',
+      'username',
+      'password',
+      'url',
+      'notes',
+      'customFields',
+      'cardNumber',
+      'cardholderName',
+      'cardExpiry',
+      'cardCVV',
+      'cardPIN',
+    ];
+    const { encryptedFields, wrappedDek } = await sealRowFields(
+      payload,
+      fields,
+      rawMasterKey,
+      initial?.dek,
+    );
+
+    return {
+      ...credentialData,
+      name: encryptedFields.name || credentialData.name,
+      username: encryptedFields.username ?? null,
+      password: encryptedFields.password ?? null,
+      url: encryptedFields.url ?? null,
+      notes: encryptedFields.notes ?? null,
+      customFields: encryptedFields.customFields ?? null,
+      cardNumber: encryptedFields.cardNumber ?? null,
+      cardholderName: encryptedFields.cardholderName ?? null,
+      cardExpiry: encryptedFields.cardExpiry ?? null,
+      cardCVV: encryptedFields.cardCVV ?? null,
+      cardPIN: encryptedFields.cardPIN ?? null,
+      dek: wrappedDek,
+    } as CredentialsCreate;
+  };
+
   const isVaultLockedOrNoMek = !ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey() || !masterPassCrypto.isVaultUnlocked();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -535,7 +595,7 @@ export default function CredentialDialog({
 
     setLoading(true);
     try {
-      const credentialData = buildCredentialData();
+      const credentialData = await buildSealedCredentialData(buildCredentialData());
       const isCustomWorkspace = Boolean(activeWorkspace && !activeWorkspace.isPersonal);
 
       // RAM-only optimistic UX. Never write plaintext secrets to LocalEngine / RxDB /
@@ -572,7 +632,7 @@ export default function CredentialDialog({
     setLoading(true);
     setError(null);
     try {
-      const credentialData = buildCredentialData();
+      const credentialData = await buildSealedCredentialData(buildCredentialData());
       let saved: any;
       if (initial && initial.$id) {
         saved = await updateCredential(initial.$id, credentialData);
