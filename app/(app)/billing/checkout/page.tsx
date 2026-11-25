@@ -34,6 +34,8 @@ function CheckoutContent() {
 
   const planId = searchParams.get('planId') || 'PRO_MONTH';
   const months = parseInt(searchParams.get('months') || '1');
+  const methodParam = (searchParams.get('method') || searchParams.get('paymentMethod') || 'CRYPTO').toUpperCase();
+  const paymentMethod = (methodParam === 'CARD' ? 'CARD' : 'CRYPTO') as 'CARD' | 'CRYPTO';
   const giftRecipientId = searchParams.get('giftRecipientId') || '';
   const giftRecipientName = searchParams.get('giftRecipientName') || '';
   const giftMessage = searchParams.get('giftMessage') || '';
@@ -41,12 +43,12 @@ function CheckoutContent() {
   const countryCode = 'US';
 
   const expectedPrice = useMemo(() => {
-    return calculateTotalSubscriptionPrice(planId, months, 'CRYPTO');
-  }, [planId, countryCode, months]);
+    return calculateTotalSubscriptionPrice(planId, months, paymentMethod);
+  }, [planId, months, paymentMethod]);
 
   const monthlyPrice = useMemo(() => {
-    return calculateTotalSubscriptionPrice('PRO_MONTH', 1, 'CRYPTO');
-  }, [countryCode]);
+    return calculateTotalSubscriptionPrice('PRO_MONTH', 1, paymentMethod);
+  }, [paymentMethod]);
 
   const markBillingSyncPending = (userId: string) => {
     if (typeof window === 'undefined') return;
@@ -62,7 +64,7 @@ function CheckoutContent() {
         const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => '');
         const session = await createBillingCheckoutSessionAction({
           planId,
-          method: 'CRYPTO',
+          method: paymentMethod,
           countryCode,
           months,
           giftRecipientId: giftRecipientId || undefined,

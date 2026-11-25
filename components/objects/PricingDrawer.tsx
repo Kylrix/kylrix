@@ -18,6 +18,8 @@ import {
   Layers,
   Lock,
   Workflow,
+  CreditCard,
+  Coins,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -66,6 +68,7 @@ type PendingCheckout = {
   months: number;
   countryCode: string;
   ledgerKey: string;
+  paymentMethod?: 'CRYPTO' | 'CARD';
 };
 
 interface PricingDrawerProps {
@@ -75,6 +78,7 @@ interface PricingDrawerProps {
   giftRecipientId?: string | null;
   giftRecipientName?: string | null;
   isGift?: boolean;
+  paymentMethod?: 'CRYPTO' | 'CARD';
 }
 
 export function PricingDrawer({
@@ -84,6 +88,7 @@ export function PricingDrawer({
   giftRecipientId,
   giftRecipientName,
   isGift = false,
+  paymentMethod: initialPaymentMethod = 'CRYPTO',
 }: PricingDrawerProps) {
   const pricingPlans = useMemo(() => getPublicPricingPlansOrDefault(), []);
   const defaultLedger = pricingPlans[0]?.ledgerKey || 'PRO';
@@ -95,6 +100,7 @@ export function PricingDrawer({
   const [selectedLedger, setSelectedLedger] = useState(
     initialTier?.toUpperCase() || defaultLedger,
   );
+  const [paymentMethod, setPaymentMethod] = useState<'CRYPTO' | 'CARD'>(initialPaymentMethod || 'CRYPTO');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const resumeAttemptedRef = useRef(false);
 
@@ -117,8 +123,8 @@ export function PricingDrawer({
   const isYearly = months >= 12;
 
   const totalPrice = useMemo(() => {
-    return calculateTotalSubscriptionPrice(selectedPlan?.ledgerKey || defaultLedger, months, 'CRYPTO');
-  }, [months, selectedPlan, defaultLedger]);
+    return calculateTotalSubscriptionPrice(selectedPlan?.ledgerKey || defaultLedger, months, paymentMethod);
+  }, [months, selectedPlan, defaultLedger, paymentMethod]);
 
   const updateMonths = useCallback((newMonths: number) => {
     const clamped = Math.max(1, Math.min(24, newMonths));
@@ -152,7 +158,7 @@ export function PricingDrawer({
       const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
       const session = await createBillingCheckoutSessionAction({
         planId,
-        method: 'CRYPTO',
+        method: paymentMethod,
         countryCode,
         months: checkoutMonths,
         giftRecipientId: giftRecipientId || undefined,
@@ -184,7 +190,7 @@ export function PricingDrawer({
     } finally {
       setCheckoutLoading(false);
     }
-  }, [selectedPlan, defaultLedger, giftRecipientId, giftRecipientName]);
+  }, [selectedPlan, defaultLedger, giftRecipientId, giftRecipientName, paymentMethod]);
 
   useEffect(() => {
     if (!user || resumeAttemptedRef.current) return;
@@ -296,6 +302,52 @@ export function PricingDrawer({
           </div>
         </div>
         )}
+
+        {/* Payment Method Selector (Crypto vs Card) */}
+        <div className="bg-[#0A0908] border border-white/6 rounded-2xl p-4 space-y-3">
+          <span className="text-[10px] text-white/55 font-bold uppercase tracking-wider block">
+            Payment Method
+          </span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('CRYPTO')}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
+                paymentMethod === 'CRYPTO'
+                  ? 'bg-[#161412] border-[#6366F1] ring-1 ring-[#6366F1] text-white'
+                  : 'bg-[#161412]/50 border-white/6 text-white/70 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Coins size={14} className={paymentMethod === 'CRYPTO' ? 'text-[#6366F1]' : 'text-white/50'} />
+                  <span className="text-xs font-bold font-clash">Crypto</span>
+                </div>
+                {paymentMethod === 'CRYPTO' && <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />}
+              </div>
+              <span className="text-[10px] text-white/40 font-mono">BlockBee</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('CARD')}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col gap-1 ${
+                paymentMethod === 'CARD'
+                  ? 'bg-[#161412] border-[#6366F1] ring-1 ring-[#6366F1] text-white'
+                  : 'bg-[#161412]/50 border-white/6 text-white/70 hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <CreditCard size={14} className={paymentMethod === 'CARD' ? 'text-[#6366F1]' : 'text-white/50'} />
+                  <span className="text-xs font-bold font-clash">Card</span>
+                </div>
+                {paymentMethod === 'CARD' && <span className="w-1.5 h-1.5 rounded-full bg-[#6366F1]" />}
+              </div>
+              <span className="text-[10px] text-white/40 font-mono">Bachs</span>
+            </button>
+          </div>
+        </div>
 
         {/* Duration Slider & Custom Number Stepper Well */}
         <div className="bg-[#0A0908] border border-white/6 rounded-2xl p-4 space-y-4">

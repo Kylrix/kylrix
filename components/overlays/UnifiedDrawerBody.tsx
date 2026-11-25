@@ -503,6 +503,7 @@ export function UnifiedDrawerBody({ activeContent, drawerData, onClose }: Props)
           giftRecipientId={drawerData?.giftRecipientId}
           giftRecipientName={drawerData?.giftRecipientName}
           isGift={drawerData?.isGift}
+          paymentMethod={drawerData?.paymentMethod}
         />
       );
     case 'tags':

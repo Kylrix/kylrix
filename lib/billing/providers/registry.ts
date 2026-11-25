@@ -15,11 +15,13 @@
 import { parseEnvCsv } from '@/lib/config/env-flags';
 import type { BillingProviderAdapter } from '@/lib/billing/providers/types';
 import { BlockBeeBillingAdapter } from '@/lib/billing/providers/blockbee';
+import { BachsBillingAdapter } from '@/lib/billing/providers/bachs';
 import { StubBillingAdapter } from '@/lib/billing/providers/stub';
 import { PaymentMethod } from '@/lib/billing/types';
 
 const BUILTIN_ADAPTERS: BillingProviderAdapter[] = [
   new BlockBeeBillingAdapter(),
+  new BachsBillingAdapter(),
   new StubBillingAdapter(),
 ];
 
@@ -70,10 +72,32 @@ export function resolveCryptoBillingAdapter(): BillingProviderAdapter {
   return getBillingAdapter('stub')!;
 }
 
+export function resolveCardBillingAdapter(): BillingProviderAdapter {
+  const explicit = (process.env.BILLING_CARD_PROVIDER || '').trim().toLowerCase();
+  if (explicit) {
+    const adapter = getBillingAdapter(explicit);
+    if (!adapter) {
+      throw new Error(
+        `Unknown BILLING_CARD_PROVIDER="${explicit}". Registered: ${listBillingAdapters()
+          .map((a) => a.id)
+          .join(', ')}`,
+      );
+    }
+    return adapter;
+  }
+
+  const bachs = getBillingAdapter('bachs');
+  if (bachs && bachs.isConfigured()) return bachs;
+  return bachs || getBillingAdapter('stub')!;
+}
+
 export function resolveBillingAdapterForMethod(method: PaymentMethod): BillingProviderAdapter {
   const normalized = String(method).toUpperCase();
   if (normalized === PaymentMethod.CRYPTO) {
     return resolveCryptoBillingAdapter();
+  }
+  if (normalized === PaymentMethod.CARD) {
+    return resolveCardBillingAdapter();
   }
   throw new Error(
     `No built-in billing adapter for payment method "${method}". Forks must register one via registerBillingAdapter().`,
@@ -83,7 +107,7 @@ export function resolveBillingAdapterForMethod(method: PaymentMethod): BillingPr
 export function listEnabledPaymentMethods(): PaymentMethod[] {
   const raw = parseEnvCsv(process.env.BILLING_ENABLED_METHODS);
   if (!raw.length) {
-    return [PaymentMethod.CRYPTO];
+    return [PaymentMethod.CRYPTO, PaymentMethod.CARD];
   }
   const allowed = new Set(Object.values(PaymentMethod));
   return raw

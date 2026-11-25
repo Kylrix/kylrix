@@ -4,6 +4,7 @@ import { registerForkBillingProviders } from '@/lib/billing/register-fork-provid
 import {
   registerBillingAdapter,
   resolveBillingAdapterForMethod,
+  resolveCardBillingAdapter,
   resolveCryptoBillingAdapter} from '@/lib/billing/providers/registry';
 import type {
   BillingProviderAdapter,
@@ -131,7 +132,12 @@ export const billingManager = new BillingManager();
 /** Register env-selected adapters. Call once at module load. */
 export function registerDefaultBillingProviders(): void {
   registerForkBillingProviders();
-  billingManager.registerProvider(adapterToProvider(resolveCryptoBillingAdapter()));
+  billingManager.registerProvider(adapterToProvider(resolveCryptoBillingAdapter(), PaymentMethod.CRYPTO));
+  try {
+    billingManager.registerProvider(adapterToProvider(resolveCardBillingAdapter(), PaymentMethod.CARD));
+  } catch (err) {
+    console.warn('[Billing] Default card provider resolution deferred:', err);
+  }
 }
 
 export { adapterToProvider };

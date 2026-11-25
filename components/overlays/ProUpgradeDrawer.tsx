@@ -14,6 +14,8 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
+  CreditCard,
+  Coins,
 } from 'lucide-react';
 import {
   getPublicPricingPlansOrDefault,
@@ -139,6 +141,7 @@ export function ProUpgradeDrawer() {
   const [selectedLedger, setSelectedLedger] = useState(
     () => pricingPlans[0]?.ledgerKey || 'PRO',
   );
+  const [paymentMethod, setPaymentMethod] = useState<'CRYPTO' | 'CARD'>('CRYPTO');
 
   const selectedPlan: PublicPricingPlan | undefined = useMemo(
     () => pricingPlans.find((p) => p.ledgerKey === selectedLedger) || pricingPlans[0],
@@ -181,6 +184,7 @@ export function ProUpgradeDrawer() {
     openUnified('pricing', {
       featureHighlight: feature,
       tier: selectedPlan?.ledgerKey || 'PRO',
+      paymentMethod,
     });
   };
 
@@ -287,6 +291,60 @@ export function ProUpgradeDrawer() {
             </span>
           </div>
 
+          {/* Payment Method Step: Crypto (BlockBee) vs Card (Bachs) */}
+          <div className="space-y-2">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white block px-1">
+              Payment Method
+            </span>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('CRYPTO')}
+                className={`p-3.5 rounded-2xl border transition-all text-left cursor-pointer flex flex-col gap-1.5 ${
+                  paymentMethod === 'CRYPTO'
+                    ? 'bg-[#000000] border-[#6366F1] ring-1 ring-[#6366F1] text-white'
+                    : 'bg-[#000000] border-white/20 text-white hover:border-white/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Coins size={15} className={paymentMethod === 'CRYPTO' ? 'text-[#6366F1]' : 'text-white/60'} />
+                    <span className="text-xs font-black font-clash">Crypto</span>
+                  </div>
+                  {paymentMethod === 'CRYPTO' && (
+                    <span className="w-2 h-2 rounded-full bg-[#6366F1]" />
+                  )}
+                </div>
+                <p className="text-[10px] text-white/50 m-0 leading-tight font-sans">
+                  USDT, BTC, ETH via BlockBee
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('CARD')}
+                className={`p-3.5 rounded-2xl border transition-all text-left cursor-pointer flex flex-col gap-1.5 ${
+                  paymentMethod === 'CARD'
+                    ? 'bg-[#000000] border-[#6366F1] ring-1 ring-[#6366F1] text-white'
+                    : 'bg-[#000000] border-white/20 text-white hover:border-white/40'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={15} className={paymentMethod === 'CARD' ? 'text-[#6366F1]' : 'text-white/60'} />
+                    <span className="text-xs font-black font-clash">Card</span>
+                  </div>
+                  {paymentMethod === 'CARD' && (
+                    <span className="w-2 h-2 rounded-full bg-[#6366F1]" />
+                  )}
+                </div>
+                <p className="text-[10px] text-white/50 m-0 leading-tight font-sans">
+                  Debit / Credit via Bachs
+                </p>
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-2.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-white block px-1">
               What you unlock
@@ -340,7 +398,7 @@ export function ProUpgradeDrawer() {
             onClick={handleGoPricing}
             className="w-full h-12 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-extrabold text-xs tracking-wide flex items-center justify-center gap-2 transition-all cursor-pointer"
           >
-            <span>Continue with {selectedPlan?.name || 'Pro'}</span>
+            <span>Continue with {selectedPlan?.name || 'Pro'} · {paymentMethod === 'CARD' ? 'Card' : 'Crypto'}</span>
             <ArrowRight size={16} />
           </button>
         </div>

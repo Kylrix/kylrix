@@ -8,6 +8,7 @@ enum _SubscriptionTier {
 
 export enum PaymentMethod {
   CRYPTO = 'CRYPTO',
+  CARD = 'CARD',
   STRIPE = 'STRIPE',
   MANUAL = 'MANUAL',
   COUPON = 'COUPON',
